@@ -1,5 +1,7 @@
 # Remote MCP Factory
 
+> Status: early MVP — Clerk auth, plan quotas, public/protected endpoints, and isolated Cloudflare Sandbox execution are implemented.
+
 **GitHub → Remote MCP.** Paste a GitHub repository containing a stdio MCP server and get a remote Streamable HTTP endpoint running in an isolated Cloudflare Sandbox.
 
 The product goal is deliberately Vercel-like: connect a repo, let the platform detect how it runs, deploy it, and receive a stable URL.
