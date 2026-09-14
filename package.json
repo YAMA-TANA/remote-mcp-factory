@@ -1,0 +1,22 @@
+{
+  "name": "remote-mcp-factory",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:init": "wrangler d1 execute remote-mcp-factory --file=./schema.sql"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.17.2",
+    "@cloudflare/sandbox": "^0.3.3",
+    "hono": "^4.9.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260912.0",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.36.0"
+  }
+}
