@@ -41,6 +41,7 @@
   ],
   "vars": {
     "ALLOW_DEV_AUTH": "false",
+    "SANDBOX_TRANSPORT": "rpc",
     "CLERK_PRO_PLAN_SLUG": "pro",
     "CLERK_TEAM_PLAN_SLUG": "team"
   }
