@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "remote-mcp-factory",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./Dockerfile",
+      "instance_type": "lite",
+      "max_instances": 10
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "class_name": "Sandbox", "name": "Sandbox" }
+    ]
+  },
+  "migrations": [
+    { "new_sqlite_classes": ["Sandbox"], "tag": "v1" }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "remote-mcp-factory",
+      "database_id": "REPLACE_ME"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "MCP_SERVER_RATE_LIMITER",
+      "namespace_id": "1370651816",
+      "simple": { "limit": 600, "period": 60 }
+    },
+    {
+      "name": "MCP_CLIENT_RATE_LIMITER",
+      "namespace_id": "1370651817",
+      "simple": { "limit": 120, "period": 60 }
+    }
+  ],
+  "vars": {
+    "ALLOW_DEV_AUTH": "false",
+    "CLERK_PRO_PLAN_SLUG": "pro",
+    "CLERK_TEAM_PLAN_SLUG": "team"
+  }
+}
