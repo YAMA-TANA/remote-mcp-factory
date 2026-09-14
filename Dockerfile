@@ -1,4 +1,4 @@
-FROM docker.io/cloudflare/sandbox:0.3.3
+FROM docker.io/cloudflare/sandbox:0.12.9
 
 USER root
 RUN apt-get update \
