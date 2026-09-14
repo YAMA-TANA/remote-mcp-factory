@@ -7,7 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "db:init": "wrangler d1 execute remote-mcp-factory --file=./schema.sql"
+    "db:init": "wrangler d1 execute remote-mcp-factory --file=./schema.sql",
+    "study:compat": "node scripts/compatibility-study.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.17.2",
