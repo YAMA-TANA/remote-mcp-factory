@@ -1,0 +1,46 @@
+name: MCP compatibility study
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_size:
+        description: Number of remote-capable MCP repositories to scan
+        required: false
+        default: '100'
+  push:
+    paths:
+      - 'scripts/compatibility-study.mjs'
+      - '.github/workflows/compatibility-study.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Scan remote-capable MCP repositories
+        env:
+          SAMPLE_SIZE: ${{ github.event.inputs.sample_size || '100' }}
+        run: npm run study:compat -- --sample "$SAMPLE_SIZE" --concurrency 4
+
+      - name: Commit study report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/compatibility-study.json reports/compatibility-study.md
+          if git diff --cached --quiet; then
+            echo "No report changes"
+            exit 0
+          fi
+          git commit -m "Update 100-repo MCP compatibility study"
+          git push
