@@ -1,0 +1,1918 @@
+{
+  "generatedAt": "2026-09-14T23:58:05.393Z",
+  "methodologyVersion": 2,
+  "source": "Official MCP Registry v0.1",
+  "summary": {
+    "sampleSize": 100,
+    "remotelyHostableDenominator": 46,
+    "excludedLocalBound": 5,
+    "uncertain": 49,
+    "counts": {
+      "edge-conditional": 6,
+      "uncertain": 49,
+      "local-bound": 5,
+      "edge-adaptable": 14,
+      "sandbox-required": 19,
+      "edge-likely": 7
+    },
+    "strictFunctionShareOfHostable": 15.2,
+    "nodeFunctionShareWithAdaptation": 45.7,
+    "possibleFunctionShareIncludingPython": 58.7,
+    "sandboxShareOfHostable": 41.3
+  },
+  "results": [
+    {
+      "name": "Rechtssysteem.ai",
+      "registryName": "ai.rechtssysteem/rechtssysteem-mcp",
+      "description": "Lekkage-vrije voorspelling van Nederlandse rechtszaken, getraind op 609.715 uitspraken",
+      "repoUrl": "https://github.com/rechtssysteem-ai/rechtssysteem-mcp",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [],
+      "classification": "edge-conditional",
+      "confidence": "medium",
+      "reasons": [
+        "Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 6,
+      "scanError": null
+    },
+    {
+      "name": "Uganda Payments (Flutterwave — MTN MoMo)",
+      "registryName": "app.wishpool/uganda-payments-mcp",
+      "description": "Uganda payments for AI agents — MTN MoMo via Flutterwave. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/uganda-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/uganda-payments-mcp /tmp/mcp-study-ORPWyl/001\nCloning into '/tmp/mcp-study-ORPWyl/001'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Cortex RMCP",
+      "registryName": "ai.dinglebear/cortex-rmcp",
+      "description": "Rust MCP server for homelab logs, syslog, Docker logs, FTS search, and AI transcript correlation.",
+      "repoUrl": "https://github.com/jmagar/cortex",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documentation indicates value tied to the user/local machine"
+      ],
+      "warnings": [],
+      "remoteHostable": false,
+      "filesScanned": 189,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/lukaskostka99-marketing-miner-mcp",
+      "registryName": "ai.smithery/lukaskostka99-marketing-miner-mcp",
+      "description": "Discover high-impact keyword ideas across Central and Eastern European and English markets. Analyz…",
+      "repoUrl": "https://github.com/lukaskostka99/marketing-miner-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 6,
+      "scanError": null
+    },
+    {
+      "name": "Otto Data — Robinhood Chain",
+      "registryName": "app.ottodata/otto",
+      "description": "Live Robinhood Chain tokenized-stock data: basis vs NASDAQ, gaps, pools, whale flows.",
+      "repoUrl": "https://github.com/Degergokalp/otto-data",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Degergokalp/otto-data /tmp/mcp-study-ORPWyl/004\nCloning into '/tmp/mcp-study-ORPWyl/004'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.ponlo/server",
+      "registryName": "ai.ponlo/server",
+      "description": "Family calendar, tasks, meals, lists & rewards hub for AI assistants.",
+      "repoUrl": "https://github.com/ClaudioGodoyB/ponlo-ai",
+      "subfolder": "mcp-server",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": null,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/ClaudioGodoyB/ponlo-ai /tmp/mcp-study-ORPWyl/005\nCloning into '/tmp/mcp-study-ORPWyl/005'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.waystation/airtable",
+      "registryName": "ai.waystation/airtable",
+      "description": "Access and manage your Airtable bases, tables, and records seamlessly",
+      "repoUrl": "https://github.com/waystation-ai/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 6,
+      "scanError": null
+    },
+    {
+      "name": "ai.pullpush/pullpush-mcp",
+      "registryName": "ai.pullpush/pullpush-mcp",
+      "description": "Connect any two APIs and keep them in sync — 48 MCP tools with shadow previews and diagnostics.",
+      "repoUrl": "https://github.com/Kaduno-systems/pullpush-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 11,
+      "scanError": null
+    },
+    {
+      "name": "YouTube Transcript AI",
+      "registryName": "ai.youtube-transcript/youtube-transcript",
+      "description": "Fetch the full transcript of any YouTube video as clean text. No API key, no signup.",
+      "repoUrl": "https://github.com/zxl777/youtube-transcript-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker",
+        "network/API-oriented code detected"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 2,
+      "scanError": null
+    },
+    {
+      "name": "ConnectMachine",
+      "registryName": "ai.connectmachine/connectmachine",
+      "description": "Manage your ConnectMachine contacts, networks, events, and digital business cards.",
+      "repoUrl": "https://github.com/connectmachine/mcp-server",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 3,
+      "scanError": null
+    },
+    {
+      "name": "ProofSlip",
+      "registryName": "ai.proofslip/mcp-server",
+      "description": "Receipt-based verification for AI agent workflows — create, verify, and poll ephemeral proof objects",
+      "repoUrl": "https://github.com/Johnny-Z13/proofslip",
+      "subfolder": "packages/mcp-server",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 13,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/pinkpixel-dev-web-scout-mcp",
+      "registryName": "ai.smithery/pinkpixel-dev-web-scout-mcp",
+      "description": "Search the web and extract clean, readable text from webpages. Process multiple URLs at once to sp…",
+      "repoUrl": "https://github.com/pinkpixel-dev/web-scout-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics",
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 13,
+      "scanError": null
+    },
+    {
+      "name": "ai.windsock/windsock",
+      "registryName": "ai.windsock/windsock",
+      "description": "Aircraft valuations, registry lookup, cost of ownership, market metrics, reports and logbooks.",
+      "repoUrl": "https://github.com/team-windsock/windsock-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio",
+        "stdio"
+      ],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 18,
+      "scanError": null
+    },
+    {
+      "name": "Ra Pay",
+      "registryName": "ai.rapay/mcp-server",
+      "description": "Send fiat payments via MCP with two-step confirmation and Stripe Connect.",
+      "repoUrl": "https://github.com/Ra-Pay-AI/rapay",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": null,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Ra-Pay-AI/rapay /tmp/mcp-study-ORPWyl/013\nCloning into '/tmp/mcp-study-ORPWyl/013'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Offendersearch",
+      "registryName": "app.offendersearch/offendersearch",
+      "description": "Search US sex-offender registries and criminal records, with per-source citations.",
+      "repoUrl": "https://github.com/Clavaa/offendersearch-quickstart",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker",
+        "network/API-oriented code detected"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 4,
+      "scanError": null
+    },
+    {
+      "name": "ssave.cc — TikTok & Instagram Downloader",
+      "registryName": "cc.ssave/tiktok-instagram-downloader",
+      "description": "Extract & download TikTok, Instagram, YouTube, Douyin media — HD, no watermark, MP3 export",
+      "repoUrl": "https://github.com/ssavecc/ssave-mcp-server",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 19,
+      "scanError": null
+    },
+    {
+      "name": "SOAR Record Gateway",
+      "registryName": "ai.lateos/soar-record-gateway",
+      "description": "SOAR security playbooks for AI agents: fetch, full-text search, and count. Metered via Stripe.",
+      "repoUrl": "https://github.com/lateos-ai/website",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/lateos-ai/website /tmp/mcp-study-ORPWyl/016\nCloning into '/tmp/mcp-study-ORPWyl/016'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Nauro",
+      "registryName": "ai.nauro/nauro",
+      "description": "What every agent should know",
+      "repoUrl": "https://github.com/Nauro-AI/nauro",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documentation indicates value tied to the user/local machine"
+      ],
+      "warnings": [],
+      "remoteHostable": false,
+      "filesScanned": 233,
+      "scanError": null
+    },
+    {
+      "name": "Just Publish",
+      "registryName": "ai.justpublish/just-publish",
+      "description": "Publish the website you built with AI to a live public URL — straight from chat, no setup.",
+      "repoUrl": "https://github.com/just-done/just-publish-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 7,
+      "scanError": null
+    },
+    {
+      "name": "ch.pfx/mcp-server",
+      "registryName": "ch.pfx/mcp-server",
+      "description": "MCP Server für Forterro Proffix Px5 ERP",
+      "repoUrl": "https://github.com/pitwch/pfx-mcp-server",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 11,
+      "scanError": null
+    },
+    {
+      "name": "ai.atlaso/mcp",
+      "registryName": "ai.atlaso/mcp",
+      "description": "AI memory layer — one shared, persistent memory across every AI tool you connect.",
+      "repoUrl": "https://github.com/atlaso-labs/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 2,
+      "scanError": null
+    },
+    {
+      "name": "Australia Logistics (buy Aramex + more labels + tracking via Shippo)",
+      "registryName": "app.wishpool/australia-logistics-mcp",
+      "description": "Australia shipping labels for AI agents: buy Aramex and more, track and refund via Shippo.",
+      "repoUrl": "https://github.com/junter1989k-ai/australia-logistics-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/australia-logistics-mcp /tmp/mcp-study-ORPWyl/021\nCloning into '/tmp/mcp-study-ORPWyl/021'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.smithery/huuthangntk-claude-vision-mcp-server",
+      "registryName": "ai.smithery/huuthangntk-claude-vision-mcp-server",
+      "description": "Analyze images from multiple angles to extract detailed insights or quick summaries. Describe visu…",
+      "repoUrl": "https://github.com/huuthangntk/claude-vision-mcp-server",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics",
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 28,
+      "scanError": null
+    },
+    {
+      "name": "Pakistan Payments (Safepay — Safepay checkout)",
+      "registryName": "app.wishpool/pakistan-payments-mcp",
+      "description": "Pakistan payments for AI agents — Safepay checkout via Safepay. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/pakistan-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/pakistan-payments-mcp /tmp/mcp-study-ORPWyl/023\nCloning into '/tmp/mcp-study-ORPWyl/023'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.smithery/Pratiksha-Kanoja-magicslide-mcp-test",
+      "registryName": "ai.smithery/Pratiksha-Kanoja-magicslide-mcp-test",
+      "description": "Create polished slide decks from text or YouTube links in seconds. Fetch video transcripts to tran…",
+      "repoUrl": "https://github.com/Pratiksha-Kanoja/magicslide-mcp-test",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Pratiksha-Kanoja/magicslide-mcp-test /tmp/mcp-study-ORPWyl/024\nCloning into '/tmp/mcp-study-ORPWyl/024'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "United Kingdom Payments (Stripe — Stripe checkout)",
+      "registryName": "app.wishpool/uk-payments-mcp",
+      "description": "United Kingdom payments for AI agents — Stripe checkout via Stripe. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/uk-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/uk-payments-mcp /tmp/mcp-study-ORPWyl/025\nCloning into '/tmp/mcp-study-ORPWyl/025'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "AgentBIT",
+      "registryName": "app.agentbit/mcp",
+      "description": "Pay-per-call x402 tools for AI agents: onchain, finance, risk, content, web & SEC data on Base.",
+      "repoUrl": "https://github.com/socialbitro/agentbit-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 3,
+      "scanError": null
+    },
+    {
+      "name": "ai.inflowpay.app/inflow",
+      "registryName": "ai.inflowpay.app/inflow",
+      "description": "MCP Server for agents to onboard, pay, and provision services autonomously with InFlow",
+      "repoUrl": "https://github.com/inflowpayai/inflow-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 2,
+      "scanError": null
+    },
+    {
+      "name": "Colombia Payments (Mercado Pago — PSE / Nequi)",
+      "registryName": "app.wishpool/colombia-payments-mcp",
+      "description": "Colombia payments for AI agents — PSE / Nequi via Mercado Pago. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/colombia-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/colombia-payments-mcp /tmp/mcp-study-ORPWyl/028\nCloning into '/tmp/mcp-study-ORPWyl/028'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "InfoLang Memory",
+      "registryName": "ai.infolang/mcp",
+      "description": "InfoLang semantic memory MCP — investigate, memorize, and recall compressed agent context.",
+      "repoUrl": "https://github.com/InfoLang-Inc/infolang-services",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/InfoLang-Inc/infolang-services /tmp/mcp-study-ORPWyl/029\nCloning into '/tmp/mcp-study-ORPWyl/029'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.smithery/Danushkumar-V-mcp-discord",
+      "registryName": "ai.smithery/Danushkumar-V-mcp-discord",
+      "description": "An MCP server that integrates with Discord to provide AI-powered features.",
+      "repoUrl": "https://github.com/Danushkumar-V/mcp-discord",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 24,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/exa-labs-exa-code-mcp",
+      "registryName": "ai.smithery/exa-labs-exa-code-mcp",
+      "description": "Find open-source libraries and fetch contextual code snippets by version to accelerate development…",
+      "repoUrl": "https://github.com/exa-labs/exa-code-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/exa-labs/exa-code-mcp /tmp/mcp-study-ORPWyl/031\nCloning into '/tmp/mcp-study-ORPWyl/031'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Poland Invoices (KSeF 2.0 national e-invoice API)",
+      "registryName": "app.wishpool/poland-invoice-mcp",
+      "description": "Poland KSeF 2.0 national e-invoices for AI agents: issue FA(3) faktura, query by KSeF number.",
+      "repoUrl": "https://github.com/junter1989k-ai/poland-invoice-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/poland-invoice-mcp /tmp/mcp-study-ORPWyl/032\nCloning into '/tmp/mcp-study-ORPWyl/032'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.atdev/supershopping",
+      "registryName": "ai.atdev/supershopping",
+      "description": "나만을 위한 AI 쇼핑 MCP — 상품을 자연어로 검색·비교·추천해 사용자의 효과적인 쇼핑을 돕습니다.",
+      "repoUrl": "https://github.com/alex-hoyeol-choi/headless-commerce",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/alex-hoyeol-choi/headless-commerce /tmp/mcp-study-ORPWyl/033\nCloning into '/tmp/mcp-study-ORPWyl/033'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "openaso",
+      "registryName": "ai.openaso/openaso",
+      "description": "App Store Optimization for AI agents: keyword ranks, suggestions, popularity, competitors, reviews",
+      "repoUrl": "https://github.com/xekor/openaso-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 2,
+      "scanError": null
+    },
+    {
+      "name": "ai.shumi/mcp",
+      "registryName": "ai.shumi/mcp",
+      "description": "Crypto market intelligence: prices, funding rates, narratives, regime, and delta-neutral research.",
+      "repoUrl": "https://github.com/shumi-ai/shumi-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics",
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 40,
+      "scanError": null
+    },
+    {
+      "name": "app.nomadpoint/nomadpoint",
+      "registryName": "app.nomadpoint/nomadpoint",
+      "description": "Plan trips and track visa days per traveller across 39,601 entry rules",
+      "repoUrl": "https://github.com/eladkishon/nomadpoint",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/eladkishon/nomadpoint /tmp/mcp-study-ORPWyl/036\nCloning into '/tmp/mcp-study-ORPWyl/036'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "LimitGuard Trust Intelligence",
+      "registryName": "ai.limitguard.api/trust-intelligence",
+      "description": "Entity verification, sanctions screening, and trust scoring for AI agents via x402 micropayments.",
+      "repoUrl": "https://github.com/jwconsultancyteam/limitguard-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 5,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/ChiR24-unreal_mcp",
+      "registryName": "ai.smithery/ChiR24-unreal_mcp",
+      "description": "Control Unreal Engine to browse assets, import content, and manage levels and sequences. Automate…",
+      "repoUrl": "https://github.com/ChiR24/Unreal_mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 144,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/IlyaGusev-academia_mcp",
+      "registryName": "ai.smithery/IlyaGusev-academia_mcp",
+      "description": "Search arXiv and ACL Anthology, retrieve citations and references, and browse web sources to accel…",
+      "repoUrl": "https://github.com/IlyaGusev/academia_mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "subprocess/shell"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 53,
+      "scanError": null
+    },
+    {
+      "name": "ai.flyvolo/knowledge",
+      "registryName": "ai.flyvolo/knowledge",
+      "description": "Evidence-graded, task-level record of how AI and automation change 70 occupations. Read-only.",
+      "repoUrl": "https://github.com/weihermans/VOLO",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/weihermans/VOLO /tmp/mcp-study-ORPWyl/040\nCloning into '/tmp/mcp-study-ORPWyl/040'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Saudi Arabia Payments (Tap Payments — mada / STC Pay)",
+      "registryName": "app.wishpool/saudi-arabia-payments-mcp",
+      "description": "Saudi Arabia payments for AI agents — mada / STC Pay via Tap Payments. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/saudi-arabia-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/saudi-arabia-payments-mcp /tmp/mcp-study-ORPWyl/041\nCloning into '/tmp/mcp-study-ORPWyl/041'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Windsor.ai MCP",
+      "registryName": "ai.windsor/windsor-mcp",
+      "description": "Query and analyze marketing, sales, and business data from 325+ platforms via Windsor.ai.",
+      "repoUrl": "https://github.com/windsor-ai/windsor_mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 2,
+      "scanError": null
+    },
+    {
+      "name": "Popdot AI",
+      "registryName": "ai.popdot/popdot-mcp",
+      "description": "Rent verified subdomains by the hour, day, or month. Free 24h trials, x402 USDC on Base.",
+      "repoUrl": "https://github.com/popdot-ai/popdot-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker",
+        "stdio transport looks mechanically replaceable at build time",
+        "network/API-oriented code detected"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 4,
+      "scanError": null
+    },
+    {
+      "name": "MentionAgent",
+      "registryName": "ai.mentionagent/mentionagent",
+      "description": "Link building outreach from your agent: review drafts, send the batch, answer publisher replies.",
+      "repoUrl": "https://github.com/BuildsbyMatt/mentionagent-claude-skill",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 3,
+      "scanError": null
+    },
+    {
+      "name": "ca.swiftsign/mcp",
+      "registryName": "ca.swiftsign/mcp",
+      "description": "E-signatures for agents: mint a sandbox key, send PDFs, track status, download the sealed result.",
+      "repoUrl": "https://github.com/shahdadk/swiftsign",
+      "subfolder": "mcp",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 13,
+      "scanError": null
+    },
+    {
+      "name": "Taiwan Payments & E-Invoice (ECPay 綠界 / NewebPay 藍新)",
+      "registryName": "app.wishpool/taiwan-payments-mcp",
+      "description": "Taiwan payments (ECPay 綠界 + NewebPay 藍新) & e-invoices for AI agents. Stateless, never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/taiwan-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/taiwan-payments-mcp /tmp/mcp-study-ORPWyl/046\nCloning into '/tmp/mcp-study-ORPWyl/046'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "TikTok Trends MCP",
+      "registryName": "ai.trendsmcp/tiktok",
+      "description": "TikTok hashtag volume over time, with growth for any hashtag. Free key at trendsmcp.ai",
+      "repoUrl": "https://github.com/trendsmcp-ai/tiktok-trends-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-conditional",
+      "confidence": "medium",
+      "reasons": [
+        "Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 11,
+      "scanError": null
+    },
+    {
+      "name": "Spala Public MCP",
+      "registryName": "ai.spala/public-mcp",
+      "description": "Discovery, OAuth, project operations, and exact project MCP handoff for Spala backend projects.",
+      "repoUrl": "https://github.com/spala-ai/spala-public-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 33,
+      "scanError": null
+    },
+    {
+      "name": "TraderSpy",
+      "registryName": "app.traderspy/traderspy",
+      "description": "AI crypto signals, smart money whale positions, live futures prices and indicators",
+      "repoUrl": "https://github.com/target1m/traderspy-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 24,
+      "scanError": null
+    },
+    {
+      "name": "Uruguay Payments (Mercado Pago — Mercado Pago wallet)",
+      "registryName": "app.wishpool/uruguay-payments-mcp",
+      "description": "Uruguay payments for AI agents — Mercado Pago wallet via Mercado Pago. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/uruguay-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/uruguay-payments-mcp /tmp/mcp-study-ORPWyl/050\nCloning into '/tmp/mcp-study-ORPWyl/050'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "app.vercel.proof-stack-lake/proofstack",
+      "registryName": "app.vercel.proof-stack-lake/proofstack",
+      "description": "Audited indie product business cases with source-backed pricing, revenue and pricing benchmarks.",
+      "repoUrl": "https://github.com/lttxzmj/proofstack-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 3,
+      "scanError": null
+    },
+    {
+      "name": "cloud.fetcher/fetcher",
+      "registryName": "cloud.fetcher/fetcher",
+      "description": "The web capability layer for AI agents: render, extract, DNS, SSL, WHOIS & more via x402.",
+      "repoUrl": "https://github.com/fetchercloud/fetcher-cloud",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "browser automation",
+        "native media/image"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 53,
+      "scanError": null
+    },
+    {
+      "name": "Squad",
+      "registryName": "ai.meetsquad/squad",
+      "description": "Decision intelligence for product teams. Turn scattered feedback into signal you can act on.",
+      "repoUrl": "https://github.com/the-basilisk-ai/squad-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 76,
+      "scanError": null
+    },
+    {
+      "name": "Boolsai Directory",
+      "registryName": "ai.boolsai/directory",
+      "description": "Indexed ecommerce site directory — vendor lookups, brands by city/market/founder. 10 tools.",
+      "repoUrl": "https://github.com/Boolsai-ai/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 6,
+      "scanError": null
+    },
+    {
+      "name": "Nigeria Payments (Paystack — bank transfer / USSD)",
+      "registryName": "app.wishpool/nigeria-payments-mcp",
+      "description": "Nigeria payments for AI agents — bank transfer / USSD via Paystack. Never holds funds.",
+      "repoUrl": "https://github.com/junter1989k-ai/nigeria-payments-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/nigeria-payments-mcp /tmp/mcp-study-ORPWyl/055\nCloning into '/tmp/mcp-study-ORPWyl/055'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.deskcrew/agentic",
+      "registryName": "ai.deskcrew/agentic",
+      "description": "Buy a managed AI phone agent for a business, paid keylessly via x402/RLUSD on the XRP Ledger.",
+      "repoUrl": "https://github.com/papperkash/ttf-website-v3",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/papperkash/ttf-website-v3 /tmp/mcp-study-ORPWyl/056\nCloning into '/tmp/mcp-study-ORPWyl/056'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Grimoire",
+      "registryName": "bot.ttrpg/grimoire",
+      "description": "Campaign manager for D&D and TTRPG GMs: your AI reads and writes a live typed campaign database.",
+      "repoUrl": "https://github.com/zafety-vibin/grimoire-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "native Go runtime"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 10,
+      "scanError": null
+    },
+    {
+      "name": "Duami",
+      "registryName": "ai.duami/intent-exchange",
+      "description": "Swiss intent exchange for AI agents: wants/offers, match, bid, confirm. Free. No escrow.",
+      "repoUrl": "https://github.com/mjbf5g7y8m-byte/matrix",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/mjbf5g7y8m-byte/matrix /tmp/mcp-study-ORPWyl/058\nCloning into '/tmp/mcp-study-ORPWyl/058'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.dataecho/mcp",
+      "registryName": "ai.dataecho/mcp",
+      "description": "Deploy files, sites, and Dockerfile apps to live URLs + private drives for agent memory.",
+      "repoUrl": "https://github.com/mohocp/dataecho",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 11,
+      "scanError": null
+    },
+    {
+      "name": "GetFacade",
+      "registryName": "ai.getfacade/mcp",
+      "description": "Designs a real house exterior on its own photo, prices it line by line and documents it.",
+      "repoUrl": "https://github.com/getfacade/mcp",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics",
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 11,
+      "scanError": null
+    },
+    {
+      "name": "ai.foura/mcp",
+      "registryName": "ai.foura/mcp",
+      "description": "Reliable web access for AI agents: smart HTTP, rotating proxies, and full-browser rendering.",
+      "repoUrl": "https://github.com/fouradata/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 102,
+      "scanError": null
+    },
+    {
+      "name": "ai.syntitan/syntitan-mcp",
+      "registryName": "ai.syntitan/syntitan-mcp",
+      "description": "AI-Ready Data Platform that fills the missing layer between data management and AI execution.",
+      "repoUrl": "https://github.com/cubigcorp/syntitan-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 5,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/samihalawa-whatsapp-go-mcp",
+      "registryName": "ai.smithery/samihalawa-whatsapp-go-mcp",
+      "description": "Scan QR codes and go! No more troublesome autos or APIs! Send text messages, images, links, locati…",
+      "repoUrl": "https://github.com/samihalawa/whatsapp-go-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "native Go runtime"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 150,
+      "scanError": null
+    },
+    {
+      "name": "Maguyva",
+      "registryName": "ai.maguyva/maguyva",
+      "description": "Code intelligence for coding agents: semantic, AST, graph, and full-text search. 279+ languages.",
+      "repoUrl": "https://github.com/Maguyva/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker",
+        "stdio transport looks mechanically replaceable at build time"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 13,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/bergeramit-bergeramit-hw3-tech",
+      "registryName": "ai.smithery/bergeramit-bergeramit-hw3-tech",
+      "description": "Create friendly greetings and add two numbers instantly. Speed up simple tasks and streamline ligh…",
+      "repoUrl": "https://github.com/bergeramit/bergeramit-hw3-tech",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-conditional",
+      "confidence": "medium",
+      "reasons": [
+        "Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 5,
+      "scanError": null
+    },
+    {
+      "name": "Tokonomix Council",
+      "registryName": "ai.tokonomix/council",
+      "description": "Multi-model consensus: 2-6 frontier LLMs answer, an independent judge synthesises one answer.",
+      "repoUrl": "https://github.com/TokonoMix/tokonomix-council-mcp",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 61,
+      "scanError": null
+    },
+    {
+      "name": "MarketTrace agent-feed",
+      "registryName": "ai.markettrace/agent-feed",
+      "description": "Crypto perps data for AI agents: funding rates, open interest, liquidations, order book, CVD.",
+      "repoUrl": "https://github.com/MarketTrace/markettrace-agent-feed",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-conditional",
+      "confidence": "medium",
+      "reasons": [
+        "Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 9,
+      "scanError": null
+    },
+    {
+      "name": "ai.callmcp/server",
+      "registryName": "ai.callmcp/server",
+      "description": "One MCP tool contract for telephony — any call provider, hosted, local, or BYOK.",
+      "repoUrl": "https://github.com/CallMCP/callmcp",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics",
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 72,
+      "scanError": null
+    },
+    {
+      "name": "xmp4 — Semantic code knowledge for your stack",
+      "registryName": "ai.example4/xmp4",
+      "description": "OSS libs in your stack, really used: source, tests, callers. C#, Java, TS, Python, Rust, PHP+.",
+      "repoUrl": "https://github.com/0ics-srls/lsai-xmp4.public",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "subprocess/shell"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 24,
+      "scanError": null
+    },
+    {
+      "name": "app.businys/mcp-server",
+      "registryName": "app.businys/mcp-server",
+      "description": "221 MCP tools across 26 practices for independent professionals. Clients, invoices, contracts.",
+      "repoUrl": "https://github.com/hiatys/businys-mcp",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker",
+        "network/API-oriented code detected"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 9,
+      "scanError": null
+    },
+    {
+      "name": "YTDL RMCP",
+      "registryName": "ai.dinglebear/rytdl",
+      "description": "yt-dlp search, download, metadata, delivery, and Plex workflows over MCP and CLI.",
+      "repoUrl": "https://github.com/dinglebear-ai/rytdl",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documentation indicates value tied to the user/local machine"
+      ],
+      "warnings": [],
+      "remoteHostable": false,
+      "filesScanned": 103,
+      "scanError": null
+    },
+    {
+      "name": "PDS Project AI MPP Connector",
+      "registryName": "ai.projectdata/mpp-connector",
+      "description": "Read, analyze, and safely edit Microsoft Project MPP files.",
+      "repoUrl": "https://github.com/projectdata-io/mpp-poweautomate-connector",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/projectdata-io/mpp-poweautomate-connector /tmp/mcp-study-ORPWyl/072\nCloning into '/tmp/mcp-study-ORPWyl/072'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Ambix",
+      "registryName": "ai.ambix/ambix",
+      "description": "Your product team's shared strategic memory — an MCP server your AI tools reason over.",
+      "repoUrl": "https://github.com/ambix-ai/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/ambix-ai/mcp /tmp/mcp-study-ORPWyl/073\nCloning into '/tmp/mcp-study-ORPWyl/073'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Synapse RMCP",
+      "registryName": "ai.dinglebear/synapse",
+      "description": "Host, Docker, Compose, SSH, logs, ZFS, and file operations over MCP and CLI.",
+      "repoUrl": "https://github.com/dinglebear-ai/synapse",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documentation indicates value tied to the user/local machine"
+      ],
+      "warnings": [],
+      "remoteHostable": false,
+      "filesScanned": 264,
+      "scanError": null
+    },
+    {
+      "name": "ch.immoswipe/immoswipe-ai",
+      "registryName": "ch.immoswipe/immoswipe-ai",
+      "description": "Search Swiss rentals & homes, housing guides/FAQs, tenant Chancen-Check and Mieter-Pool signup.",
+      "repoUrl": "https://github.com/Immoswipe/immoswipe-ai",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Immoswipe/immoswipe-ai /tmp/mcp-study-ORPWyl/075\nCloning into '/tmp/mcp-study-ORPWyl/075'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "at.memebo/memeboat-mcp",
+      "registryName": "at.memebo/memeboat-mcp",
+      "description": "Search 25,000+ meme templates and create shareable memes on memebo.at. Free, anonymous, no API key.",
+      "repoUrl": "https://github.com/memebo-at/memeboat-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 9,
+      "scanError": null
+    },
+    {
+      "name": "capital.hove/read-only-local-postgres-mcp-server",
+      "registryName": "capital.hove/read-only-local-postgres-mcp-server",
+      "description": "MCP server for read-only PostgreSQL database queries in Claude Desktop",
+      "repoUrl": "https://github.com/hovecapital/read-only-local-postgres-mcp-server",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documentation indicates value tied to the user/local machine"
+      ],
+      "warnings": [],
+      "remoteHostable": false,
+      "filesScanned": 14,
+      "scanError": null
+    },
+    {
+      "name": "Reddit Trends MCP",
+      "registryName": "ai.trendsmcp/reddit",
+      "description": "Reddit trend data over time, with growth for any topic or brand. Free key at trendsmcp.ai",
+      "repoUrl": "https://github.com/trendsmcp-ai/reddit-trends-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-conditional",
+      "confidence": "medium",
+      "reasons": [
+        "Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 11,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/arjunkmrm-local001",
+      "registryName": "ai.smithery/arjunkmrm-local001",
+      "description": "Get the current time in your preferred timezone or any region you specify. Browse concise informat…",
+      "repoUrl": "https://github.com/arjunkmrm/time",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/arjunkmrm/time /tmp/mcp-study-ORPWyl/079\nCloning into '/tmp/mcp-study-ORPWyl/079'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Hungary Invoices (NAV Online Szamla 3.0 reporting API)",
+      "registryName": "app.wishpool/hungary-invoice-mcp",
+      "description": "Hungary NAV Online Szamla 3.0 invoice reporting for AI agents: report invoice data, query status.",
+      "repoUrl": "https://github.com/junter1989k-ai/hungary-invoice-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/hungary-invoice-mcp /tmp/mcp-study-ORPWyl/080\nCloning into '/tmp/mcp-study-ORPWyl/080'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.syntheticbrew/syntheticbrew",
+      "registryName": "ai.syntheticbrew/syntheticbrew",
+      "description": "Embed an AI chat widget on your website from your coding agent: provision, configure, get snippet.",
+      "repoUrl": "https://github.com/syntheticinc/syntheticbrew",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/syntheticinc/syntheticbrew /tmp/mcp-study-ORPWyl/081\nCloning into '/tmp/mcp-study-ORPWyl/081'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "AutoRFP.ai",
+      "registryName": "ai.autorfp/mcp",
+      "description": "Search AutoRFP.ai projects, requirements, content library, and tags for Q&A and analytics.",
+      "repoUrl": "https://github.com/AutoRFP/mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-conditional",
+      "confidence": "medium",
+      "reasons": [
+        "Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 7,
+      "scanError": null
+    },
+    {
+      "name": "SnowSure — Snow & Ski",
+      "registryName": "ai.snowsure/snow",
+      "description": "Live ski snow, multi-model forecasts, powder rankings & a grounded Answer Engine for 500+ resorts.",
+      "repoUrl": "https://github.com/mikeslone/snowsure-web",
+      "subfolder": "mcp-server",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/mikeslone/snowsure-web /tmp/mcp-study-ORPWyl/083\nCloning into '/tmp/mcp-study-ORPWyl/083'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Ishan Goyal public context",
+      "registryName": "ai.igoyal/public-context",
+      "description": "Read-only canonical igoyal.ai Markdown resources, including MPP-paid city guides.",
+      "repoUrl": "https://github.com/IshanGoyal/personal-website",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/IshanGoyal/personal-website /tmp/mcp-study-ORPWyl/084\nCloning into '/tmp/mcp-study-ORPWyl/084'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Gotify RMCP",
+      "registryName": "ai.dinglebear/gotify-rmcp",
+      "description": "Rust MCP server and CLI for Gotify push notifications and message management.",
+      "repoUrl": "https://github.com/jmagar/gotify-rmcp",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "native Rust runtime"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 76,
+      "scanError": null
+    },
+    {
+      "name": "ai.backengine/backengine-mcp",
+      "registryName": "ai.backengine/backengine-mcp",
+      "description": "Surface customer & prospect context from Slack, email, transcripts and tickets in any MCP client.",
+      "repoUrl": "https://github.com/BackEngine-ai/backengine-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 2,
+      "scanError": null
+    },
+    {
+      "name": "Forge Engine",
+      "registryName": "app.forgeengine/forge",
+      "description": "Design spec + milestones AI coding agents read before building; drift flagged, changes reviewed.",
+      "repoUrl": "https://github.com/alongkornonline2019/forge-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 14,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/dsharipova-mcp-hw",
+      "registryName": "ai.smithery/dsharipova-mcp-hw",
+      "description": "Create personalized greetings by name in the tone you choose. Get quick suggestions for friendly i…",
+      "repoUrl": "https://github.com/dsharipova/mcp-hw",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 9,
+      "scanError": null
+    },
+    {
+      "name": "ai.wild-card/deepcontext",
+      "registryName": "ai.wild-card/deepcontext",
+      "description": "Advanced codebase indexing and semantic search MCP server",
+      "repoUrl": "https://github.com/Wildcard-Official/deepcontext",
+      "subfolder": "",
+      "declaredRemote": false,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": null,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Wildcard-Official/deepcontext /tmp/mcp-study-ORPWyl/089\nCloning into '/tmp/mcp-study-ORPWyl/089'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "MCP Junction",
+      "registryName": "ai.mcpjunction/directory",
+      "description": "Search a nightly-refreshed directory of MCP servers by keyword, category or topic.",
+      "repoUrl": "https://github.com/rickstek/mcpjunction",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "browser automation"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 27,
+      "scanError": null
+    },
+    {
+      "name": "Scry",
+      "registryName": "ai.tunnelmind/scry",
+      "description": "Free IPv4 lookups against a distributed attacker-observation corpus.",
+      "repoUrl": "https://github.com/TunnelMind/scry-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-likely",
+      "confidence": "high",
+      "reasons": [
+        "Node/TypeScript with no detected subprocess, browser, native-addon, or local-daemon blocker",
+        "network/API-oriented code detected"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 7,
+      "scanError": null
+    },
+    {
+      "name": "GEOMETRY",
+      "registryName": "app.geometry/mcp",
+      "description": "Deterministic calendars and cosmic date JSON for AI agents via MCP (Gregorian 1900-2100).",
+      "repoUrl": "https://github.com/goqolabs/geometry-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 5,
+      "scanError": null
+    },
+    {
+      "name": "MainBook Bank Statement Converter",
+      "registryName": "ai.mainbook/bank-statement-converter",
+      "description": "Convert PDF bank statements to checked Excel, CSV or JSON with balance validation.",
+      "repoUrl": "https://github.com/human-beyond/mainbook-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [
+        "stdio"
+      ],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "subprocess/shell"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 43,
+      "scanError": null
+    },
+    {
+      "name": "EasyKanban",
+      "registryName": "app.easykanb/easykanban",
+      "description": "Read and manage your EasyKanban kanban boards: to-do summaries, create, update, and move cards.",
+      "repoUrl": "https://github.com/egoetmann/easykanban-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 1,
+      "scanError": null
+    },
+    {
+      "name": "ai.smithery/truss44-mcp-crypto-price",
+      "registryName": "ai.smithery/truss44-mcp-crypto-price",
+      "description": "Provide real-time cryptocurrency price data and market analysis.",
+      "repoUrl": "https://github.com/truss44/mcp-crypto-price",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "Node/TypeScript has no hard native/process blocker but state/listener semantics need checking"
+      ],
+      "warnings": [
+        "filesystem/state semantics",
+        "listener/server semantics"
+      ],
+      "remoteHostable": true,
+      "filesScanned": 55,
+      "scanError": null
+    },
+    {
+      "name": "ai.websitepublisher/mcp",
+      "registryName": "ai.websitepublisher/mcp",
+      "description": "Build and publish websites through AI conversation.",
+      "repoUrl": "https://github.com/megberts/mcp-websitepublisher-ai",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "runtime not covered by automatic edge compiler"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 3,
+      "scanError": null
+    },
+    {
+      "name": "Netherlands Invoices (Peppol BIS 3.0 via Storecove)",
+      "registryName": "app.wishpool/netherlands-invoice-mcp",
+      "description": "Netherlands Peppol BIS 3.0 e-invoices for AI agents: send, check recipient, get delivery proof.",
+      "repoUrl": "https://github.com/junter1989k-ai/netherlands-invoice-mcp",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "clone/scan failed"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 0,
+      "scanError": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/junter1989k-ai/netherlands-invoice-mcp /tmp/mcp-study-ORPWyl/097\nCloning into '/tmp/mcp-study-ORPWyl/097'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.smithery/jirispilka-actors-mcp-server",
+      "registryName": "ai.smithery/jirispilka-actors-mcp-server",
+      "description": "Greet anyone by name with friendly, personalized messages. Explore the origin of Hello, World thro…",
+      "repoUrl": "https://github.com/jirispilka/actors-mcp-server",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process",
+        "browser automation",
+        "native media/image"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 86,
+      "scanError": null
+    },
+    {
+      "name": "CountLink",
+      "registryName": "app.countlink/countdown",
+      "description": "Shared countdown timers that stay in sync on every screen — no account, any number of viewers.",
+      "repoUrl": "https://github.com/mrbrunocode/countlink",
+      "subfolder": "",
+      "declaredRemote": true,
+      "packageTransports": [],
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process",
+        "browser automation",
+        "native media/image"
+      ],
+      "warnings": [],
+      "remoteHostable": true,
+      "filesScanned": 142,
+      "scanError": null
+    }
+  ]
+}
