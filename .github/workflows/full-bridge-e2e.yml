@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/**'
       - 'fixtures/bridge-e2e-mcp/**'
+      - 'fixtures/bridge-ffmpeg-e2e-mcp/**'
       - 'scripts/test-full-bridge-e2e.mjs'
       - 'Dockerfile'
       - 'schema.sql'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'src/**'
       - 'fixtures/bridge-e2e-mcp/**'
+      - 'fixtures/bridge-ffmpeg-e2e-mcp/**'
       - 'scripts/test-full-bridge-e2e.mjs'
       - 'Dockerfile'
       - 'schema.sql'
@@ -28,7 +30,7 @@ permissions:
 jobs:
   full-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +74,7 @@ jobs:
           cat /tmp/factory-wrangler.log
           exit 1
 
-      - name: Execute GitHub -> compiler -> Edge -> Binary Bridge -> real ffprobe -> MCP tool E2E
+      - name: Execute GitHub -> compiler -> Edge -> Binary Bridge -> real ffprobe/ffmpeg -> MCP E2E
         env:
           FACTORY_URL: http://127.0.0.1:8787
           E2E_BRANCH: ${{ github.head_ref || github.ref_name }}
