@@ -2,6 +2,7 @@ import { clerkIdentity } from './auth.js';
 import { binaryBridgeStatus, probeMedia, transcodeMedia } from './binary-bridge.js';
 import { verifyBridgeToken, type BridgeOperation } from './bridge-auth.js';
 import { compiledBridgeAllows } from './bridge-policy.js';
+import { githubRoutes } from './github-routes.js';
 import core from './index.js';
 import { deleteDeploymentSecret, listDeploymentSecretNames, putDeploymentSecrets } from './secrets.js';
 import { stopRuntime } from './runtime.js';
@@ -248,6 +249,8 @@ export default {
       return withCors(new Response(null, { status: 204 }), origin);
     }
 
+    const githubResponse = await githubRoutes(request, env, ctx);
+    if (githubResponse) return withCors(githubResponse, origin);
     const bridgeResponse = await bridgeRoutes(request, env);
     if (bridgeResponse) return withCors(bridgeResponse, origin);
     const diagnosticResponse = await diagnosticRoutes(request, env);
