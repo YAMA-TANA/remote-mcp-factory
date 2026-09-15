@@ -1,6 +1,7 @@
 import { clerkIdentity } from '../auth.js';
 import type { Env } from '../types.js';
 import { PICOSVC_PRODUCT_MAP, PICOSVC_PRODUCTS, type PicoSvcProductSlug } from './catalog.js';
+import { mockManagementRoutes } from './mock.js';
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -12,6 +13,9 @@ function monthKey(now = new Date()): string {
 
 export async function picoSvcRoutes(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
+
+  const mockResponse = await mockManagementRoutes(request, env);
+  if (mockResponse) return mockResponse;
 
   if (request.method === 'GET' && url.pathname === '/api/picosvc/catalog') {
     return json({ brand: 'PicoSvc', products: PICOSVC_PRODUCTS });
