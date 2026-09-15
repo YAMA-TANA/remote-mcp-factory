@@ -19,12 +19,18 @@ const POOL_SIZE = Math.max(SAMPLE_SIZE, Math.min(3000, Number(arg('pool', '1000'
 const CONCURRENCY = Math.max(1, Math.min(8, Number(arg('concurrency', '4')) || 4));
 const OUTPUT_DIR = arg('output', 'reports');
 const REGISTRY = 'https://registry.modelcontextprotocol.io/v0.1/servers';
-const SAMPLE_SEED = 'remote-mcp-factory-study-v2';
-const MAX_BYTES = 2_000_000;
+const SAMPLE_SEED = 'remote-mcp-factory-study-v3';
+const MAX_BYTES = 2_500_000;
 
-const CODE_EXT = new Set(['.ts','.tsx','.js','.jsx','.mjs','.cjs','.mts','.cts','.py','.rs','.go','.java','.kt','.cs','.rb','.php','.swift','.sh']);
-const DATA_EXT = new Set(['.json','.toml','.yaml','.yml','.txt','.md','.lock']);
+const CODE_EXT = new Set([
+  '.ts','.tsx','.js','.jsx','.mjs','.cjs','.mts','.cts','.py','.rs','.go','.java','.kt','.kts','.cs','.rb','.php','.swift','.sh',
+]);
+const DATA_EXT = new Set(['.json','.toml','.yaml','.yml','.txt','.md','.lock','.xml']);
 const SKIP = new Set(['.git','node_modules','.venv','venv','dist','build','coverage','.next','.cache','vendor','target']);
+const IMPORTANT = new Set([
+  'package.json','pyproject.toml','requirements.txt','Dockerfile','Cargo.toml','go.mod','README.md','Gemfile','composer.json','pom.xml',
+  'build.gradle','build.gradle.kts','Package.swift',
+]);
 
 const HARD_NODE = [
   ['child_process', /(?:node:)?child_process|\bspawnSync?\s*\(|\bexecFileSync?\s*\(|\bexecSync?\s*\(/i],
@@ -46,12 +52,16 @@ const SOFT = [
   ['local sqlite/state', /\bsqlite\b|\.sqlite\b|\.db\b/i],
   ['listener/server semantics', /\.listen\s*\(|createServer\s*\(/i],
 ];
+
+// These are intentionally strict. A binary merely being installed locally is not
+// "local-bound": a cloud Sandbox can install binaries. Local-bound means the MCP's
+// value depends on resources that live on the end user's own machine/session.
 const LOCAL_BOUND = [
-  /local file ?system|your file ?system|your local files|files on your (?:computer|machine)/i,
-  /local git (?:repo|repository)|working tree on your|current working directory/i,
-  /desktop app(?:lication)?|control (?:your )?(?:desktop|mouse|keyboard)|clipboard/i,
-  /requires .* installed on (?:your|the) (?:machine|computer)|connects to .* on localhost/i,
-  /local hardware|serial port|usb device|bluetooth device/i,
+  /(?:access|read|write|manage|search)(?:es|s|ing)?[^\n]{0,80}(?:your|the user's) (?:local )?(?:files|folders|directories|filesystem)/i,
+  /(?:your|the user's) (?:local )?(?:git )?(?:working tree|working copy|repository on disk)/i,
+  /current (?:git )?(?:working tree|working directory|workspace) on (?:your|the user's) machine/i,
+  /control[^\n]{0,80}(?:your|the user's) (?:desktop|mouse|keyboard|clipboard|ide|vscode)/i,
+  /(?:serial port|usb device|bluetooth device|local hardware) attached to (?:your|the user's) (?:computer|machine)/i,
 ];
 
 function repoUrl(value) {
@@ -66,7 +76,7 @@ function repoUrl(value) {
 }
 
 async function fetchJson(url) {
-  const r = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'remote-mcp-factory-study/0.2' } });
+  const r = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'remote-mcp-factory-study/0.3' } });
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
   return r.json();
 }
@@ -74,11 +84,11 @@ async function fetchJson(url) {
 function unwrap(entry) { return entry?.server ?? entry; }
 function stableRank(value) { return createHash('sha256').update(`${SAMPLE_SEED}|${value}`).digest('hex'); }
 
-async function registryPool(limit) {
+async function registrySample(poolSize, sampleSize) {
   const byRepo = new Map();
   let cursor = null;
   let pages = 0;
-  while (byRepo.size < limit && pages < 60) {
+  while (byRepo.size < poolSize && pages < 60) {
     const u = new URL(REGISTRY);
     u.searchParams.set('limit', '100');
     u.searchParams.set('version', 'latest');
@@ -104,14 +114,19 @@ async function registryPool(limit) {
     if (!cursor) break;
   }
   const all = [...byRepo.values()].sort((a,b) => stableRank(a.repoUrl).localeCompare(stableRank(b.repoUrl)));
-  if (all.length < SAMPLE_SIZE) throw new Error(`Official Registry yielded only ${all.length} unique GitHub repos`);
-  return all.slice(0, SAMPLE_SIZE);
+  if (all.length < sampleSize) throw new Error(`Official Registry yielded only ${all.length} unique GitHub repos`);
+  return all.slice(0, sampleSize);
 }
 
 async function walk(dir, root, files, budget) {
   if (budget.bytes >= MAX_BYTES) return;
   let entries;
   try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+  entries.sort((a,b) => {
+    const ap = IMPORTANT.has(a.name) || CODE_EXT.has(extname(a.name).toLowerCase()) ? 0 : 1;
+    const bp = IMPORTANT.has(b.name) || CODE_EXT.has(extname(b.name).toLowerCase()) ? 0 : 1;
+    return ap - bp || a.name.localeCompare(b.name);
+  });
   for (const e of entries) {
     if (budget.bytes >= MAX_BYTES) return;
     const full = join(dir, e.name);
@@ -121,11 +136,11 @@ async function walk(dir, root, files, budget) {
     }
     if (!e.isFile()) continue;
     const ext = extname(e.name).toLowerCase();
-    const important = ['package.json','pyproject.toml','requirements.txt','Dockerfile','Cargo.toml','go.mod','README.md'].includes(e.name);
+    const important = IMPORTANT.has(e.name) || e.name.endsWith('.csproj');
     if (!important && !CODE_EXT.has(ext) && !DATA_EXT.has(ext)) continue;
     let info;
     try { info = await stat(full); } catch { continue; }
-    if (info.size > 300_000) continue;
+    if (info.size > 350_000) continue;
     let text;
     try { text = await readFile(full, 'utf8'); } catch { continue; }
     text = text.slice(0, MAX_BYTES - budget.bytes);
@@ -143,7 +158,7 @@ function analyze(files, meta) {
   const reasons = [], warnings = [];
   const paths = files.map(f => f.path);
   const code = files.filter(f => f.isCode).map(f => `\n/*${f.path}*/\n${f.text}`).join('\n');
-  const docs = files.filter(f => /README|\.md$/i.test(f.path)).map(f => f.text).join('\n').slice(0, 500_000);
+  const docs = files.filter(f => /README|\.md$/i.test(f.path)).map(f => f.text).join('\n').slice(0, 600_000);
   const semantic = `${meta.description}\n${docs}`;
 
   const packageFile = files.find(f => /(^|\/)package\.json$/.test(f.path));
@@ -156,11 +171,21 @@ function analyze(files, meta) {
   const hasPy = paths.some(p => p.endsWith('.py')) || paths.some(p => /(?:^|\/)(pyproject\.toml|requirements\.txt)$/.test(p));
   const hasRust = paths.some(p => /(?:^|\/)Cargo\.toml$/.test(p)) || paths.some(p => p.endsWith('.rs'));
   const hasGo = paths.some(p => /(?:^|\/)go\.mod$/.test(p)) || paths.some(p => p.endsWith('.go'));
+  const hasJvm = paths.some(p => /\.(java|kt|kts)$/i.test(p)) || paths.some(p => /(?:^|\/)(pom\.xml|build\.gradle(?:\.kts)?)$/.test(p));
+  const hasDotnet = paths.some(p => /\.cs$/i.test(p) || /\.csproj$/i.test(p));
+  const hasRuby = paths.some(p => /\.rb$/i.test(p) || /(?:^|\/)Gemfile$/.test(p));
+  const hasPhp = paths.some(p => /\.php$/i.test(p) || /(?:^|\/)composer\.json$/.test(p));
+  const hasSwift = paths.some(p => /\.swift$/i.test(p) || /(?:^|\/)Package\.swift$/.test(p));
+  const hasShell = paths.some(p => /\.sh$/i.test(p));
 
   if (!meta.declaredRemote && LOCAL_BOUND.some(p => p.test(semantic))) {
-    return result('local-bound', 'medium', ['documentation indicates value tied to the user/local machine'], warnings, false);
+    return result('local-bound', 'high', ['documentation ties the MCP to resources on the end user\'s own machine/session'], warnings, false);
   }
-  if (hasRust || hasGo) return result('sandbox-required', 'high', [hasRust ? 'native Rust runtime' : 'native Go runtime'], warnings, true);
+
+  if (hasRust || hasGo || hasJvm || hasDotnet || hasRuby || hasPhp || hasSwift) {
+    const runtime = hasRust ? 'Rust' : hasGo ? 'Go' : hasJvm ? 'JVM' : hasDotnet ? '.NET' : hasRuby ? 'Ruby' : hasPhp ? 'PHP' : 'Swift';
+    return result('sandbox-required', 'high', [`${runtime} runtime is not a Cloudflare Worker JS/Pyodide target for this compiler`], warnings, true);
+  }
 
   if (hasNode) {
     for (const [label,p] of HARD_NODE) if (p.test(nodeText)) reasons.push(label);
@@ -183,19 +208,33 @@ function analyze(files, meta) {
     return result('edge-conditional', 'medium', ['Python has no obvious hard blocker; Pyodide dependency compatibility still requires build verification'], warnings, true);
   }
 
-  return result('uncertain', 'low', ['runtime not covered by automatic edge compiler'], warnings, meta.declaredRemote ? true : null);
+  if (hasShell) return result('sandbox-required', 'high', ['shell-script runtime requires a Linux process environment'], warnings, true);
+  return result('uncertain', 'low', ['no deployable server runtime recognized in scanned repository'], warnings, meta.declaredRemote ? true : null);
 }
 
 async function scanOne(meta, base, i) {
   const dir = join(base, String(i).padStart(3,'0'));
   try {
-    await execFileAsync('git', ['clone','--depth','1','--single-branch','--no-tags',meta.repoUrl,dir], { timeout: 60_000, maxBuffer: 1_000_000, env: {...process.env, GIT_TERMINAL_PROMPT:'0'} });
+    await execFileAsync('git', ['clone','--depth','1','--single-branch','--no-tags',meta.repoUrl,dir], {
+      timeout: 60_000,
+      maxBuffer: 1_000_000,
+      env: {...process.env, GIT_TERMINAL_PROMPT:'0'},
+    });
     const root = meta.subfolder ? join(dir, meta.subfolder) : dir;
     const files = [];
     await walk(root, root, files, {bytes:0});
     return {...meta, ...analyze(files, meta), filesScanned: files.length, scanError: null};
   } catch (e) {
-    return {...meta, classification:'uncertain', confidence:'low', reasons:['clone/scan failed'], warnings:[], remoteHostable:meta.declaredRemote ? true : null, filesScanned:0, scanError:String(e).slice(0,500)};
+    return {
+      ...meta,
+      classification:'inaccessible',
+      confidence:'high',
+      reasons:['repository could not be cloned or declared subfolder could not be scanned'],
+      warnings:[],
+      remoteHostable:meta.declaredRemote ? true : null,
+      filesScanned:0,
+      scanError:String(e).slice(0,500),
+    };
   } finally { await rm(dir,{recursive:true,force:true}).catch(()=>{}); }
 }
 
@@ -217,35 +256,46 @@ function summarize(results) {
   const hostable = results.filter(r => ['edge-likely','edge-adaptable','edge-conditional','sandbox-required'].includes(r.classification));
   const count = k => hostable.filter(r => r.classification === k).length;
   const pct = (x,n) => n ? Number((100*x/n).toFixed(1)) : 0;
+  const functionNode = count('edge-likely') + count('edge-adaptable');
+  const functionPossible = functionNode + count('edge-conditional');
   return {
     sampleSize: results.length,
-    remotelyHostableDenominator: hostable.length,
+    analyzableRemoteHostable: hostable.length,
     excludedLocalBound: counts['local-bound'] ?? 0,
-    uncertain: counts['uncertain'] ?? 0,
+    inaccessibleRepos: counts['inaccessible'] ?? 0,
+    unresolvedSource: counts['uncertain'] ?? 0,
     counts,
     strictFunctionShareOfHostable: pct(count('edge-likely'), hostable.length),
-    nodeFunctionShareWithAdaptation: pct(count('edge-likely') + count('edge-adaptable'), hostable.length),
-    possibleFunctionShareIncludingPython: pct(count('edge-likely') + count('edge-adaptable') + count('edge-conditional'), hostable.length),
+    nodeFunctionShareWithAdaptation: pct(functionNode, hostable.length),
+    possibleFunctionShareIncludingPython: pct(functionPossible, hostable.length),
     sandboxShareOfHostable: pct(count('sandbox-required'), hostable.length),
+    conservativeNodeFunctionFloorOfNonLocalSample: pct(functionNode, results.length - (counts['local-bound'] ?? 0)),
   };
 }
 
 const esc = s => String(s).replace(/\|/g,'\\|').replace(/\n/g,' ');
 function markdown(summary, results) {
   const rows = results.map(r => `| ${esc(r.name)} | ${esc(r.repoUrl)} | ${r.declaredRemote?'yes':'no'} | ${r.classification} | ${r.confidence} | ${esc(r.reasons[0] ?? '')} |`).join('\n');
-  return `# MCP Function Compatibility Study\n\nGenerated: ${new Date().toISOString()}\n\nSource: **Official MCP Registry**, sampled deterministically from public GitHub-backed servers. Local-bound MCPs are excluded from the remotely-hostable denominator. This is a static first-pass study; production compatibility still requires an actual bundle/build plus MCP initialize/tools-list smoke test.\n\n## Result\n\n- Sample: **${summary.sampleSize} repos**\n- Remotely-hostable denominator: **${summary.remotelyHostableDenominator}**\n- Local-bound excluded: **${summary.excludedLocalBound}**\n- Uncertain: **${summary.uncertain}**\n- Strict edge-likely share of hostable: **${summary.strictFunctionShareOfHostable}%**\n- Node edge-likely + edge-adaptable: **${summary.nodeFunctionShareWithAdaptation}%**\n- Possible edge incl. Python conditional: **${summary.possibleFunctionShareIncludingPython}%**\n- Sandbox-required share of hostable: **${summary.sandboxShareOfHostable}%**\n\n## Buckets\n${Object.entries(summary.counts).map(([k,v]) => `- **${k}: ${v}**`).join('\n')}\n\n## Sample details\n\n| MCP | Repository | Remote already declared | Classification | Confidence | Primary reason |\n| --- | --- | ---: | --- | --- | --- |\n${rows}\n`;
+  return `# MCP Function Compatibility Study\n\nGenerated: ${new Date().toISOString()}\n\nSource: **Official MCP Registry**, deterministically sampled from public GitHub-backed servers. "Local-bound" is deliberately strict: only MCPs whose semantics depend on the end user's own machine/session are excluded. A binary or local dependency by itself is **not** local-bound; it is Sandbox work. This remains a static first pass: real Function compatibility requires bundle/build plus MCP initialize/tools-list smoke tests.\n\n## Result\n\n- Sample: **${summary.sampleSize} repos**\n- Analyzable remotely-hostable denominator: **${summary.analyzableRemoteHostable}**\n- Local-bound excluded: **${summary.excludedLocalBound}**\n- Inaccessible repos: **${summary.inaccessibleRepos}**\n- Source/runtime unresolved: **${summary.unresolvedSource}**\n- Strict edge-likely share of analyzable hostable: **${summary.strictFunctionShareOfHostable}%**\n- Node edge-likely + edge-adaptable: **${summary.nodeFunctionShareWithAdaptation}%**\n- Possible edge incl. Python conditional: **${summary.possibleFunctionShareIncludingPython}%**\n- Sandbox-required share of analyzable hostable: **${summary.sandboxShareOfHostable}%**\n- Conservative Node-Function floor across every non-local sampled repo (counting inaccessible/unresolved as non-Function): **${summary.conservativeNodeFunctionFloorOfNonLocalSample}%**\n\n## Buckets\n${Object.entries(summary.counts).map(([k,v]) => `- **${k}: ${v}**`).join('\n')}\n\n## Sample details\n\n| MCP | Repository | Remote already declared | Classification | Confidence | Primary reason |\n| --- | --- | ---: | --- | --- | --- |\n${rows}\n`;
 }
 
 async function main() {
   console.log(`Sampling ${SAMPLE_SIZE} GitHub-backed MCP repos from Official Registry…`);
-  const sample = await registryPool(POOL_SIZE);
-  console.log(`Selected ${sample.length} repos with fixed-seed sampling.`);
+  const sample = await registrySample(POOL_SIZE, SAMPLE_SIZE);
+  console.log(`Selected ${sample.length} repos with fixed-seed sampling from a pool of up to ${POOL_SIZE}.`);
   const temp = await mkdtemp(join(tmpdir(),'mcp-study-'));
   try {
     const results = await mapConcurrent(sample, CONCURRENCY, (m,i) => scanOne(m,temp,i));
     const summary = summarize(results);
     await mkdir(OUTPUT_DIR,{recursive:true});
-    await writeFile(join(OUTPUT_DIR,'compatibility-study.json'), JSON.stringify({generatedAt:new Date().toISOString(), methodologyVersion:2, source:'Official MCP Registry v0.1', summary, results},null,2)+'\n');
+    await writeFile(join(OUTPUT_DIR,'compatibility-study.json'), JSON.stringify({
+      generatedAt:new Date().toISOString(),
+      methodologyVersion:3,
+      source:'Official MCP Registry v0.1',
+      sampleSeed:SAMPLE_SEED,
+      summary,
+      results,
+    },null,2)+'\n');
     await writeFile(join(OUTPUT_DIR,'compatibility-study.md'), markdown(summary,results));
     console.log(JSON.stringify(summary,null,2));
   } finally { await rm(temp,{recursive:true,force:true}).catch(()=>{}); }
