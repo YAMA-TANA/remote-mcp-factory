@@ -1,6 +1,6 @@
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
-function sanitizedEdgeRequest(request: Request): Request {
+function sanitizedEdgeRequest(request: Request<any, any>): Request {
   const url = new URL(request.url);
   url.pathname = '/mcp';
   url.search = '';
@@ -22,7 +22,7 @@ export async function edgeBuildFor(env: Env, serverId: string): Promise<EdgeBuil
   return await env.DB.prepare('SELECT * FROM edge_builds WHERE server_id=?').bind(serverId).first<EdgeBuildRow>();
 }
 
-export async function serveEdgeRequest(env: Env, row: ServerRow, request: Request): Promise<Response | null> {
+export async function serveEdgeRequest(env: Env, row: ServerRow, request: Request<any, any>): Promise<Response | null> {
   const edge = await edgeBuildFor(env, row.id);
   if (!edge || edge.status !== 'ready' || !edge.bundle || !edge.bundle_hash) return null;
   if (!env.LOADER) throw new Error('Dynamic Worker loader binding is not configured');
