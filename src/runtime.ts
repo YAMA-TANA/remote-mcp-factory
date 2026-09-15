@@ -77,19 +77,23 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     .bind('building', new Date().toISOString(), row.id).run();
 
   try {
-    // Keep deploys safe during rolling upgrades: the compiler can bring an older D1 schema
-    // forward before it writes the richer R2/compatibility metadata.
     await ensureEdgeBuildSchema(env);
     await cloneRepository(sandbox, row);
     const detection = await detectMcp(sandbox, row.subdir);
     const command = row.command?.trim() || detection.command;
 
-    // Compile first. A successful Edge deployment avoids keeping or rebuilding a runtime container.
     const edge = await tryCompileToEdge(env, sandbox, row, detection);
-    if (edge.ok) {
+    if (edge.ok && edge.compatibility.runtime === 'edge') {
       await env.DB.prepare(`UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=NULL, updated_at=? WHERE id=?`)
-        .bind('ready', edge.compatibility.runtime === 'edge-with-bridge-candidate' ? 'edge-node-bridge-candidate' : 'edge-node', command, new Date().toISOString(), row.id).run();
+        .bind('ready', 'edge-node', command, new Date().toISOString(), row.id).run();
       return;
+    }
+
+    if (edge.ok && edge.compatibility.runtime !== 'edge') {
+      // The compiler can prove the Web/MCP shape is valid, but until tool-level bridge
+      // rewrites exist we must not expose a Worker whose native tool calls would fail.
+      await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
+        .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is enabled.`, new Date().toISOString(), row.id).run();
     }
 
     await prepareSandboxFallback(env, row, sandbox, detection);
@@ -115,10 +119,6 @@ export async function stopRuntime(env: Env, row: Pick<ServerRow, 'id' | 'owner'>
   }
 }
 
-/**
- * Starts the expensive Linux fallback only when it is actually needed.
- * Edge-ready deployments normally never call this function.
- */
 export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
   const sandbox = serverSandbox(env, row);
 
