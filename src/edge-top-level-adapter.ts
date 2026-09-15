@@ -16,11 +16,11 @@ function ensureHandlerImport(source) {
       changed = true;
       const names = inside.split(',').map((v) => v.trim()).filter(Boolean);
       if (!names.includes('createMcpHandler')) names.push('createMcpHandler');
-      return `import { ${names.join(', ')} } from ${quote}@modelcontextprotocol/server${quote};`;
+      return 'import { ' + names.join(', ') + ' } from ' + quote + '@modelcontextprotocol/server' + quote + ';';
     },
   );
   if (!changed) {
-    source = `import { createMcpHandler } from '@modelcontextprotocol/server';\n` + source;
+    source = "import { createMcpHandler } from '@modelcontextprotocol/server';\n" + source;
   }
   return source;
 }
@@ -48,7 +48,7 @@ code = stripStdioImport(code);
 const serverDecl = /(?:^|\n)([ \t]*)(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+(?:McpServer|Server)\s*\(/g;
 const matches = [...code.matchAll(serverDecl)];
 if (matches.length !== 1) {
-  throw new Error(`Top-level adapter requires exactly one McpServer/Server declaration; found ${matches.length}`);
+  throw new Error('Top-level adapter requires exactly one McpServer/Server declaration; found ' + matches.length);
 }
 
 const match = matches[0];
@@ -57,13 +57,14 @@ const serverName = match[2];
 const declStart = match.index + match[0].indexOf(indent);
 
 // Accept either direct connect(new StdioServerTransport()) or the common
-// `const transport = new StdioServerTransport(); await server.connect(transport);` tail.
+// transport variable followed by server.connect(transport) tail.
+const escapedServer = serverName.replace(/[$]/g, '\\$&');
 const directConnect = new RegExp(
-  `(?:^|\\n)[ \\t]*(?:await\\s+)?${serverName.replace(/[$]/g, '\\$&')}\\.connect\\s*\\(\\s*new\\s+StdioServerTransport\\s*\\([^;]*?\\)\\s*\\)\\s*;?`,
+  '(?:^|\\n)[ \\t]*(?:await\\s+)?' + escapedServer + '\\.connect\\s*\\(\\s*new\\s+StdioServerTransport\\s*\\([^;]*?\\)\\s*\\)\\s*;?',
   'm',
 );
 const connectViaVar = new RegExp(
-  `(?:^|\\n)[ \\t]*(?:const|let)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*new\\s+StdioServerTransport\\s*\\([^;]*?\\)\\s*;[\\s\\n]*(?:await\\s+)?${serverName.replace(/[$]/g, '\\$&')}\\.connect\\s*\\(\\s*\\1\\s*\\)\\s*;?`,
+  '(?:^|\\n)[ \\t]*(?:const|let)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*new\\s+StdioServerTransport\\s*\\([^;]*?\\)\\s*;[\\s\\n]*(?:await\\s+)?' + escapedServer + '\\.connect\\s*\\(\\s*\\1\\s*\\)\\s*;?',
   'm',
 );
 
@@ -96,8 +97,8 @@ const wrapped = [
   prefix.trimEnd(),
   '',
   'export default createMcpHandler(() => {',
-  body.trim().split('\n').map((line) => `  ${line}`).join('\n'),
-  `  return ${serverName};`,
+  body.trim().split('\n').map((line) => '  ' + line).join('\n'),
+  '  return ' + serverName + ';',
   '});',
   '',
 ].join('\n');
