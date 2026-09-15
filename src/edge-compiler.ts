@@ -53,22 +53,21 @@ function edgeEntryName(source: string): string {
   return /\.(?:ts|mts|cts|tsx)$/i.test(source) ? '.factory-edge-entry.ts' : '.factory-edge-entry.mjs';
 }
 
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function digestHex(value: string | Uint8Array): Promise<string> {
   const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const digest = await crypto.subtle.digest('SHA-256', ownedArrayBuffer(bytes));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 function decodeBase64(value: string): Uint8Array {
   const binary = atob(value.trim());
   return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
-}
-
-async function readSandboxText(sandbox: Sandbox, path: string): Promise<string> {
-  const file = await sandbox.readFile(path, { encoding: 'utf-8' }) as any;
-  if (typeof file?.content === 'string') return file.content;
-  if (file?.content instanceof ReadableStream) return await new Response(file.content).text();
-  return String(file?.content ?? '');
 }
 
 async function readSandboxBytes(sandbox: Sandbox, path: string): Promise<Uint8Array> {
