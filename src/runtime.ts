@@ -83,6 +83,15 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     const command = row.command?.trim() || detection.command;
 
     const edge = await tryCompileToEdge(env, sandbox, row, detection);
+    if (edge.compatibility.runtime === 'local-bound') {
+      const reason = `${edge.compatibility.summary}. This MCP depends on the user's local machine and cannot preserve its semantics on a cloud host without a local relay.`;
+      await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
+        .bind('incompatible', reason, new Date().toISOString(), row.id).run();
+      await env.DB.prepare('UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=?, updated_at=? WHERE id=?')
+        .bind('local-bound', 'local-bound', command, reason.slice(0, 8000), new Date().toISOString(), row.id).run();
+      return;
+    }
+
     if (edge.ok && edge.compatibility.runtime === 'edge') {
       await env.DB.prepare(`UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=NULL, updated_at=? WHERE id=?`)
         .bind('ready', 'edge-node', command, new Date().toISOString(), row.id).run();
@@ -120,6 +129,9 @@ export async function stopRuntime(env: Env, row: Pick<ServerRow, 'id' | 'owner'>
 }
 
 export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
+  if (row.status === 'local-bound' || row.detected_runtime === 'local-bound') {
+    throw new Error('Local-bound MCPs require a local relay and cannot run in the cloud runtime');
+  }
   const sandbox = serverSandbox(env, row);
 
   if (!(await processRunning(sandbox))) {
