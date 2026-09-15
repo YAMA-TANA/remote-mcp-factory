@@ -19,9 +19,7 @@ function ensureHandlerImport(source) {
       return 'import { ' + names.join(', ') + ' } from ' + quote + '@modelcontextprotocol/server' + quote + ';';
     },
   );
-  if (!changed) {
-    source = "import { createMcpHandler } from '@modelcontextprotocol/server';\n" + source;
-  }
+  if (!changed) source = "import { createMcpHandler } from '@modelcontextprotocol/server';\n" + source;
   return source;
 }
 
@@ -42,22 +40,54 @@ function meaningfulTail(value) {
     .trim();
 }
 
+function hasTopLevelAwait(source) {
+  let depth = 0;
+  let quote = null;
+  let escape = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i];
+    const n = source[i + 1];
+    if (lineComment) {
+      if (c === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (c === '*' && n === '/') { blockComment = false; i++; }
+      continue;
+    }
+    if (quote) {
+      if (escape) { escape = false; continue; }
+      if (c === '\\') { escape = true; continue; }
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '/' && n === '/') { lineComment = true; i++; continue; }
+    if (c === '/' && n === '*') { blockComment = true; i++; continue; }
+    if (c === '"' || c === "'" || c === String.fromCharCode(96)) { quote = c; continue; }
+    if (c === '{') { depth++; continue; }
+    if (c === '}') { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && source.slice(i, i + 5) === 'await') {
+      const prev = source[i - 1] || '';
+      const next = source[i + 5] || '';
+      if (!/[A-Za-z0-9_$]/.test(prev) && !/[A-Za-z0-9_$]/.test(next)) return true;
+    }
+  }
+  return false;
+}
+
 code = ensureHandlerImport(code);
 code = stripStdioImport(code);
 
 const serverDecl = /(?:^|\n)([ \t]*)(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+(?:McpServer|Server)\s*\(/g;
 const matches = [...code.matchAll(serverDecl)];
-if (matches.length !== 1) {
-  throw new Error('Top-level adapter requires exactly one McpServer/Server declaration; found ' + matches.length);
-}
+if (matches.length !== 1) throw new Error('Top-level adapter requires exactly one McpServer/Server declaration; found ' + matches.length);
 
 const match = matches[0];
 const indent = match[1] || '';
 const serverName = match[2];
 const declStart = match.index + match[0].indexOf(indent);
-
-// Accept either direct connect(new StdioServerTransport()) or the common
-// transport variable followed by server.connect(transport) tail.
 const escapedServer = serverName.replace(/[$]/g, '\\$&');
 const directConnect = new RegExp(
   '(?:^|\\n)[ \\t]*(?:await\\s+)?' + escapedServer + '\\.connect\\s*\\(\\s*new\\s+StdioServerTransport\\s*\\([^;]*?\\)\\s*\\)\\s*;?',
@@ -70,9 +100,7 @@ const connectViaVar = new RegExp(
 
 let connect = directConnect.exec(code);
 if (!connect) connect = connectViaVar.exec(code);
-if (!connect || connect.index <= declStart) {
-  throw new Error('Top-level adapter could not find the terminal stdio connect call');
-}
+if (!connect || connect.index <= declStart) throw new Error('Top-level adapter could not find the terminal stdio connect call');
 
 const connectStart = connect.index + (connect[0].startsWith('\n') ? 1 : 0);
 const connectEnd = connect.index + connect[0].length;
@@ -80,18 +108,10 @@ const prefix = code.slice(0, declStart);
 const body = code.slice(declStart, connectStart);
 const suffix = code.slice(connectEnd);
 
-if (meaningfulTail(suffix)) {
-  throw new Error('Top-level adapter refuses meaningful runtime code after stdio connect');
-}
-if (/^\s*export\s/m.test(body)) {
-  throw new Error('Top-level adapter refuses exported declarations inside the server registration block');
-}
-if (/\bawait\b/.test(body)) {
-  throw new Error('Top-level adapter refuses top-level await inside the server registration block');
-}
-if (/\b(?:process\.exit|setInterval|setTimeout)\s*\(/.test(body)) {
-  throw new Error('Top-level adapter refuses process/timer side effects in the server registration block');
-}
+if (meaningfulTail(suffix)) throw new Error('Top-level adapter refuses meaningful runtime code after stdio connect');
+if (/^\s*export\s/m.test(body)) throw new Error('Top-level adapter refuses exported declarations inside the server registration block');
+if (hasTopLevelAwait(body)) throw new Error('Top-level adapter refuses top-level await inside the server registration block');
+if (/\b(?:process\.exit|setInterval|setTimeout)\s*\(/.test(body)) throw new Error('Top-level adapter refuses process/timer side effects in the server registration block');
 
 const wrapped = [
   prefix.trimEnd(),
