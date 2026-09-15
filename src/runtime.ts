@@ -3,6 +3,8 @@ import { detectMcp, type Detection } from './analyze.js';
 import { prepareBinaryBridge, restoreBridgeSource } from './bridge-compiler.js';
 import { tryCompileToEdge } from './edge-compiler.js';
 import { EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
+import { createInstallationAccessToken } from './github-app.js';
+import { ensureGitHubSchema } from './github-schema.js';
 import { ensureEdgeBuildSchema } from './schema-compat.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { Env, ServerRow } from './types.js';
@@ -10,6 +12,7 @@ import type { Env, ServerRow } from './types.js';
 const PORT = 8080;
 const SANDBOX_READY_MARKER = '/workspace/.sandbox-ready';
 const SANDBOX_SMOKE_SCRIPT = '/tmp/factory-sandbox-smoke.mjs';
+const GIT_AUTH_HOME = '/tmp/factory-git-home';
 
 function validateRepoUrl(value: string): string {
   const u = new URL(value);
@@ -35,12 +38,27 @@ export function serverSandbox(env: Env, row: Pick<ServerRow, 'id' | 'owner'>): S
   return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '10m' });
 }
 
-async function cloneRepository(sandbox: Sandbox, row: ServerRow): Promise<void> {
+async function cloneRepository(env: Env, sandbox: Sandbox, row: ServerRow): Promise<void> {
   const repo = validateRepoUrl(row.repo_url);
   const branch = safeBranch(row.branch || 'main');
-  await sandbox.exec('rm -rf /workspace/repo /workspace/.sandbox-ready /workspace/edge-build');
-  const result = await sandbox.exec(`git clone --depth 1 --branch ${JSON.stringify(branch)} ${JSON.stringify(repo)} /workspace/repo`);
-  if (!result.success) throw new Error(result.stderr || 'git clone failed');
+  await sandbox.exec(`rm -rf /workspace/repo /workspace/.sandbox-ready /workspace/edge-build ${GIT_AUTH_HOME}`);
+
+  let authenticated = false;
+  try {
+    if (row.github_installation_id && row.github_repo_id) {
+      const token = await createInstallationAccessToken(env, row.github_installation_id, row.github_repo_id);
+      await sandbox.exec(`mkdir -p ${GIT_AUTH_HOME} && chmod 700 ${GIT_AUTH_HOME}`);
+      await sandbox.writeFile(`${GIT_AUTH_HOME}/.netrc`, `machine github.com\nlogin x-access-token\npassword ${token}\n`);
+      await sandbox.exec(`chmod 600 ${GIT_AUTH_HOME}/.netrc`);
+      authenticated = true;
+    }
+
+    const prefix = authenticated ? `HOME=${GIT_AUTH_HOME} GIT_TERMINAL_PROMPT=0` : 'GIT_TERMINAL_PROMPT=0';
+    const result = await sandbox.exec(`${prefix} git clone --depth 1 --branch ${JSON.stringify(branch)} ${JSON.stringify(repo)} /workspace/repo`);
+    if (!result.success) throw new Error(result.stderr || 'git clone failed');
+  } finally {
+    await sandbox.exec(`rm -rf ${GIT_AUTH_HOME}`).catch(() => undefined);
+  }
 }
 
 async function sandboxReady(sandbox: Sandbox): Promise<boolean> {
@@ -112,7 +130,7 @@ async function prepareSandboxFallback(env: Env, row: ServerRow, sandbox: Sandbox
   return { ...row, status: 'ready', detected_runtime: `sandbox-${detected.runtime}`, detected_command: command, error: null };
 }
 
-export async function buildServer(env: Env, row: ServerRow): Promise<void> {
+async function buildServerOnce(env: Env, row: ServerRow): Promise<void> {
   const sandbox = serverSandbox(env, row);
   await env.DB.prepare('UPDATE servers SET status=?, error=NULL, updated_at=? WHERE id=?')
     .bind('building', new Date().toISOString(), row.id).run();
@@ -120,19 +138,14 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
   try {
     await ensureEdgeBuildSchema(env);
     await stopRuntime(env, row);
-    await cloneRepository(sandbox, row);
+    await cloneRepository(env, sandbox, row);
     const detection = await detectMcp(sandbox, row.subdir);
     const command = row.command?.trim() || detection.command;
 
-    // Try a narrowly-scoped native rewrite before the ordinary Edge compiler. The bridge
-    // stage self-verifies the transformed source and only becomes active for a single,
-    // pure ffprobe helper. Everything else remains a normal Edge/Sandbox decision.
     const bridge = await prepareBinaryBridge(env, sandbox, row);
     const edge = await tryCompileToEdge(env, sandbox, row, detection);
 
     if (bridge.active) {
-      // The artifact has already been materialized by tryCompileToEdge. Restore the source
-      // clone so emergency Linux fallback always executes pristine upstream code.
       await restoreBridgeSource(sandbox, row);
       if (edge.ok) {
         edge.compatibility = bridge.compatibility;
@@ -158,8 +171,6 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     }
 
     if (edge.ok && edge.compatibility.runtime !== 'edge') {
-      // A candidate is not an active bridge. It stays on Linux unless the compiler
-      // has rewritten and verified the native call, represented by edge-with-bridge.
       await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
         .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is verified.`, new Date().toISOString(), row.id).run();
     }
@@ -170,6 +181,30 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     await env.DB.prepare('UPDATE servers SET status=?, error=?, updated_at=? WHERE id=?')
       .bind('error', message.slice(0, 8000), new Date().toISOString(), row.id).run();
     throw error;
+  }
+}
+
+export async function buildServer(env: Env, initialRow: ServerRow): Promise<void> {
+  await ensureGitHubSchema(env);
+  let row = initialRow;
+  while (true) {
+    let iterationError: unknown = null;
+    try {
+      await buildServerOnce(env, row);
+    } catch (error) {
+      iterationError = error;
+    }
+
+    // Pushes arriving while a build is queued/running are coalesced into exactly one follow-up build.
+    const claimed = await env.DB.prepare(`
+      UPDATE servers SET redeploy_pending=0,status='queued',updated_at=? WHERE id=? AND redeploy_pending=1
+    `).bind(new Date().toISOString(), row.id).run();
+    if ((claimed.meta?.changes || 0) === 0) {
+      if (iterationError) throw iterationError;
+      return;
+    }
+
+    row = await env.DB.prepare('SELECT * FROM servers WHERE id=?').bind(row.id).first<ServerRow>() ?? row;
   }
 }
 
@@ -191,10 +226,11 @@ export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
   if (row.detected_runtime === 'local-bound') {
     throw new Error('Local-bound MCPs require a local relay and cannot run in the cloud runtime');
   }
+  await ensureGitHubSchema(env);
   const sandbox = serverSandbox(env, row);
 
   if (!(await processRunning(sandbox))) {
-    if (!(await repositoryPresent(sandbox))) await cloneRepository(sandbox, row);
+    if (!(await repositoryPresent(sandbox))) await cloneRepository(env, sandbox, row);
 
     let fresh = row;
     if (!(await sandboxReady(sandbox))) {
