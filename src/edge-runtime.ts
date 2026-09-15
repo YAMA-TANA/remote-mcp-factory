@@ -1,3 +1,4 @@
+import { loadEdgeArtifact } from './artifact-store.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
@@ -28,26 +29,41 @@ export async function edgeBuildFor(env: Env, serverId: string): Promise<EdgeBuil
 
 export async function serveEdgeRequest(env: Env, row: ServerRow, request: Request<any, any>): Promise<Response | null> {
   const edge = await edgeBuildFor(env, row.id);
-  if (!edge || edge.status !== 'ready' || !edge.bundle || !edge.bundle_hash) return null;
+  if (!edge || edge.status !== 'ready' || !edge.bundle_hash) return null;
+  if (!edge.bundle && !edge.artifact_key) return null;
   if (!env.LOADER) throw new Error('Dynamic Worker loader binding is not configured');
 
-  // updated_at changes when secrets/access configuration changes, so a warm isolate never reuses stale credentials.
   const workerId = `mcp:${row.id}:${edge.bundle_hash}:${row.updated_at}`;
   const stub = env.LOADER.get(workerId, async () => {
     const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
+    if (edge.artifact_key) {
+      const artifact = await loadEdgeArtifact(env, edge.artifact_key);
+      return {
+        compatibilityDate: '2026-09-15',
+        compatibilityFlags: ['nodejs_compat'],
+        mainModule: artifact.mainModule,
+        modules: artifact.modules,
+        env: deploymentSecrets.values,
+        limits: {
+          cpuMs: EDGE_CPU_MS_PER_REQUEST,
+          subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
+        },
+      };
+    }
+
+    const mainModule = edge.main_module || 'worker.js';
     return {
       compatibilityDate: '2026-09-15',
       compatibilityFlags: ['nodejs_compat'],
-      mainModule: 'worker.js',
+      mainModule,
       modules: {
-        'worker.js': { js: edge.bundle! },
+        [mainModule]: { js: edge.bundle! },
       },
       env: deploymentSecrets.values,
       limits: {
         cpuMs: EDGE_CPU_MS_PER_REQUEST,
         subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
       },
-      // API/SaaS MCPs need outbound fetch. Egress allow/deny policy will be tightened before arbitrary public signup.
     };
   });
   return await stub.getEntrypoint().fetch(sanitizedEdgeRequest(request));
