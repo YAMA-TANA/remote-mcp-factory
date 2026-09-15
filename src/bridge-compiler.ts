@@ -19,6 +19,14 @@ export interface BridgeCompileResult {
   rewrittenFunction?: string;
 }
 
+export async function restoreBridgeSource(sandbox: Sandbox, row: ServerRow): Promise<void> {
+  // The source clone is disposable. Revert only compiler-generated edits and files so
+  // a later Linux fallback always runs the upstream repository, not our Edge shim.
+  const cwd = repoWorkdir(row);
+  const result = await sandbox.exec('git reset --hard HEAD && git clean -fd', { cwd });
+  if (!result.success) throw new Error(result.stderr || 'Could not restore source after bridge compilation');
+}
+
 /**
  * Extremely conservative first bridge transform.
  *
@@ -54,8 +62,7 @@ export async function prepareBinaryBridge(env: Env, sandbox: Sandbox, row: Serve
 
   const after = await analyzeRuntimeCompatibility(sandbox, row);
   if (after.runtime !== 'edge') {
-    // The source was changed but verification found another native/local dependency.
-    // Returning inactive makes runtime.ts restore the pristine repository before fallback.
+    await restoreBridgeSource(sandbox, row);
     return { active: false, compatibility: before };
   }
 
