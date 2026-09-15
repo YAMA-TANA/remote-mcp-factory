@@ -33,7 +33,7 @@ function transformV1CommonJs(source) {
   s = s.replace('async function main() {', 'function buildServer() {');
   const tail = /\s*\/\/ Start server\s*\n\s*const transport = new StdioServerTransport\(\);\s*\n\s*await server\.connect\(transport\);\s*\n\s*console\.error\([^\n]*\);\s*\n}\s*\n\s*main\(\)\.catch\([\s\S]*$/m;
   if (!tail.test(s)) throw new Error('Could not identify stdio bootstrap tail');
-  s = s.replace(tail, `\n  return server;\n}\n\nexport default createMcpHandler(() => buildServer());\n`);
+  s = s.replace(tail, `\n  return server;\n}\n\nexport default createMcpHandler(() => buildServer(), { onerror: (error) => console.error('MCP_HANDLER_ERROR', error?.stack || error) });\n`);
   if (/StdioServerTransport|@modelcontextprotocol\/sdk/.test(s)) throw new Error('v1/stdin imports remain after codemod');
   return s;
 }
