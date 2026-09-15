@@ -1,5 +1,8 @@
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
+const EDGE_CPU_MS_PER_REQUEST = 1_000;
+const EDGE_SUBREQUESTS_PER_REQUEST = 64;
+
 function sanitizedEdgeRequest(request: Request<any, any>): Request {
   const url = new URL(request.url);
   url.pathname = '/mcp';
@@ -35,7 +38,11 @@ export async function serveEdgeRequest(env: Env, row: ServerRow, request: Reques
     modules: {
       'worker.js': { js: edge.bundle! },
     },
-    // API/SaaS MCPs need outbound fetch. Egress policy will be tightened before open public signup.
+    limits: {
+      cpuMs: EDGE_CPU_MS_PER_REQUEST,
+      subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
+    },
+    // API/SaaS MCPs need outbound fetch. Egress allow/deny policy will be tightened before arbitrary public signup.
   }));
   return await stub.getEntrypoint().fetch(sanitizedEdgeRequest(request));
 }
