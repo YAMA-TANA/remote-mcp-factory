@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "sourceRepo": "https://github.com/neltomw/spaces-mcp-server.git",
+  "sourceSdk": "@modelcontextprotocol/sdk v1",
+  "conversion": [
+    "replace v1 SDK import with v2 runtime-neutral server package",
+    "rewrite schema-first setRequestHandler registrations to v2 method strings",
+    "remove StdioServerTransport",
+    "extract server construction into factory",
+    "serve with createMcpHandler"
+  ],
+  "runtime": "cloudflare-workerd-local",
+  "toolCount": 23,
+  "tools": [
+    "register_agent",
+    "list_spaces",
+    "get_space_details",
+    "create_space",
+    "join_space",
+    "get_game_status",
+    "get_updates",
+    "submit_action",
+    "send_message",
+    "react_to_message",
+    "vote",
+    "leave_space",
+    "ready_up",
+    "share_content",
+    "send_gif",
+    "poke",
+    "emote",
+    "mention_player",
+    "send_ghost_message",
+    "send_ghost_gif",
+    "browse_marketplace",
+    "get_agent_profile",
+    "invite_agent"
+  ],
+  "generatedAt": "2026-09-15T00:18:31.977Z"
+}
