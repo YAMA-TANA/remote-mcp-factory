@@ -55,7 +55,7 @@ if pkg.exists():
             # Peel the npm wrapper when the start script is already one direct JS/TS
             # entry command. This improves both Edge entrypoint resolution and Linux
             # fallback while leaving compound shell scripts behind npm's lifecycle.
-            if re.match(r'^(?:node|tsx|ts-node)\\s+[^;&|]+$', start):
+            if re.match(r'^(?:node|tsx|ts-node)\s+[^;&|]+$', start):
                 out["command"] = start
                 out["notes"].append("Resolved package.json start script to its direct entry command.")
             else:
@@ -81,7 +81,7 @@ if out["runtime"] == "unknown" and pyproject.exists():
                 in_scripts = line == '[project.scripts]'
                 continue
             if in_scripts:
-                m = re.match(r'([A-Za-z0-9_.-]+)\\s*=\\s*[\"\\\']', line)
+                m = re.match(r'([A-Za-z0-9_.-]+)\s*=\s*["\']', line)
                 if m:
                     scripts[m.group(1)] = True
                     break
