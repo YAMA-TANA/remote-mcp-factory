@@ -45,4 +45,28 @@ server.tool(
   },
 );
 
+server.tool(
+  'attempt_transcode_scope',
+  'E2E-only tool proving that an ffprobe-scoped bridge token cannot call ffmpeg transcode.',
+  { dataBase64: z.string() },
+  async ({ dataBase64 }) => {
+    const baseUrl = process.env.FACTORY_BRIDGE_BASE_URL;
+    const token = process.env.FACTORY_BRIDGE_TOKEN;
+    if (!baseUrl || !token) {
+      return { content: [{ type: 'text', text: JSON.stringify({ status: 0, configured: false }) }] };
+    }
+    const response = await fetch(`${baseUrl}/transcode`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ dataBase64, format: 'mp3' }),
+    });
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ status: response.status, configured: true }) }],
+    };
+  },
+);
+
 await server.connect(new StdioServerTransport());
