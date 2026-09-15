@@ -1,0 +1,48 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import { writeFile, unlink } from 'node:fs/promises';
+
+const execAsync = promisify(exec);
+
+async function ffprobe(filePath) {
+  const { stdout } = await execAsync(
+    `ffprobe -v error -show_format -show_streams -of json "${filePath}"`,
+  );
+  return JSON.parse(stdout);
+}
+
+const server = new McpServer({ name: 'factory-bridge-e2e', version: '1.0.0' });
+
+server.tool(
+  'probe_base64',
+  'Probe an uploaded WAV file and return metadata.',
+  { dataBase64: z.string() },
+  async ({ dataBase64 }) => {
+    const filePath = `/tmp/factory-e2e-${Date.now()}-${Math.random().toString(16).slice(2)}.wav`;
+    await writeFile(filePath, Buffer.from(dataBase64, 'base64'));
+    try {
+      const info = await ffprobe(filePath);
+      const audio = Array.isArray(info.streams)
+        ? info.streams.find((stream) => stream.codec_type === 'audio')
+        : null;
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            duration: Number(info.format?.duration || 0),
+            formatName: info.format?.format_name || null,
+            audioCodec: audio?.codec_name || null,
+            sampleRate: Number(audio?.sample_rate || 0),
+          }),
+        }],
+      };
+    } finally {
+      await unlink(filePath).catch(() => undefined);
+    }
+  },
+);
+
+await server.connect(new StdioServerTransport());
