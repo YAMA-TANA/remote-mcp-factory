@@ -51,8 +51,16 @@ if pkg.exists():
         if path:
             out["command"] = "node " + path
         elif "start" in scripts:
-            out["command"] = "npm start"
-            out["notes"].append("Using npm start; verify that it is stdio, not an HTTP server.")
+            start = str(scripts.get("start") or "").strip()
+            # Peel the npm wrapper when the start script is already one direct JS/TS
+            # entry command. This improves both Edge entrypoint resolution and Linux
+            # fallback while leaving compound shell scripts behind npm's lifecycle.
+            if re.match(r'^(?:node|tsx|ts-node)\\s+[^;&|]+$', start):
+                out["command"] = start
+                out["notes"].append("Resolved package.json start script to its direct entry command.")
+            else:
+                out["command"] = "npm start"
+                out["notes"].append("Using npm start; verify that it is stdio, not an HTTP server.")
 
 pyproject = root / "pyproject.toml"
 if out["runtime"] == "unknown" and pyproject.exists():
