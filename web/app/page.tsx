@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
 
 type Deployment = {
@@ -35,6 +35,14 @@ function shortBytes(bytes?: number | null) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
   return `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
+}
+
+function runtimeBadge(item: Deployment) {
+  if (item.detected_runtime === 'local-bound') return { label: '⌁ Local-bound', className: 'fallbackPill' };
+  if (item.detected_runtime === 'edge-node-bridge') return { label: '⚡ Edge + Bridge', className: 'edgePill' };
+  if (item.edge_status === 'ready' || item.detected_runtime === 'edge-node') return { label: '⚡ Edge', className: 'edgePill' };
+  if (item.detected_runtime?.startsWith('sandbox')) return { label: '▣ Sandbox', className: 'fallbackPill' };
+  return { label: '… Detecting', className: 'fallbackPill' };
 }
 
 export default function Home() {
@@ -137,8 +145,6 @@ export default function Home() {
     }
   }
 
-  const active = useMemo(() => deployments.filter((item) => !['error'].includes(item.status)), [deployments]);
-
   return (
     <main>
       <nav className="nav shell">
@@ -154,7 +160,7 @@ export default function Home() {
       <section className="hero shell">
         <div className="eyebrow"><span className="dot" /> Edge-first MCP deployment</div>
         <h1>GitHub in.<br />Remote MCP out.</h1>
-        <p className="lede">Paste a public MCP repository. We analyze it, compile compatible servers to a Cloudflare Dynamic Worker, smoke-test the MCP protocol, and fall back to Linux only when needed.</p>
+        <p className="lede">Paste a public MCP repository. We analyze it, compile compatible servers to a Cloudflare Dynamic Worker, bridge narrowly supported native calls, and fall back to Linux only when needed.</p>
 
         <div className="deployCard">
           {!configured && (
@@ -192,30 +198,33 @@ export default function Home() {
         </div>
 
         <div className="flow">
-          <span>GitHub repo</span><i>→</i><span>Analyze</span><i>→</i><span>Compile + smoke test</span><i>→</i><span>Dynamic Worker</span><em>or Sandbox</em>
+          <span>GitHub repo</span><i>→</i><span>Analyze</span><i>→</i><span>Compile + verify</span><i>→</i><span>Edge</span><em>Bridge or Sandbox when needed</em>
         </div>
       </section>
 
       <section className="shell deploymentsSection">
         <div className="sectionHead"><div><span className="kicker">YOUR PROJECTS</span><h2>Deployments</h2></div>{signedIn && <button className="ghost" onClick={() => void refresh()}>Refresh</button>}</div>
-        {!signedIn ? <div className="empty">Sign in to view deployments.</div> : active.length === 0 ? <div className="empty">No deployments yet. Paste a GitHub MCP above.</div> : (
+        {!signedIn ? <div className="empty">Sign in to view deployments.</div> : deployments.length === 0 ? <div className="empty">No deployments yet. Paste a GitHub MCP above.</div> : (
           <div className="deploymentGrid">
-            {deployments.map((item) => (
-              <article className="deployment" key={item.id}>
-                <div className="deploymentTop"><div><strong>{item.name}</strong><p>{item.repo_url.replace('https://github.com/', '')}</p></div><span className={`status ${item.status}`}>{item.status}</span></div>
-                <div className="runtime"><span className={item.edge_status === 'ready' ? 'edgePill' : 'fallbackPill'}>{item.edge_status === 'ready' ? '⚡ Edge' : item.detected_runtime?.startsWith('sandbox') ? '▣ Sandbox' : '… Detecting'}</span><span>{item.edge_tool_count ? `${item.edge_tool_count} tools` : 'tools pending'}</span><span>{item.edge_status === 'ready' ? shortBytes(item.edge_size_bytes) : item.branch}</span></div>
-                {item.edge_reason && item.edge_status !== 'ready' && <p className="reason">{item.edge_reason}</p>}
-                {item.error && <p className="reason errorText">{item.error}</p>}
-                <div className="deploymentBottom"><code>{item.id}</code><span>{item.visibility === 'token' ? 'Protected' : 'Public'}</span></div>
-              </article>
-            ))}
+            {deployments.map((item) => {
+              const runtime = runtimeBadge(item);
+              return (
+                <article className="deployment" key={item.id}>
+                  <div className="deploymentTop"><div><strong>{item.name}</strong><p>{item.repo_url.replace('https://github.com/', '')}</p></div><span className={`status ${item.status}`}>{item.status}</span></div>
+                  <div className="runtime"><span className={runtime.className}>{runtime.label}</span><span>{item.edge_tool_count ? `${item.edge_tool_count} tools` : 'tools pending'}</span><span>{item.edge_status === 'ready' ? shortBytes(item.edge_size_bytes) : item.branch}</span></div>
+                  {item.edge_reason && item.edge_status !== 'ready' && <p className="reason">{item.edge_reason}</p>}
+                  {item.error && <p className="reason errorText">{item.error}</p>}
+                  <div className="deploymentBottom"><code>{item.id}</code><span>{item.visibility === 'token' ? 'Protected' : 'Public'}</span></div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
 
       <section className="features shell">
         <article><span>01</span><h3>Automatic conversion</h3><p>SDK migration, stdio removal, Worker bundling and real protocol verification happen automatically.</p></article>
-        <article><span>02</span><h3>Runtime selection</h3><p>Cheap serverless Edge when possible. Isolated Linux Sandbox for native binaries, subprocesses and heavy runtimes.</p></article>
+        <article><span>02</span><h3>Runtime selection</h3><p>Edge by default, a narrow Binary Bridge when verified, Sandbox for heavy workloads, and a clear rejection when the MCP is tied to a local machine.</p></article>
         <article><span>03</span><h3>Protected by default</h3><p>Bearer-protected endpoints, rate limits, usage quotas and encrypted deployment secrets.</p></article>
       </section>
 
