@@ -1,3 +1,4 @@
+import { loadDeploymentSecrets } from './secrets.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
 const EDGE_CPU_MS_PER_REQUEST = 1_000;
@@ -30,19 +31,24 @@ export async function serveEdgeRequest(env: Env, row: ServerRow, request: Reques
   if (!edge || edge.status !== 'ready' || !edge.bundle || !edge.bundle_hash) return null;
   if (!env.LOADER) throw new Error('Dynamic Worker loader binding is not configured');
 
-  const workerId = `mcp:${row.id}:${edge.bundle_hash}`;
-  const stub = env.LOADER.get(workerId, async () => ({
-    compatibilityDate: '2026-09-15',
-    compatibilityFlags: ['nodejs_compat'],
-    mainModule: 'worker.js',
-    modules: {
-      'worker.js': { js: edge.bundle! },
-    },
-    limits: {
-      cpuMs: EDGE_CPU_MS_PER_REQUEST,
-      subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
-    },
-    // API/SaaS MCPs need outbound fetch. Egress allow/deny policy will be tightened before arbitrary public signup.
-  }));
+  // updated_at changes when secrets/access configuration changes, so a warm isolate never reuses stale credentials.
+  const workerId = `mcp:${row.id}:${edge.bundle_hash}:${row.updated_at}`;
+  const stub = env.LOADER.get(workerId, async () => {
+    const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
+    return {
+      compatibilityDate: '2026-09-15',
+      compatibilityFlags: ['nodejs_compat'],
+      mainModule: 'worker.js',
+      modules: {
+        'worker.js': { js: edge.bundle! },
+      },
+      env: deploymentSecrets.values,
+      limits: {
+        cpuMs: EDGE_CPU_MS_PER_REQUEST,
+        subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
+      },
+      // API/SaaS MCPs need outbound fetch. Egress allow/deny policy will be tightened before arbitrary public signup.
+    };
+  });
   return await stub.getEntrypoint().fetch(sanitizedEdgeRequest(request));
 }
