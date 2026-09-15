@@ -1,0 +1,33 @@
+name: npm stdio MCP edge study
+
+on:
+  push:
+    branches: [edge-compiler-poc]
+    paths:
+      - 'scripts/stdio-edge-study.mjs'
+      - '.github/workflows/stdio-edge-study.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  study:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scan actual npm+stdio MCP packages from Official Registry
+        env:
+          SAMPLE_SIZE: '100'
+        run: node scripts/stdio-edge-study.mjs
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/stdio-edge-study.json reports/stdio-edge-study.md
+          git diff --cached --quiet || git commit -m "Record npm stdio MCP edge study"
+          git push
