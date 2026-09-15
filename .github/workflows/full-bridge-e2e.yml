@@ -1,0 +1,85 @@
+name: Full Binary Bridge E2E
+
+on:
+  push:
+    branches: [bridge-e2e-proof]
+    paths:
+      - 'src/**'
+      - 'fixtures/bridge-e2e-mcp/**'
+      - 'scripts/test-full-bridge-e2e.mjs'
+      - 'Dockerfile'
+      - 'schema.sql'
+      - 'wrangler.jsonc'
+      - '.github/workflows/full-bridge-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Factory dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install E2E MCP client dependencies
+        run: npm install --prefix fixtures/bridge-e2e-mcp --ignore-scripts --no-audit --no-fund
+
+      - name: Verify Docker engine
+        run: docker version
+
+      - name: Initialize local D1
+        run: npx wrangler d1 execute remote-mcp-factory --local --file=./schema.sql
+
+      - name: Start the real Factory Worker + Sandbox container locally
+        run: |
+          CI=1 nohup npx wrangler dev --local --port 8787 \
+            --var ALLOW_DEV_AUTH:true \
+            --var BRIDGE_SIGNING_KEY:factory-e2e-signing-key \
+            > /tmp/factory-wrangler.log 2>&1 < /dev/null &
+          echo $! > /tmp/factory-wrangler.pid
+
+          for i in $(seq 1 150); do
+            if curl --fail --silent http://127.0.0.1:8787/healthz >/tmp/factory-health.json 2>/dev/null; then
+              cat /tmp/factory-health.json
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/factory-wrangler.pid)" 2>/dev/null; then
+              echo 'wrangler dev exited before health check succeeded'
+              cat /tmp/factory-wrangler.log
+              exit 1
+            fi
+            sleep 2
+          done
+          echo 'Timed out waiting for Factory Worker'
+          cat /tmp/factory-wrangler.log
+          exit 1
+
+      - name: Execute GitHub -> compiler -> Edge -> Binary Bridge -> real ffprobe -> MCP tool E2E
+        env:
+          FACTORY_URL: http://127.0.0.1:8787
+          E2E_BRANCH: bridge-e2e-proof
+        run: node scripts/test-full-bridge-e2e.mjs
+
+      - name: Factory logs
+        if: always()
+        run: |
+          echo '=== wrangler log ==='
+          cat /tmp/factory-wrangler.log || true
+          echo '=== docker containers ==='
+          docker ps -a || true
+
+      - name: Stop local Factory
+        if: always()
+        run: |
+          if test -f /tmp/factory-wrangler.pid; then
+            kill "$(cat /tmp/factory-wrangler.pid)" 2>/dev/null || true
+          fi
