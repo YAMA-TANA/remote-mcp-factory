@@ -3,7 +3,7 @@ import type { Sandbox } from '@cloudflare/sandbox';
 export type Visibility = 'public' | 'token';
 export type PlanId = 'hobby' | 'pro' | 'team';
 export type EdgeBuildStatus = 'ready' | 'failed' | 'incompatible';
-export type CompatibilityRuntime = 'edge' | 'edge-with-bridge-candidate' | 'heavy';
+export type CompatibilityRuntime = 'edge' | 'edge-with-bridge-candidate' | 'heavy' | 'local-bound';
 
 export interface RateLimiter {
   limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -113,7 +113,7 @@ export interface EdgeBuildRow {
 }
 
 export interface NativeDependencyEvidence {
-  kind: 'subprocess' | 'binary' | 'browser';
+  kind: 'subprocess' | 'binary' | 'browser' | 'local-bound';
   command: string | null;
   file: string;
   line: number;
