@@ -1,5 +1,5 @@
 import type { Sandbox } from '@cloudflare/sandbox';
-import { BRIDGE_REWRITE_SCRIPT } from './bridge-rewrite-v2.js';
+import { BRIDGE_REWRITE_SCRIPT } from './bridge-rewrite-v3.js';
 import { analyzeRuntimeCompatibility } from './compat-analysis.js';
 import type { CompatibilityReport, Env, ServerRow } from './types.js';
 
