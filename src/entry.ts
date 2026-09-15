@@ -1,5 +1,6 @@
 import { clerkIdentity } from './auth.js';
 import { binaryBridgeStatus, probeMedia, transcodeMedia } from './binary-bridge.js';
+import { verifyBridgeToken } from './bridge-auth.js';
 import core from './index.js';
 import { deleteDeploymentSecret, listDeploymentSecretNames, putDeploymentSecrets } from './secrets.js';
 import { stopRuntime } from './runtime.js';
@@ -47,6 +48,50 @@ async function ownedServer(request: Request, env: Env, id: string): Promise<{ ro
   return { row };
 }
 
+async function runBridgeOperation(request: Request, env: Env, row: ServerRow, operation: 'probe' | 'transcode'): Promise<Response> {
+  const limited = await env.MCP_SERVER_RATE_LIMITER.limit({ key: `bridge:${row.id}` });
+  if (!limited.success) return json({ error: 'Bridge rate limit exceeded' }, 429);
+
+  const body = await request.json().catch(() => null) as any;
+  if (!body || typeof body.dataBase64 !== 'string') return json({ error: 'Body must include dataBase64' }, 400);
+  try {
+    if (operation === 'probe') {
+      const result = await probeMedia(env, row, {
+        dataBase64: body.dataBase64,
+        filename: typeof body.filename === 'string' ? body.filename : undefined,
+      });
+      return json({ serverId: row.id, capability: 'ffprobe', result });
+    }
+    const result = await transcodeMedia(env, row, {
+      dataBase64: body.dataBase64,
+      filename: typeof body.filename === 'string' ? body.filename : undefined,
+      format: body.format,
+    });
+    return json({ serverId: row.id, capability: 'ffmpeg', result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return json({ error: message }, /exceeds|must be|valid base64/i.test(message) ? 400 : 422);
+  }
+}
+
+async function internalBridgeRoutes(request: Request, env: Env): Promise<Response | null> {
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/internal\/bridge\/([a-z0-9][a-z0-9-]{5,40})\/(probe|transcode)$/);
+  if (!match) return null;
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: { allow: 'POST' } });
+  if (!env.BRIDGE_SIGNING_KEY) return json({ error: 'Bridge signing is not configured' }, 503);
+
+  const row = await env.DB.prepare('SELECT * FROM servers WHERE id=?').bind(match[1]).first<ServerRow>();
+  if (!row || !row.enabled) return json({ error: 'Not found' }, 404);
+  const edge = await env.DB.prepare('SELECT * FROM edge_builds WHERE server_id=?').bind(row.id).first<EdgeBuildRow>();
+  if (!edge?.bundle_hash) return json({ error: 'No compiled deployment' }, 409);
+
+  const auth = request.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!(await verifyBridgeToken(env, token, row.id, edge.bundle_hash))) return json({ error: 'Unauthorized' }, 401);
+  return await runBridgeOperation(request, env, row, match[2] as 'probe' | 'transcode');
+}
+
 async function bridgeRoutes(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
   const match = url.pathname.match(/^\/api\/servers\/([a-z0-9][a-z0-9-]{5,40})\/bridge\/(probe|transcode)$/);
@@ -55,28 +100,7 @@ async function bridgeRoutes(request: Request, env: Env): Promise<Response | null
 
   const owned = await ownedServer(request, env, match[1]);
   if ('response' in owned) return owned.response;
-  const body = await request.json().catch(() => null) as any;
-  if (!body || typeof body.dataBase64 !== 'string') return json({ error: 'Body must include dataBase64' }, 400);
-
-  try {
-    if (match[2] === 'probe') {
-      const result = await probeMedia(env, owned.row, {
-        dataBase64: body.dataBase64,
-        filename: typeof body.filename === 'string' ? body.filename : undefined,
-      });
-      return json({ serverId: owned.row.id, capability: 'ffprobe', result });
-    }
-
-    const result = await transcodeMedia(env, owned.row, {
-      dataBase64: body.dataBase64,
-      filename: typeof body.filename === 'string' ? body.filename : undefined,
-      format: body.format,
-    });
-    return json({ serverId: owned.row.id, capability: 'ffmpeg', result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return json({ error: message }, /exceeds|must be|valid base64/i.test(message) ? 400 : 422);
-  }
+  return await runBridgeOperation(request, env, owned.row, match[2] as 'probe' | 'transcode');
 }
 
 async function diagnosticRoutes(request: Request, env: Env): Promise<Response | null> {
@@ -155,6 +179,9 @@ async function secretRoutes(request: Request, env: Env, ctx: ExecutionContext): 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const internalBridge = await internalBridgeRoutes(request, env);
+    if (internalBridge) return internalBridge;
+
     const origin = url.pathname.startsWith('/api/') ? allowedOrigin(request, env) : null;
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
       if (!origin) return new Response(null, { status: 403 });
