@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
 const FACTORY_URL = (process.env.FACTORY_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
-const BRANCH = process.env.E2E_BRANCH || 'bridge-e2e-proof';
+const BRANCH = process.env.E2E_BRANCH || 'main';
 const FIXTURE = resolve('fixtures/bridge-e2e-mcp/node_modules/@modelcontextprotocol/sdk');
 const USER = 'factory-bridge-e2e-user';
 
@@ -51,6 +51,14 @@ function makeWav({ sampleRate = 8000, durationSeconds = 0.25, frequency = 440 } 
     o += 2;
   }
   return out;
+}
+
+function textResult(result) {
+  const text = Array.isArray(result?.content)
+    ? result.content.find((item) => item.type === 'text')?.text
+    : null;
+  if (!text) throw new Error(`Tool returned no text content: ${JSON.stringify(result)}`);
+  return JSON.parse(text);
 }
 
 async function waitForDeployment(id) {
@@ -118,20 +126,19 @@ async function main() {
   await client.connect(transport);
   try {
     const listed = await client.listTools();
-    if (!listed.tools.some((tool) => tool.name === 'probe_base64')) {
-      throw new Error(`probe_base64 missing from tools/list: ${JSON.stringify(listed)}`);
+    for (const expected of ['probe_base64', 'attempt_transcode_scope']) {
+      if (!listed.tools.some((tool) => tool.name === expected)) {
+        throw new Error(`${expected} missing from tools/list: ${JSON.stringify(listed)}`);
+      }
     }
 
     const wav = makeWav();
+    const wavBase64 = wav.toString('base64');
     const result = await client.callTool({
       name: 'probe_base64',
-      arguments: { dataBase64: wav.toString('base64') },
+      arguments: { dataBase64: wavBase64 },
     });
-    const text = Array.isArray(result.content)
-      ? result.content.find((item) => item.type === 'text')?.text
-      : null;
-    if (!text) throw new Error(`Tool returned no text content: ${JSON.stringify(result)}`);
-    const metadata = JSON.parse(text);
+    const metadata = textResult(result);
     console.log(`tool result: ${JSON.stringify(metadata)}`);
 
     if (metadata.audioCodec !== 'pcm_s16le') throw new Error(`Unexpected codec: ${metadata.audioCodec}`);
@@ -142,11 +149,20 @@ async function main() {
     if (!String(metadata.formatName || '').includes('wav')) {
       throw new Error(`Unexpected format: ${metadata.formatName}`);
     }
+
+    const scopeAttempt = textResult(await client.callTool({
+      name: 'attempt_transcode_scope',
+      arguments: { dataBase64: wavBase64 },
+    }));
+    console.log(`scope isolation result: ${JSON.stringify(scopeAttempt)}`);
+    if (scopeAttempt.configured !== true || scopeAttempt.status !== 401) {
+      throw new Error(`Probe-scoped token unexpectedly reached transcode: ${JSON.stringify(scopeAttempt)}`);
+    }
   } finally {
     await client.close().catch(() => undefined);
   }
 
-  console.log('PASS full Factory E2E: GitHub clone -> rewrite -> Edge -> signed Binary Bridge -> real ffprobe -> MCP tool result');
+  console.log('PASS full Factory E2E: GitHub clone -> rewrite -> Edge -> signed operation-scoped Binary Bridge -> real ffprobe -> cross-operation denial -> MCP tool result');
 }
 
 main().catch((error) => {

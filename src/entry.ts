@@ -1,12 +1,16 @@
 import { clerkIdentity } from './auth.js';
 import { binaryBridgeStatus, probeMedia, transcodeMedia } from './binary-bridge.js';
-import { verifyBridgeToken } from './bridge-auth.js';
+import { verifyBridgeToken, type BridgeOperation } from './bridge-auth.js';
 import core from './index.js';
 import { deleteDeploymentSecret, listDeploymentSecretNames, putDeploymentSecrets } from './secrets.js';
 import { stopRuntime } from './runtime.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
 export { Sandbox } from '@cloudflare/sandbox';
+
+const MAX_BRIDGE_HTTP_BODY_BYTES = 12 * 1024 * 1024;
+
+class BridgeRequestTooLargeError extends Error {}
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -48,28 +52,81 @@ async function ownedServer(request: Request, env: Env, id: string): Promise<{ ro
   return { row };
 }
 
-async function runBridgeOperation(request: Request, env: Env, row: ServerRow, operation: 'probe' | 'transcode'): Promise<Response> {
+function estimatedBase64Bytes(value: string): number {
+  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((value.length * 3) / 4) - padding);
+}
+
+async function readBridgeJson(request: Request): Promise<any> {
+  const declared = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > MAX_BRIDGE_HTTP_BODY_BYTES) {
+    throw new BridgeRequestTooLargeError(`Bridge request exceeds ${MAX_BRIDGE_HTTP_BODY_BYTES} bytes`);
+  }
+  if (!request.body) return null;
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MAX_BRIDGE_HTTP_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new BridgeRequestTooLargeError(`Bridge request exceeds ${MAX_BRIDGE_HTTP_BODY_BYTES} bytes`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+async function runBridgeOperation(request: Request, env: Env, row: ServerRow, operation: BridgeOperation): Promise<Response> {
   const limited = await env.MCP_SERVER_RATE_LIMITER.limit({ key: `bridge:${row.id}` });
   if (!limited.success) return json({ error: 'Bridge rate limit exceeded' }, 429);
 
-  const body = await request.json().catch(() => null) as any;
-  if (!body || typeof body.dataBase64 !== 'string') return json({ error: 'Body must include dataBase64' }, 400);
+  const startedAt = Date.now();
+  let inputBytes = 0;
   try {
+    const body = await readBridgeJson(request);
+    if (!body || typeof body.dataBase64 !== 'string') return json({ error: 'Body must include dataBase64' }, 400);
+    inputBytes = estimatedBase64Bytes(body.dataBase64);
+
     if (operation === 'probe') {
       const result = await probeMedia(env, row, {
         dataBase64: body.dataBase64,
         filename: typeof body.filename === 'string' ? body.filename : undefined,
       });
+      console.info(JSON.stringify({ event: 'binary_bridge', serverId: row.id, operation, ok: true, inputBytes, durationMs: Date.now() - startedAt }));
       return json({ serverId: row.id, capability: 'ffprobe', result });
     }
+
     const result = await transcodeMedia(env, row, {
       dataBase64: body.dataBase64,
       filename: typeof body.filename === 'string' ? body.filename : undefined,
       format: body.format,
     });
+    console.info(JSON.stringify({ event: 'binary_bridge', serverId: row.id, operation, ok: true, inputBytes, outputBytes: result.bytes, durationMs: Date.now() - startedAt }));
     return json({ serverId: row.id, capability: 'ffmpeg', result });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    console.warn(JSON.stringify({ event: 'binary_bridge', serverId: row.id, operation, ok: false, inputBytes, durationMs: Date.now() - startedAt, error: message.slice(0, 500) }));
+    if (error instanceof BridgeRequestTooLargeError) return json({ error: message }, 413);
     return json({ error: message }, /exceeds|must be|valid base64/i.test(message) ? 400 : 422);
   }
 }
@@ -86,10 +143,11 @@ async function internalBridgeRoutes(request: Request, env: Env): Promise<Respons
   const edge = await env.DB.prepare('SELECT * FROM edge_builds WHERE server_id=?').bind(row.id).first<EdgeBuildRow>();
   if (!edge?.bundle_hash) return json({ error: 'No compiled deployment' }, 409);
 
+  const operation = match[2] as BridgeOperation;
   const auth = request.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  if (!(await verifyBridgeToken(env, token, row.id, edge.bundle_hash))) return json({ error: 'Unauthorized' }, 401);
-  return await runBridgeOperation(request, env, row, match[2] as 'probe' | 'transcode');
+  if (!(await verifyBridgeToken(env, token, row.id, edge.bundle_hash, operation))) return json({ error: 'Unauthorized' }, 401);
+  return await runBridgeOperation(request, env, row, operation);
 }
 
 async function bridgeRoutes(request: Request, env: Env): Promise<Response | null> {
@@ -100,7 +158,7 @@ async function bridgeRoutes(request: Request, env: Env): Promise<Response | null
 
   const owned = await ownedServer(request, env, match[1]);
   if ('response' in owned) return owned.response;
-  return await runBridgeOperation(request, env, owned.row, match[2] as 'probe' | 'transcode');
+  return await runBridgeOperation(request, env, owned.row, match[2] as BridgeOperation);
 }
 
 async function diagnosticRoutes(request: Request, env: Env): Promise<Response | null> {
