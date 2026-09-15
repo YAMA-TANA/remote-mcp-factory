@@ -1,8 +1,9 @@
 import { clerkIdentity } from './auth.js';
+import { binaryBridgeStatus } from './binary-bridge.js';
 import core from './index.js';
 import { deleteDeploymentSecret, listDeploymentSecretNames, putDeploymentSecrets } from './secrets.js';
 import { stopRuntime } from './runtime.js';
-import type { Env, ServerRow } from './types.js';
+import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
 export { Sandbox } from '@cloudflare/sandbox';
 
@@ -44,6 +45,37 @@ async function ownedServer(request: Request, env: Env, id: string): Promise<{ ro
   const row = await env.DB.prepare('SELECT * FROM servers WHERE id=? AND owner=?').bind(id, identity.ownerId).first<ServerRow>();
   if (!row) return { response: json({ error: 'Not found' }, 404) };
   return { row };
+}
+
+async function diagnosticRoutes(request: Request, env: Env): Promise<Response | null> {
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/servers\/([a-z0-9][a-z0-9-]{5,40})\/(compatibility|bridge-status)$/);
+  if (!match) return null;
+  if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405, headers: { allow: 'GET' } });
+  const owned = await ownedServer(request, env, match[1]);
+  if ('response' in owned) return owned.response;
+
+  if (match[2] === 'bridge-status') {
+    const capabilities = await binaryBridgeStatus(env, owned.row);
+    return json({ serverId: owned.row.id, capabilities });
+  }
+
+  const edge = await env.DB.prepare('SELECT * FROM edge_builds WHERE server_id=?').bind(owned.row.id).first<EdgeBuildRow>();
+  if (!edge) return json({ serverId: owned.row.id, status: 'not-analyzed' });
+  let compatibility: unknown = {};
+  try { compatibility = JSON.parse(edge.compatibility_json || '{}'); } catch {}
+  return json({
+    serverId: owned.row.id,
+    status: edge.status,
+    compilerVersion: edge.compiler_version,
+    artifact: edge.artifact_key ? 'r2' : edge.bundle ? 'd1-legacy' : null,
+    mainModule: edge.main_module,
+    moduleCount: edge.module_count,
+    sizeBytes: edge.size_bytes,
+    toolCount: edge.tool_count,
+    compatibility,
+    reason: edge.reason,
+  });
 }
 
 async function secretRoutes(request: Request, env: Env, ctx: ExecutionContext): Promise<Response | null> {
@@ -97,6 +129,8 @@ export default {
       return withCors(new Response(null, { status: 204 }), origin);
     }
 
+    const diagnosticResponse = await diagnosticRoutes(request, env);
+    if (diagnosticResponse) return withCors(diagnosticResponse, origin);
     const secretResponse = await secretRoutes(request, env, ctx);
     if (secretResponse) return withCors(secretResponse, origin);
     return withCors(await core.fetch(request, env, ctx), origin);
