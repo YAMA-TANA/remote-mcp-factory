@@ -307,8 +307,12 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
     const smokeConfig = deploymentSecrets.names.length ? { ...config, vars: deploymentSecrets.values } : config;
     const smokeConfigFile = 'wrangler.edge-smoke.jsonc';
     await sandbox.writeFile(`${cwd}/${smokeConfigFile}`, JSON.stringify(smokeConfig, null, 2));
-    const tools = await smokeTest(sandbox, row, cwd, smokeConfigFile);
-    await sandbox.exec(`rm -f ${shell(`${cwd}/${smokeConfigFile}`)}`).catch(() => undefined);
+    let tools: string[];
+    try {
+      tools = await smokeTest(sandbox, row, cwd, smokeConfigFile);
+    } finally {
+      await sandbox.exec(`rm -f ${shell(`${cwd}/${smokeConfigFile}`)}`).catch(() => undefined);
+    }
     const bundleHash = await artifactHash(emitted.modules);
 
     let artifactKey: string | null = null;
