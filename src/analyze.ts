@@ -28,7 +28,7 @@ pkg = root / "package.json"
 if pkg.exists():
     p = json.loads(pkg.read_text())
     out["runtime"] = "node"
-    if (root / "pnpm-lock.yaml").exists(): out["install"] = ["pnpm install --frozen-lockfile"]
+    if (root / "pnpm-lock.yaml").exists(): out["install"] = ["npx --yes pnpm@latest install --frozen-lockfile"]
     elif (root / "yarn.lock").exists(): out["install"] = ["yarn install --frozen-lockfile"]
     elif (root / "package-lock.json").exists(): out["install"] = ["npm ci"]
     else: out["install"] = ["npm install"]
@@ -75,3 +75,4 @@ print(json.dumps(out))
   if (!result.success) throw new Error(result.stderr || 'MCP detection failed');
   return JSON.parse(result.stdout) as Detection;
 }
+
