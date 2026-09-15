@@ -2,12 +2,14 @@ import { getSandbox, type Sandbox } from '@cloudflare/sandbox';
 import { detectMcp, type Detection } from './analyze.js';
 import { prepareBinaryBridge, restoreBridgeSource } from './bridge-compiler.js';
 import { tryCompileToEdge } from './edge-compiler.js';
+import { EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
 import { ensureEdgeBuildSchema } from './schema-compat.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { Env, ServerRow } from './types.js';
 
 const PORT = 8080;
 const SANDBOX_READY_MARKER = '/workspace/.sandbox-ready';
+const SANDBOX_SMOKE_SCRIPT = '/tmp/factory-sandbox-smoke.mjs';
 
 function validateRepoUrl(value: string): string {
   const u = new URL(value);
@@ -51,6 +53,43 @@ async function repositoryPresent(sandbox: Sandbox): Promise<boolean> {
   return probe.stdout.includes('yes');
 }
 
+async function startVerifiedSandboxRuntime(
+  env: Env,
+  row: ServerRow,
+  sandbox: Sandbox,
+  command: string,
+  cwd: string,
+): Promise<string[]> {
+  const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
+  const proxy = `mcp-proxy --port ${PORT} --stateless --server stream --shell -- ${command}`;
+  const processId = `mcp-proxy-${row.id}`.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 63);
+  await sandbox.writeFile(SANDBOX_SMOKE_SCRIPT, EDGE_SMOKE_SCRIPT);
+  const process = await sandbox.startProcess(proxy, {
+    cwd,
+    env: deploymentSecrets.values,
+    processId,
+  });
+
+  try {
+    await process.waitForPort(PORT, { mode: 'tcp', timeout: 15000 });
+    const smoke = await sandbox.exec(
+      `MCP_URL=http://127.0.0.1:${PORT}/mcp node ${SANDBOX_SMOKE_SCRIPT}`,
+      { cwd },
+    );
+    if (!smoke.success) {
+      throw new Error(`MCP initialize/tools-list health check failed: ${(smoke.stderr || smoke.stdout || 'unknown error').slice(0, 8000)}`);
+    }
+    const parsed = JSON.parse(smoke.stdout.trim()) as { tools?: unknown };
+    if (!Array.isArray(parsed.tools) || !parsed.tools.every((value) => typeof value === 'string')) {
+      throw new Error('MCP initialize/tools-list health check did not return a valid tools array');
+    }
+    return parsed.tools;
+  } catch (error) {
+    await sandbox.killProcess(process.id).catch(() => undefined);
+    throw error;
+  }
+}
+
 async function prepareSandboxFallback(env: Env, row: ServerRow, sandbox: Sandbox, detection?: Detection): Promise<ServerRow> {
   const detected = detection ?? await detectMcp(sandbox, row.subdir);
   const cwd = workdir(row);
@@ -66,6 +105,7 @@ async function prepareSandboxFallback(env: Env, row: ServerRow, sandbox: Sandbox
 
   const command = row.command?.trim() || detected.command;
   if (!command) throw new Error('Could not detect the stdio start command. Set command manually.');
+  await startVerifiedSandboxRuntime(env, row, sandbox, command, cwd);
   await sandbox.writeFile(SANDBOX_READY_MARKER, new Date().toISOString());
   await env.DB.prepare(`UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=NULL, updated_at=? WHERE id=?`)
     .bind('ready', `sandbox-${detected.runtime}`, command, new Date().toISOString(), row.id).run();
@@ -79,6 +119,7 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
 
   try {
     await ensureEdgeBuildSchema(env);
+    await stopRuntime(env, row);
     await cloneRepository(sandbox, row);
     const detection = await detectMcp(sandbox, row.subdir);
     const command = row.command?.trim() || detection.command;
@@ -162,15 +203,11 @@ export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
       fresh = await env.DB.prepare('SELECT * FROM servers WHERE id=?').bind(row.id).first<ServerRow>() ?? row;
     }
 
-    const upstream = fresh.command?.trim() || fresh.detected_command;
-    if (!upstream) throw new Error('No stdio command configured');
-    const proxy = `mcp-proxy --port ${PORT} --stateless --server stream --shell -- ${upstream}`;
-    const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
-    const process = await sandbox.startProcess(proxy, {
-      cwd: workdir(fresh),
-      env: deploymentSecrets.values,
-    });
-    await process.waitForPort(PORT, { mode: 'tcp', timeout: 15000 });
+    if (!(await processRunning(sandbox))) {
+      const upstream = fresh.command?.trim() || fresh.detected_command;
+      if (!upstream) throw new Error('No stdio command configured');
+      await startVerifiedSandboxRuntime(env, fresh, sandbox, upstream, workdir(fresh));
+    }
   }
 
   const tunnel = await sandbox.tunnels.get(PORT);
