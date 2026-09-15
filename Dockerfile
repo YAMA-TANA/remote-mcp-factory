@@ -15,5 +15,7 @@ RUN npm install -g --no-audit --no-fund mcp-proxy@6.7.16 \
   && printf '#!/bin/sh\nexec npx --yes wrangler@4.131.2 "$@"\n' > /usr/local/bin/wrangler \
   && chmod +x /usr/local/bin/wrangler
 
-USER sandbox
+# Keep the base image runtime user/entrypoint semantics intact. Cloudflare Sandbox
+# base images do not guarantee a named `sandbox` passwd entry; forcing USER sandbox
+# prevents the container from starting in local and potentially hosted runtimes.
 EXPOSE 8080
