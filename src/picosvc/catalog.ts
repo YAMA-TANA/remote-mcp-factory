@@ -56,7 +56,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     slug: 'mock',
     name: 'PicoSvc Mock',
     role: 'Mock API',
-    status: 'planned',
+    status: 'active',
     endpointHost: 'mock.picosvc.com',
     tiers: {
       free: { priceUsdMonthly: 0, limits: { endpoints: 1 } },
