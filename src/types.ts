@@ -53,6 +53,7 @@ export interface Env {
   DEPLOYMENT_SECRETS_KEY?: string;
   ALLOW_DEV_AUTH?: string;
   PUBLIC_MCP_ORIGIN?: string;
+  WEB_ORIGINS?: string;
 }
 
 export interface AuthIdentity {
