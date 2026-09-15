@@ -27,14 +27,29 @@ function transformV1CommonJs(source) {
   );
   s = s.replace(/const \{ StdioServerTransport \} = require\(['"]@modelcontextprotocol\/sdk\/server\/stdio\.js['"]\);?\s*/, '');
   s = s.replace(
-    /const \{\s*CallToolRequestSchema,\s*ListToolsRequestSchema,\s*ListResourcesRequestSchema,\s*ReadResourceRequestSchema,\s*\} = require\(['"]@modelcontextprotocol\/sdk\/types\.js['"]\);?/m,
-    `import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/core';`,
+    /const \{\s*CallToolRequestSchema,\s*ListToolsRequestSchema,\s*ListResourcesRequestSchema,\s*ReadResourceRequestSchema,\s*\} = require\(['"]@modelcontextprotocol\/sdk\/types\.js['"]\);?\s*/m,
+    '',
   );
+
+  // Official v1→v2 low-level API migration: schema-first handler registration
+  // becomes method-string registration. The handler still receives the full spec request.
+  const methodMap = {
+    ListToolsRequestSchema: 'tools/list',
+    CallToolRequestSchema: 'tools/call',
+    ListResourcesRequestSchema: 'resources/list',
+    ReadResourceRequestSchema: 'resources/read',
+  };
+  for (const [schema, method] of Object.entries(methodMap)) {
+    s = s.replace(new RegExp(`setRequestHandler\\(\\s*${schema}\\s*,`, 'g'), `setRequestHandler('${method}',`);
+  }
+
   s = s.replace('async function main() {', 'function buildServer() {');
   const tail = /\s*\/\/ Start server\s*\n\s*const transport = new StdioServerTransport\(\);\s*\n\s*await server\.connect\(transport\);\s*\n\s*console\.error\([^\n]*\);\s*\n}\s*\n\s*main\(\)\.catch\([\s\S]*$/m;
   if (!tail.test(s)) throw new Error('Could not identify stdio bootstrap tail');
   s = s.replace(tail, `\n  return server;\n}\n\nexport default createMcpHandler(() => buildServer(), { onerror: (error) => console.error('MCP_HANDLER_ERROR', error?.stack || error) });\n`);
-  if (/StdioServerTransport|@modelcontextprotocol\/sdk/.test(s)) throw new Error('v1/stdin imports remain after codemod');
+  if (/StdioServerTransport|@modelcontextprotocol\/sdk|ListToolsRequestSchema|CallToolRequestSchema|ListResourcesRequestSchema|ReadResourceRequestSchema/.test(s)) {
+    throw new Error('v1 SDK/transport/schema-first registrations remain after codemod');
+  }
   return s;
 }
 
@@ -50,7 +65,6 @@ async function main(){
     pkg.dependencies={...(pkg.dependencies||{})};
     delete pkg.dependencies['@modelcontextprotocol/sdk'];
     pkg.dependencies['@modelcontextprotocol/server']='^2.0.0';
-    pkg.dependencies['@modelcontextprotocol/core']='^2.0.0';
     await writeFile(join(target,'package.json'),JSON.stringify(pkg,null,2));
     await writeFile(join(target,'wrangler.edge.jsonc'),JSON.stringify({name:'spaces-edge-proof',main:'edge-entry.mjs',compatibility_date:'2026-09-15',compatibility_flags:['nodejs_compat']},null,2));
     await run('npm',['install','--ignore-scripts'],{cwd:target});
@@ -62,7 +76,7 @@ async function main(){
     if(init.error)throw new Error(JSON.stringify(init.error));
     const tools=await mcp(url,{jsonrpc:'2.0',id:2,method:'tools/list',params:{}}); if(tools.error)throw new Error(JSON.stringify(tools.error));
     const names=tools.result?.tools?.map(x=>x.name)||[]; if(!names.length)throw new Error('No tools returned');
-    const report={ok:true,sourceRepo:REPO,sourceSdk:'@modelcontextprotocol/sdk v1',conversion:['replace v1 SDK imports with v2 runtime-neutral packages','remove StdioServerTransport','extract server construction into factory','serve with createMcpHandler'],runtime:'cloudflare-workerd-local',toolCount:names.length,tools:names,generatedAt:new Date().toISOString()};
+    const report={ok:true,sourceRepo:REPO,sourceSdk:'@modelcontextprotocol/sdk v1',conversion:['replace v1 SDK import with v2 runtime-neutral server package','rewrite schema-first setRequestHandler registrations to v2 method strings','remove StdioServerTransport','extract server construction into factory','serve with createMcpHandler'],runtime:'cloudflare-workerd-local',toolCount:names.length,tools:names,generatedAt:new Date().toISOString()};
     await writeFile(resolve(ROOT,'reports/edge-proof-v1-spaces.json'),JSON.stringify(report,null,2)+'\n');
     await writeFile(resolve(ROOT,'reports/edge-proof-v1-spaces.md'),`# Automatic v1 stdio → Worker proof\n\n- Result: **PASS**\n- Source: ${REPO}\n- Original SDK: \`@modelcontextprotocol/sdk\` v1\n- Original transport: \`StdioServerTransport\`\n- Conversion: automated source rewrite; source repository left untouched\n- Runtime: Cloudflare workerd via Wrangler\n- MCP handshake: \`initialize\` ✅\n- \`tools/list\`: **${names.length} tools** ✅\n\nTools: ${names.map(n=>`\`${n}\``).join(', ')}\n\nGenerated: ${report.generatedAt}\n`);
     console.log(`PASS automatic v1 conversion: ${names.length} tools`);
