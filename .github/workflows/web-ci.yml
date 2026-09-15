@@ -1,0 +1,39 @@
+name: Web CI
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'src/entry.ts'
+      - 'src/types.ts'
+      - '.github/workflows/web-ci.yml'
+  push:
+    branches: [next-pages-ui]
+    paths:
+      - 'web/**'
+      - 'src/entry.ts'
+      - 'src/types.ts'
+      - '.github/workflows/web-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_FACTORY_API_URL: https://factory.example.workers.dev
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+      - run: test -f out/index.html
