@@ -92,17 +92,18 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
       return;
     }
 
-    if (edge.ok && edge.compatibility.runtime === 'edge') {
+    if (edge.ok && (edge.compatibility.runtime === 'edge' || edge.compatibility.runtime === 'edge-with-bridge')) {
+      const detectedRuntime = edge.compatibility.runtime === 'edge-with-bridge' ? 'edge-node-bridge' : 'edge-node';
       await env.DB.prepare(`UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=NULL, updated_at=? WHERE id=?`)
-        .bind('ready', 'edge-node', command, new Date().toISOString(), row.id).run();
+        .bind('ready', detectedRuntime, command, new Date().toISOString(), row.id).run();
       return;
     }
 
     if (edge.ok && edge.compatibility.runtime !== 'edge') {
-      // The compiler can prove the Web/MCP shape is valid, but until tool-level bridge
-      // rewrites exist we must not expose a Worker whose native tool calls would fail.
+      // A candidate is not an active bridge. It stays on Linux unless the compiler
+      // has rewritten and verified the native call, which is represented by edge-with-bridge.
       await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
-        .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is enabled.`, new Date().toISOString(), row.id).run();
+        .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is verified.`, new Date().toISOString(), row.id).run();
     }
 
     await prepareSandboxFallback(env, row, sandbox, detection);
