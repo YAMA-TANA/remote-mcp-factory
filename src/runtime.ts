@@ -1,6 +1,7 @@
 import { getSandbox, type Sandbox } from '@cloudflare/sandbox';
 import { detectMcp, type Detection } from './analyze.js';
 import { tryCompileToEdge } from './edge-compiler.js';
+import { loadDeploymentSecrets } from './secrets.js';
 import type { Env, ServerRow } from './types.js';
 
 const PORT = 8080;
@@ -101,6 +102,15 @@ async function processRunning(sandbox: Sandbox): Promise<boolean> {
   return list.some((p: any) => String(p.command ?? '').includes('mcp-proxy'));
 }
 
+export async function stopRuntime(env: Env, row: Pick<ServerRow, 'id' | 'owner'>): Promise<void> {
+  const sandbox = serverSandbox(env, row);
+  const list = await sandbox.listProcesses().catch(() => [] as any[]);
+  for (const process of list) {
+    if (!String((process as any).command ?? '').includes('mcp-proxy')) continue;
+    await sandbox.killProcess((process as any).id).catch(() => undefined);
+  }
+}
+
 /**
  * Starts the expensive Linux fallback only when it is actually needed.
  * Edge-ready deployments normally never call this function.
@@ -121,7 +131,11 @@ export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
     const upstream = fresh.command?.trim() || fresh.detected_command;
     if (!upstream) throw new Error('No stdio command configured');
     const proxy = `mcp-proxy --port ${PORT} --stateless --server stream --shell -- ${upstream}`;
-    const process = await sandbox.startProcess(proxy, { cwd: workdir(fresh) });
+    const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
+    const process = await sandbox.startProcess(proxy, {
+      cwd: workdir(fresh),
+      env: deploymentSecrets.values,
+    });
     await process.waitForPort(PORT, { mode: 'tcp', timeout: 15000 });
   }
 
