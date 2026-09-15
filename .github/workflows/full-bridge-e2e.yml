@@ -7,7 +7,9 @@ on:
       - 'src/**'
       - 'fixtures/bridge-e2e-mcp/**'
       - 'fixtures/bridge-ffmpeg-e2e-mcp/**'
+      - 'fixtures/secret-e2e-mcp/**'
       - 'scripts/test-full-bridge-e2e.mjs'
+      - 'scripts/test-deployment-secrets-e2e.mjs'
       - 'Dockerfile'
       - 'schema.sql'
       - 'wrangler.jsonc'
@@ -17,7 +19,9 @@ on:
       - 'src/**'
       - 'fixtures/bridge-e2e-mcp/**'
       - 'fixtures/bridge-ffmpeg-e2e-mcp/**'
+      - 'fixtures/secret-e2e-mcp/**'
       - 'scripts/test-full-bridge-e2e.mjs'
+      - 'scripts/test-deployment-secrets-e2e.mjs'
       - 'Dockerfile'
       - 'schema.sql'
       - 'wrangler.jsonc'
@@ -55,6 +59,7 @@ jobs:
           CI=1 nohup npx wrangler dev --local --port 8787 \
             --var ALLOW_DEV_AUTH:true \
             --var BRIDGE_SIGNING_KEY:factory-e2e-signing-key \
+            --var 'DEPLOYMENT_SECRETS_KEY:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=' \
             > /tmp/factory-wrangler.log 2>&1 < /dev/null &
           echo $! > /tmp/factory-wrangler.pid
 
@@ -79,6 +84,12 @@ jobs:
           FACTORY_URL: http://127.0.0.1:8787
           E2E_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: node scripts/test-full-bridge-e2e.mjs
+
+      - name: Execute encrypted deployment secrets -> Edge smoke/runtime -> rotation E2E
+        env:
+          FACTORY_URL: http://127.0.0.1:8787
+          E2E_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: node scripts/test-deployment-secrets-e2e.mjs
 
       - name: Factory logs
         if: always()

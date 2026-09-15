@@ -57,37 +57,47 @@ export async function putDeploymentSecrets(env: Env, serverId: string, input: Re
   const entries = Object.entries(input);
   if (!entries.length) return [];
   if (entries.length > 50) throw new Error('At most 50 secrets may be updated at once');
-  const key = await encryptionKey(env);
-  const now = new Date().toISOString();
-  const names: string[] = [];
 
-  for (const [rawName, rawValue] of entries) {
+  // Validate the entire request before mutating D1 so one bad item cannot leave a partial update.
+  const validated = entries.map(([rawName, rawValue]) => {
     const name = validateSecretName(rawName);
     if (typeof rawValue !== 'string') throw new Error(`${name} must be a string`);
     if (rawValue.length > 16_384) throw new Error(`${name} exceeds the 16 KiB value limit`);
+    return { name, value: rawValue };
+  });
+
+  const key = await encryptionKey(env);
+  const now = new Date().toISOString();
+  const statements: D1PreparedStatement[] = [];
+
+  for (const { name, value } of validated) {
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const plaintext = new TextEncoder().encode(rawValue);
+    const plaintext = new TextEncoder().encode(value);
     const encrypted = await crypto.subtle.encrypt(
       { name: 'AES-GCM', iv: toArrayBuffer(iv) },
       key,
       toArrayBuffer(plaintext),
     );
-    await env.DB.prepare(`
+    statements.push(env.DB.prepare(`
       INSERT INTO server_secrets (server_id,name,iv,ciphertext,updated_at)
       VALUES (?,?,?,?,?)
       ON CONFLICT(server_id,name) DO UPDATE SET iv=excluded.iv,ciphertext=excluded.ciphertext,updated_at=excluded.updated_at
-    `).bind(serverId, name, bytesToBase64(iv), bytesToBase64(new Uint8Array(encrypted)), now).run();
-    names.push(name);
+    `).bind(serverId, name, bytesToBase64(iv), bytesToBase64(new Uint8Array(encrypted)), now));
   }
-  // Changes the Dynamic Worker identity so a warm isolate can never retain the previous secret set.
-  await env.DB.prepare('UPDATE servers SET updated_at=? WHERE id=?').bind(now, serverId).run();
-  return names.sort();
+
+  // Keep the secret mutation and Dynamic Worker identity invalidation in one D1 batch.
+  statements.push(env.DB.prepare('UPDATE servers SET updated_at=? WHERE id=?').bind(now, serverId));
+  await env.DB.batch(statements);
+  return validated.map(({ name }) => name).sort();
 }
 
 export async function deleteDeploymentSecret(env: Env, serverId: string, rawName: string): Promise<void> {
   const name = validateSecretName(rawName);
-  await env.DB.prepare('DELETE FROM server_secrets WHERE server_id=? AND name=?').bind(serverId, name).run();
-  await env.DB.prepare('UPDATE servers SET updated_at=? WHERE id=?').bind(new Date().toISOString(), serverId).run();
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM server_secrets WHERE server_id=? AND name=?').bind(serverId, name),
+    env.DB.prepare('UPDATE servers SET updated_at=? WHERE id=?').bind(now, serverId),
+  ]);
 }
 
 export async function listDeploymentSecretNames(env: Env, serverId: string): Promise<string[]> {
