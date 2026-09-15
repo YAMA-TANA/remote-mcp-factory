@@ -9,6 +9,7 @@ on:
       - 'src/runtime.ts'
       - 'src/index.ts'
       - 'src/types.ts'
+      - 'scripts/test-edge-compiler-assets.mjs'
       - 'schema.sql'
       - 'migrations/**'
       - 'wrangler.jsonc'
@@ -32,3 +33,5 @@ jobs:
         run: npm run typecheck
       - name: Validate Wrangler config
         run: npx wrangler types --config wrangler.jsonc --env-interface GeneratedEnv /tmp/factory-worker-configuration.d.ts
+      - name: External MCP compiler integration test
+        run: node scripts/test-edge-compiler-assets.mjs
