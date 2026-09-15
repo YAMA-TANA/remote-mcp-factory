@@ -9,6 +9,7 @@ on:
       - 'src/artifact-store.ts'
       - 'src/compat-analysis.ts'
       - 'src/binary-bridge.ts'
+      - 'src/schema-compat.ts'
       - 'src/runtime.ts'
       - 'src/entry.ts'
       - 'src/index.ts'
