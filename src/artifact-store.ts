@@ -17,8 +17,14 @@ export interface EdgeArtifactManifest {
   modules: EdgeArtifactModuleRecord[];
 }
 
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function sha256Hex(bytes: ArrayBuffer | Uint8Array): Promise<string> {
-  const input = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const input = bytes instanceof Uint8Array ? ownedArrayBuffer(bytes) : bytes;
   const digest = await crypto.subtle.digest('SHA-256', input);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -83,8 +89,9 @@ export async function loadEdgeArtifact(
     const actualHash = await sha256Hex(bytes);
     if (actualHash !== record.sha256) throw new Error(`Edge artifact checksum mismatch: ${record.name}`);
 
-    if (record.type === 'data') modules[record.name] = { data: bytes.buffer };
-    else if (record.type === 'wasm') modules[record.name] = { wasm: bytes.buffer };
+    const buffer = ownedArrayBuffer(bytes);
+    if (record.type === 'data') modules[record.name] = { data: buffer };
+    else if (record.type === 'wasm') modules[record.name] = { wasm: buffer };
     else {
       const text = new TextDecoder().decode(bytes);
       if (record.type === 'js') modules[record.name] = { js: text };
