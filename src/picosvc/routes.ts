@@ -1,0 +1,55 @@
+import { clerkIdentity } from '../auth.js';
+import type { Env } from '../types.js';
+import { PICOSVC_PRODUCT_MAP, PICOSVC_PRODUCTS, type PicoSvcProductSlug } from './catalog.js';
+
+function json(body: unknown, status = 200): Response {
+  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+}
+
+function monthKey(now = new Date()): string {
+  return now.toISOString().slice(0, 7);
+}
+
+export async function picoSvcRoutes(request: Request, env: Env): Promise<Response | null> {
+  const url = new URL(request.url);
+
+  if (request.method === 'GET' && url.pathname === '/api/picosvc/catalog') {
+    return json({ brand: 'PicoSvc', products: PICOSVC_PRODUCTS });
+  }
+
+  const productMatch = url.pathname.match(/^\/api\/picosvc\/products\/([a-z-]+)$/);
+  if (request.method === 'GET' && productMatch) {
+    const product = PICOSVC_PRODUCT_MAP.get(productMatch[1] as PicoSvcProductSlug);
+    return product ? json(product) : json({ error: 'Unknown PicoSvc product' }, 404);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/picosvc/account') {
+    const identity = await clerkIdentity(request, env);
+    if (!identity) return json({ error: 'Authentication required', signInUrl: env.CLERK_SIGN_IN_URL || null }, 401);
+
+    const entitlements = await env.DB.prepare(`
+      SELECT product, tier, source, active, updated_at
+      FROM product_entitlements
+      WHERE owner=?
+      ORDER BY product
+    `).bind(identity.ownerId).all();
+
+    const usage = await env.DB.prepare(`
+      SELECT product, metric, quantity, updated_at
+      FROM product_usage_monthly
+      WHERE owner=? AND month=?
+      ORDER BY product, metric
+    `).bind(identity.ownerId, monthKey()).all();
+
+    return json({
+      userId: identity.userId,
+      orgId: identity.orgId,
+      ownerId: identity.ownerId,
+      month: monthKey(),
+      entitlements: entitlements.results,
+      usage: usage.results,
+    });
+  }
+
+  return null;
+}

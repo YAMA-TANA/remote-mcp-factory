@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "remote-mcp-factory",
-  "main": "src/entry.ts",
+  "main": "src/picosvc-entry.ts",
   "compatibility_date": "2026-09-15",
   "compatibility_flags": [
     "nodejs_compat"
@@ -65,7 +65,7 @@
     "SANDBOX_TRANSPORT": "rpc",
     "CLERK_PRO_PLAN_SLUG": "pro",
     "CLERK_TEAM_PLAN_SLUG": "team",
-    "WEB_ORIGINS": "https://remote-mcp-factory.pages.dev"
+    "WEB_ORIGINS": "https://remote-mcp-factory.pages.dev,https://picosvc.com,https://app.picosvc.com"
   },
   "r2_buckets": [
     {

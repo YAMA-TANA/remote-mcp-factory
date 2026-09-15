@@ -27,6 +27,32 @@ type CreateResult = {
   error?: string;
 };
 
+type Product = {
+  slug: string;
+  name: string;
+  role: string;
+  status: 'active' | 'planned';
+};
+
+const PRODUCTS: Product[] = [
+  { slug: 'mcp', name: 'MCP', role: 'MCP hosting / Remote conversion', status: 'active' },
+  { slug: 'mock', name: 'Mock', role: 'Mock API', status: 'planned' },
+  { slug: 'hooks', name: 'Hooks', role: 'Webhook inbox / replay', status: 'planned' },
+  { slug: 'rss', name: 'RSS', role: 'Web → RSS', status: 'planned' },
+  { slug: 'mail', name: 'Mail', role: 'Email → Webhook', status: 'planned' },
+  { slug: 'shot', name: 'Shot', role: 'Screenshot / PDF', status: 'planned' },
+  { slug: 'fetch', name: 'Fetch', role: 'URL → Markdown / metadata', status: 'planned' },
+  { slug: 'qr', name: 'QR', role: 'Dynamic QR / redirect', status: 'planned' },
+  { slug: 'cron', name: 'Cron', role: 'Cron execution / monitoring', status: 'planned' },
+  { slug: 'functions', name: 'Functions', role: 'Tiny serverless functions', status: 'planned' },
+  { slug: 'json', name: 'JSON', role: 'JSON API / tiny database', status: 'planned' },
+  { slug: 'files', name: 'Files', role: 'R2-backed file delivery', status: 'planned' },
+  { slug: 'license', name: 'License', role: 'License key validation', status: 'planned' },
+  { slug: 'flags', name: 'Flags', role: 'Feature flags / remote config', status: 'planned' },
+  { slug: 'monitor', name: 'Monitor', role: 'Web page change monitoring', status: 'planned' },
+  { slug: 'forms', name: 'Forms', role: 'Form backend', status: 'planned' },
+];
+
 const API_URL = (process.env.NEXT_PUBLIC_FACTORY_API_URL || '').replace(/\/$/, '');
 const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
 
@@ -148,8 +174,9 @@ export default function Home() {
   return (
     <main>
       <nav className="nav shell">
-        <div className="brand"><span className="brandMark">M</span><span>Remote MCP Factory</span></div>
+        <div className="brand"><span className="brandMark">P</span><span>PicoSvc</span></div>
         <div className="navRight">
+          <a href="#products">Products</a>
           <a href="https://github.com/YAMA-TANA/remote-mcp-factory" target="_blank" rel="noreferrer">GitHub</a>
           {signedIn ? <div ref={userButtonRef} className="userButton" /> : (
             <button className="secondary" onClick={() => clerk?.openSignIn()}>Sign in</button>
@@ -158,9 +185,37 @@ export default function Home() {
       </nav>
 
       <section className="hero shell">
-        <div className="eyebrow"><span className="dot" /> Edge-first MCP deployment</div>
-        <h1>GitHub in.<br />Remote MCP out.</h1>
-        <p className="lede">Paste a public MCP repository. We analyze it, compile compatible servers to a Cloudflare Dynamic Worker, bridge narrowly supported native calls, and fall back to Linux only when needed.</p>
+        <div className="eyebrow"><span className="dot" /> Small developer infrastructure</div>
+        <h1>Tiny services.<br />One account.</h1>
+        <p className="lede">Mock APIs, webhook inboxes, RSS, screenshots, Remote MCP hosting and other small infrastructure without another heavyweight platform. Free to start, Tiny from $1/month, Pro from $3/month.</p>
+
+        <div className="flow">
+          <span>One login</span><i>→</i><span>One dashboard</span><i>→</i><span>Product-scoped plans</span><i>→</i><span>Cloudflare edge</span><em>MCP is live first</em>
+        </div>
+      </section>
+
+      <section className="shell deploymentsSection" id="products">
+        <div className="sectionHead"><div><span className="kicker">PICOSVC SUITE</span><h2>Pick only what you need.</h2></div></div>
+        <div className="deploymentGrid">
+          {PRODUCTS.map((product) => (
+            <article className="deployment" key={product.slug}>
+              <div className="deploymentTop">
+                <div><strong>PicoSvc {product.name}</strong><p>{product.role}</p></div>
+                <span className={`status ${product.status === 'active' ? 'ready' : ''}`}>{product.status}</span>
+              </div>
+              <div className="runtime">
+                <span className={product.status === 'active' ? 'edgePill' : 'fallbackPill'}>{product.status === 'active' ? 'Available now' : 'Planned'}</span>
+                <span>Free</span><span>$1 Tiny</span><span>$3 Pro</span>
+              </div>
+              <div className="deploymentBottom"><code>{product.slug}</code><span>shared PicoSvc account</span></div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="shell deploymentsSection" id="mcp">
+        <div className="sectionHead"><div><span className="kicker">AVAILABLE NOW</span><h2>PicoSvc MCP</h2></div></div>
+        <p className="lede">Connect a stdio MCP repository. Compatible servers compile to Cloudflare Dynamic Workers; heavier servers fall back to an isolated Sandbox.</p>
 
         <div className="deployCard">
           {!configured && (
@@ -168,18 +223,15 @@ export default function Home() {
           )}
           {!signedIn ? (
             <div className="signinState">
-              <div>
-                <strong>Deploy your first MCP</strong>
-                <p>Sign in to create and manage endpoints.</p>
-              </div>
-              <button className="primary" disabled={!clerk} onClick={() => clerk?.openSignIn()}>Sign in with Clerk</button>
+              <div><strong>Deploy your first MCP</strong><p>Your PicoSvc login will be shared with every product.</p></div>
+              <button className="primary" disabled={!clerk} onClick={() => clerk?.openSignIn()}>Sign in to PicoSvc</button>
             </div>
           ) : (
             <>
-              <label>GitHub repository</label>
+              <label>GitHub MCP repository</label>
               <div className="repoRow">
                 <div className="repoInput"><span>↗</span><input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="https://github.com/owner/mcp-server" /></div>
-                <button className="primary" disabled={creating || !repo.trim()} onClick={deploy}>{creating ? 'Deploying…' : 'Deploy'}</button>
+                <button className="primary" disabled={creating || !repo.trim()} onClick={deploy}>{creating ? 'Deploying…' : 'Deploy MCP'}</button>
               </div>
               <div className="options">
                 <label>Branch <input value={branch} onChange={(e) => setBranch(e.target.value)} /></label>
@@ -196,15 +248,11 @@ export default function Home() {
             </div>
           )}
         </div>
-
-        <div className="flow">
-          <span>GitHub repo</span><i>→</i><span>Analyze</span><i>→</i><span>Compile + verify</span><i>→</i><span>Edge</span><em>Bridge or Sandbox when needed</em>
-        </div>
       </section>
 
       <section className="shell deploymentsSection">
-        <div className="sectionHead"><div><span className="kicker">YOUR PROJECTS</span><h2>Deployments</h2></div>{signedIn && <button className="ghost" onClick={() => void refresh()}>Refresh</button>}</div>
-        {!signedIn ? <div className="empty">Sign in to view deployments.</div> : deployments.length === 0 ? <div className="empty">No deployments yet. Paste a GitHub MCP above.</div> : (
+        <div className="sectionHead"><div><span className="kicker">YOUR MCP PROJECTS</span><h2>Deployments</h2></div>{signedIn && <button className="ghost" onClick={() => void refresh()}>Refresh</button>}</div>
+        {!signedIn ? <div className="empty">Sign in to view your PicoSvc MCP deployments.</div> : deployments.length === 0 ? <div className="empty">No MCP deployments yet.</div> : (
           <div className="deploymentGrid">
             {deployments.map((item) => {
               const runtime = runtimeBadge(item);
@@ -223,12 +271,12 @@ export default function Home() {
       </section>
 
       <section className="features shell">
-        <article><span>01</span><h3>Automatic conversion</h3><p>SDK migration, stdio removal, Worker bundling and real protocol verification happen automatically.</p></article>
-        <article><span>02</span><h3>Runtime selection</h3><p>Edge by default, a narrow Binary Bridge when verified, Sandbox for heavy workloads, and a clear rejection when the MCP is tied to a local machine.</p></article>
-        <article><span>03</span><h3>Protected by default</h3><p>Bearer-protected endpoints, rate limits, usage quotas and encrypted deployment secrets.</p></article>
+        <article><span>01</span><h3>Shared account</h3><p>One Clerk identity across every PicoSvc product. Organizations can become shared owners without separate product accounts.</p></article>
+        <article><span>02</span><h3>Product-scoped plans</h3><p>Use Free on one product, Tiny on another and Pro only where you need more capacity.</p></article>
+        <article><span>03</span><h3>Edge first</h3><p>Most services stay small Cloudflare Workers. MCP keeps its Dynamic Worker and Sandbox runtime for arbitrary server code.</p></article>
       </section>
 
-      <footer className="shell"><span>Remote MCP Factory</span><span>Built on Cloudflare</span></footer>
+      <footer className="shell"><span>PicoSvc</span><span>Tiny developer services from $1/month.</span></footer>
     </main>
   );
 }
