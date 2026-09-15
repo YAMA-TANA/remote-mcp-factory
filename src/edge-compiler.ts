@@ -1,9 +1,10 @@
 import type { Sandbox } from '@cloudflare/sandbox';
 import type { Detection } from './analyze.js';
-import { EDGE_ADAPT_SCRIPT, EDGE_ASSESS_SCRIPT, EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
+import { EDGE_ADAPTER_SCRIPT } from './edge-adapter.js';
+import { EDGE_ASSESS_SCRIPT, EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
-const EDGE_COMPILER_VERSION = '0.1.1';
+const EDGE_COMPILER_VERSION = '0.1.2';
 const EDGE_COMPATIBILITY_DATE = '2026-09-15';
 const EDGE_SMOKE_PORT = 8793;
 const MAX_D1_BUNDLE_BYTES = 1_800_000;
@@ -186,10 +187,17 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
         { cwd },
       );
       if (markers.stdout.trim()) throw new Error(`MCP SDK codemod requires manual migration: ${markers.stdout.trim()}`);
+      // The upstream codemod is intentionally import-driven and can leave CommonJS JavaScript imports untouched.
+      // Always ensure the runtime-neutral v2 packages are present; the adapter below removes any leftover v1 paths.
+      await execOk(
+        sandbox,
+        `npm pkg set 'dependencies.@modelcontextprotocol/server=^2.0.0' 'dependencies.@modelcontextprotocol/core=^2.0.0'`,
+        cwd,
+      );
     }
 
     if (assessment.strategy !== 'native-http') {
-      await sandbox.writeFile('/tmp/factory-edge-adapt.mjs', EDGE_ADAPT_SCRIPT);
+      await sandbox.writeFile('/tmp/factory-edge-adapt.mjs', EDGE_ADAPTER_SCRIPT);
       const outputName = edgeEntryName(assessment.entry);
       const outputPath = `${cwd}/${outputName}`;
       await execOk(sandbox, `node /tmp/factory-edge-adapt.mjs ${shell(sourceEntry)} ${shell(outputPath)}`, cwd);
