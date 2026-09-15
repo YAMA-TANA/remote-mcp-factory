@@ -10,6 +10,34 @@ function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
+function allowedOrigin(request: Request, env: Env): string | null {
+  const origin = request.headers.get('origin');
+  if (!origin) return null;
+  try {
+    const url = new URL(origin);
+    if (url.protocol === 'https:' && url.hostname.endsWith('.pages.dev')) return origin;
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return origin;
+  } catch {
+    return null;
+  }
+  const configured = (env.WEB_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+  return configured.includes(origin.replace(/\/$/, '')) ? origin : null;
+}
+
+function withCors(response: Response, origin: string | null): Response {
+  if (!origin) return response;
+  const headers = new Headers(response.headers);
+  headers.set('access-control-allow-origin', origin);
+  headers.set('access-control-allow-methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
+  headers.set('access-control-allow-headers', 'authorization,content-type');
+  headers.set('access-control-max-age', '86400');
+  headers.append('vary', 'Origin');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 async function ownedServer(request: Request, env: Env, id: string): Promise<{ row: ServerRow } | { response: Response }> {
   const identity = await clerkIdentity(request, env);
   if (!identity) return { response: json({ error: 'Authentication required', signInUrl: env.CLERK_SIGN_IN_URL || null }, 401) };
@@ -40,7 +68,6 @@ async function secretRoutes(request: Request, env: Env, ctx: ExecutionContext): 
         return json({ error: 'Body must be { secrets: { NAME: "value" } }' }, 400);
       }
       const updated = await putDeploymentSecrets(env, row.id, body.secrets);
-      // Existing Linux fallback processes inherit env at process start, so stop them and lazily restart on next request.
       ctx.waitUntil(stopRuntime(env, row).catch(() => undefined));
       const names = await listDeploymentSecretNames(env, row.id);
       return json({ serverId: row.id, updated, names });
@@ -63,8 +90,15 @@ async function secretRoutes(request: Request, env: Env, ctx: ExecutionContext): 
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    const origin = url.pathname.startsWith('/api/') ? allowedOrigin(request, env) : null;
+    if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
+      if (!origin) return new Response(null, { status: 403 });
+      return withCors(new Response(null, { status: 204 }), origin);
+    }
+
     const secretResponse = await secretRoutes(request, env, ctx);
-    if (secretResponse) return secretResponse;
-    return await core.fetch(request, env, ctx);
+    if (secretResponse) return withCors(secretResponse, origin);
+    return withCors(await core.fetch(request, env, ctx), origin);
   },
 };
