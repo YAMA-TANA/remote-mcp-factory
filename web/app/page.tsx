@@ -36,7 +36,7 @@ type Product = {
 
 const PRODUCTS: Product[] = [
   { slug: 'mcp', name: 'MCP', role: 'MCP hosting / Remote conversion', status: 'active' },
-  { slug: 'mock', name: 'Mock', role: 'Mock API', status: 'planned' },
+  { slug: 'mock', name: 'Mock', role: 'Mock API', status: 'active' },
   { slug: 'hooks', name: 'Hooks', role: 'Webhook inbox / replay', status: 'planned' },
   { slug: 'rss', name: 'RSS', role: 'Web → RSS', status: 'planned' },
   { slug: 'mail', name: 'Mail', role: 'Email → Webhook', status: 'planned' },
@@ -177,6 +177,7 @@ export default function Home() {
         <div className="brand"><span className="brandMark">P</span><span>PicoSvc</span></div>
         <div className="navRight">
           <a href="#products">Products</a>
+          <a href="/mock">Mock</a>
           <a href="https://github.com/YAMA-TANA/remote-mcp-factory" target="_blank" rel="noreferrer">GitHub</a>
           {signedIn ? <div ref={userButtonRef} className="userButton" /> : (
             <button className="secondary" onClick={() => clerk?.openSignIn()}>Sign in</button>
@@ -190,7 +191,7 @@ export default function Home() {
         <p className="lede">Mock APIs, webhook inboxes, RSS, screenshots, Remote MCP hosting and other small infrastructure without another heavyweight platform. Free to start, Tiny from $1/month, Pro from $3/month.</p>
 
         <div className="flow">
-          <span>One login</span><i>→</i><span>One dashboard</span><i>→</i><span>Product-scoped plans</span><i>→</i><span>Cloudflare edge</span><em>MCP is live first</em>
+          <span>One login</span><i>→</i><span>One dashboard</span><i>→</i><span>Product-scoped plans</span><i>→</i><span>Cloudflare edge</span><em>MCP + Mock live first</em>
         </div>
       </section>
 
@@ -207,7 +208,10 @@ export default function Home() {
                 <span className={product.status === 'active' ? 'edgePill' : 'fallbackPill'}>{product.status === 'active' ? 'Available now' : 'Planned'}</span>
                 <span>Free</span><span>$1 Tiny</span><span>$3 Pro</span>
               </div>
-              <div className="deploymentBottom"><code>{product.slug}</code><span>shared PicoSvc account</span></div>
+              <div className="deploymentBottom">
+                <code>{product.slug}</code>
+                {product.slug === 'mock' ? <a href="/mock">Open dashboard →</a> : <span>shared PicoSvc account</span>}
+              </div>
             </article>
           ))}
         </div>

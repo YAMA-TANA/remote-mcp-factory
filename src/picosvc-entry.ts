@@ -1,4 +1,5 @@
 import legacyEntry, { Sandbox } from './entry.js';
+import { mockRuntimeRoute } from './picosvc/mock.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
 import type { Env } from './types.js';
 
@@ -40,6 +41,9 @@ function withCors(response: Response, origin: string | null): Response {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    const mockResponse = await mockRuntimeRoute(request, env);
+    if (mockResponse) return mockResponse;
 
     if (url.pathname.startsWith('/api/picosvc/')) {
       const origin = allowedOrigin(request, env);
