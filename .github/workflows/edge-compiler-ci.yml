@@ -2,11 +2,15 @@ name: Edge compiler CI
 
 on:
   push:
-    branches: [edge-compiler-poc]
+    branches: [edge-compiler-poc, compat-runtime-v1]
   pull_request:
     paths:
       - 'src/edge-*.ts'
+      - 'src/artifact-store.ts'
+      - 'src/compat-analysis.ts'
+      - 'src/binary-bridge.ts'
       - 'src/runtime.ts'
+      - 'src/entry.ts'
       - 'src/index.ts'
       - 'src/types.ts'
       - 'scripts/test-edge-compiler-assets.mjs'
