@@ -124,6 +124,8 @@ export default function MockPage() {
         <a className="brand" href="/"><span className="brandMark">P</span><span>PicoSvc</span></a>
         <div className="navRight">
           <a href="/">Products</a>
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
           {signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>Sign in</button>}
         </div>
       </nav>
@@ -131,16 +133,16 @@ export default function MockPage() {
       <section className="hero shell">
         <div className="eyebrow"><span className="dot" /> PicoSvc Mock</div>
         <h1>Mock an API.<br />Keep moving.</h1>
-        <p className="lede">Create a stable public endpoint with the HTTP method, status and response body you need. Free includes 1 endpoint; Tiny includes 10 for $1/month.</p>
+        <p className="lede">Create a stable public endpoint with the HTTP method, status and response body you need. PicoSvc Mock has its own plan and quota; buying another PicoSvc product does not automatically upgrade Mock. Free includes 1 endpoint and Tiny includes 10 for $1/month.</p>
 
         {!signedIn ? (
           <div className="deployCard signinState">
-            <div><strong>Sign in to create a mock endpoint</strong><p>Your account is shared with every PicoSvc service.</p></div>
+            <div><strong>Sign in to create a mock endpoint</strong><p>Your login is shared across PicoSvc. Product subscriptions remain independent unless you choose a bundle that explicitly includes them.</p></div>
             <button className="primary" disabled={!clerk} onClick={() => clerk?.openSignIn()}>Sign in to PicoSvc</button>
           </div>
         ) : (
           <div className="deployCard">
-            <div className="sectionHead"><div><span className="kicker">{data.tier.toUpperCase()} PLAN</span><h2>New endpoint</h2></div><span>{data.endpoints.length} / {data.limit ?? '∞'}</span></div>
+            <div className="sectionHead"><div><span className="kicker">{data.tier.toUpperCase()} MOCK PLAN</span><h2>New endpoint</h2></div><span>{data.endpoints.length} / {data.limit ?? '∞'}</span></div>
             <div className="options">
               <label>Name <input value={name} onChange={(event) => setName(event.target.value)} /></label>
               <label>Method <select value={method} onChange={(event) => setMethod(event.target.value)}><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label>
@@ -170,7 +172,7 @@ export default function MockPage() {
         )}
       </section>
 
-      <footer className="shell"><span>PicoSvc Mock</span><span>Tiny developer services from $1/month.</span></footer>
+      <footer className="shell"><span>PicoSvc Mock</span><span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></span></footer>
     </main>
   );
 }
