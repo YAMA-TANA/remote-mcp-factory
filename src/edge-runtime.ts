@@ -1,5 +1,6 @@
 import { loadEdgeArtifact } from './artifact-store.js';
-import { createBridgeToken, type BridgeOperation } from './bridge-auth.js';
+import { createBridgeToken } from './bridge-auth.js';
+import { compiledBridgeOperation } from './bridge-policy.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
@@ -22,23 +23,6 @@ function sanitizedEdgeRequest(request: Request<any, any>): Request {
   };
   if (request.method !== 'GET' && request.method !== 'HEAD') init.body = request.body;
   return new Request(url.toString(), init);
-}
-
-function compiledBridgeOperation(edge: EdgeBuildRow): BridgeOperation | null {
-  try {
-    const compatibility = JSON.parse(edge.compatibility_json || '{}') as {
-      runtime?: string;
-      bridgeCommands?: unknown;
-    };
-    if (compatibility.runtime !== 'edge-with-bridge' || !Array.isArray(compatibility.bridgeCommands)) return null;
-    const commands = compatibility.bridgeCommands.filter((value): value is string => typeof value === 'string');
-    if (commands.length !== 1) return null;
-    if (commands[0] === 'ffprobe') return 'probe';
-    if (commands[0] === 'ffmpeg') return 'transcode';
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export async function edgeBuildFor(env: Env, serverId: string): Promise<EdgeBuildRow | null> {

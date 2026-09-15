@@ -1,6 +1,7 @@
 import { clerkIdentity } from './auth.js';
 import { binaryBridgeStatus, probeMedia, transcodeMedia } from './binary-bridge.js';
 import { verifyBridgeToken, type BridgeOperation } from './bridge-auth.js';
+import { compiledBridgeAllows } from './bridge-policy.js';
 import core from './index.js';
 import { deleteDeploymentSecret, listDeploymentSecretNames, putDeploymentSecrets } from './secrets.js';
 import { stopRuntime } from './runtime.js';
@@ -147,6 +148,7 @@ async function internalBridgeRoutes(request: Request, env: Env): Promise<Respons
   const auth = request.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   if (!(await verifyBridgeToken(env, token, row.id, edge.bundle_hash, operation))) return json({ error: 'Unauthorized' }, 401);
+  if (!compiledBridgeAllows(edge, operation)) return json({ error: 'Compiled deployment does not allow this bridge operation' }, 403);
   return await runBridgeOperation(request, env, row, operation);
 }
 
