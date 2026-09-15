@@ -20,7 +20,12 @@ function cleanDir(subdir: string): string {
 export async function detectMcp(sandbox: Sandbox, subdir: string): Promise<Detection> {
   const cwd = cleanDir(subdir);
   const script = String.raw`
-import json, os, pathlib, tomllib
+import json, os, pathlib, re
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
+
 root = pathlib.Path(os.environ['TARGET'])
 out = {"runtime":"unknown","command":None,"install":[],"build":[],"notes":[]}
 
@@ -52,8 +57,27 @@ if pkg.exists():
 pyproject = root / "pyproject.toml"
 if out["runtime"] == "unknown" and pyproject.exists():
     out["runtime"] = "python"
-    data = tomllib.loads(pyproject.read_text())
-    scripts = data.get("project", {}).get("scripts", {})
+    text = pyproject.read_text()
+    scripts = {}
+    if tomllib is not None:
+        data = tomllib.loads(text)
+        scripts = data.get("project", {}).get("scripts", {})
+    else:
+        # Python 3.10 (used by current Sandbox images) has no stdlib tomllib.
+        # We only need the first console-script key, so parse that narrow TOML table
+        # without adding a runtime dependency just for MCP detection.
+        in_scripts = False
+        for raw in text.splitlines():
+            line = raw.strip()
+            if line.startswith('[') and line.endswith(']'):
+                in_scripts = line == '[project.scripts]'
+                continue
+            if in_scripts:
+                m = re.match(r'([A-Za-z0-9_.-]+)\\s*=\\s*[\"\\\']', line)
+                if m:
+                    scripts[m.group(1)] = True
+                    break
+        out["notes"].append("Detected pyproject.toml using Python 3.10-compatible fallback parser.")
     if scripts:
         name = next(iter(scripts.keys()))
         out["command"] = name
