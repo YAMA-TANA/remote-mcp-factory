@@ -8,6 +8,11 @@ export interface RateLimiter {
   limit(options: { key: string }): Promise<{ success: boolean }>;
 }
 
+export interface DynamicWorkerLimits {
+  cpuMs?: number;
+  subRequests?: number;
+}
+
 export interface DynamicWorkerCode {
   compatibilityDate: string;
   compatibilityFlags?: string[];
@@ -15,6 +20,7 @@ export interface DynamicWorkerCode {
   modules: Record<string, string | { js: string } | { cjs: string } | { text: string } | { json: unknown }>;
   env?: Record<string, unknown>;
   globalOutbound?: unknown;
+  limits?: DynamicWorkerLimits;
 }
 
 export interface DynamicWorkerEntrypoint {
@@ -22,7 +28,7 @@ export interface DynamicWorkerEntrypoint {
 }
 
 export interface DynamicWorkerStub {
-  getEntrypoint(name?: string): DynamicWorkerEntrypoint;
+  getEntrypoint(name?: string, options?: { limits?: DynamicWorkerLimits }): DynamicWorkerEntrypoint;
 }
 
 export interface WorkerLoader {
