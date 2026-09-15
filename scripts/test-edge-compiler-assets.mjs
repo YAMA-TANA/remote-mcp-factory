@@ -12,7 +12,7 @@ const PORT = 8794;
 
 function embeddedScript(source, name) {
   const match = source.match(new RegExp(`const ${name}_B64 = '([^']+)'`));
-  if (!match) throw new Error(`Could not find ${name}_B64 in src/edge-scripts.ts`);
+  if (!match) throw new Error(`Could not find ${name}_B64`);
   return Buffer.from(match[1], 'base64').toString('utf8');
 }
 
@@ -50,8 +50,9 @@ async function waitFor(url, ms = 45000) {
 
 async function main() {
   const assets = await readFile(resolve(ROOT, 'src/edge-scripts.ts'), 'utf8');
+  const adapterAsset = await readFile(resolve(ROOT, 'src/edge-adapter.ts'), 'utf8');
   const assess = embeddedScript(assets, 'ASSESS');
-  const adapt = embeddedScript(assets, 'ADAPT');
+  const adapt = embeddedScript(adapterAsset, 'ADAPTER');
   const smoke = embeddedScript(assets, 'SMOKE');
 
   const temp = await mkdtemp(join(tmpdir(), 'factory-edge-assets-'));
@@ -71,10 +72,20 @@ async function main() {
     await run('npx', ['-y', '@modelcontextprotocol/codemod@2.0.0', 'v1-to-v2', '.'], { cwd: target });
     const migrated = await readFile(join(target, assessment.entry), 'utf8');
     if (migrated.includes('@mcp-codemod-error')) throw new Error('Official v1→v2 codemod left an action-required marker');
+    await run('npm', [
+      'pkg', 'set',
+      'dependencies.@modelcontextprotocol/server=^2.0.0',
+      'dependencies.@modelcontextprotocol/core=^2.0.0',
+    ], { cwd: target });
 
     await writeFile(join(temp, 'adapt.mjs'), adapt);
     const edgeEntry = join(target, '.factory-edge-entry.mjs');
     await run('node', [join(temp, 'adapt.mjs'), join(target, assessment.entry), edgeEntry], { cwd: target });
+
+    const transformed = await readFile(edgeEntry, 'utf8');
+    if (transformed.includes('@modelcontextprotocol/sdk/') || transformed.includes('StdioServerTransport')) {
+      throw new Error('Generated Edge entry still contains v1/stdio runtime dependencies');
+    }
 
     await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: target });
     await writeFile(join(target, 'wrangler.edge.jsonc'), JSON.stringify({
