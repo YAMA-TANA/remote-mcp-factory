@@ -32,25 +32,26 @@ type Product = {
   name: string;
   role: string;
   status: 'active' | 'planned';
+  pricing: string;
 };
 
 const PRODUCTS: Product[] = [
-  { slug: 'mcp', name: 'MCP', role: 'MCP hosting / Remote conversion', status: 'active' },
-  { slug: 'mock', name: 'Mock', role: 'Mock API', status: 'active' },
-  { slug: 'hooks', name: 'Hooks', role: 'Webhook inbox / replay', status: 'planned' },
-  { slug: 'rss', name: 'RSS', role: 'Web → RSS', status: 'planned' },
-  { slug: 'mail', name: 'Mail', role: 'Email → Webhook', status: 'planned' },
-  { slug: 'shot', name: 'Shot', role: 'Screenshot / PDF', status: 'planned' },
-  { slug: 'fetch', name: 'Fetch', role: 'URL → Markdown / metadata', status: 'planned' },
-  { slug: 'qr', name: 'QR', role: 'Dynamic QR / redirect', status: 'planned' },
-  { slug: 'cron', name: 'Cron', role: 'Cron execution / monitoring', status: 'planned' },
-  { slug: 'functions', name: 'Functions', role: 'Tiny serverless functions', status: 'planned' },
-  { slug: 'json', name: 'JSON', role: 'JSON API / tiny database', status: 'planned' },
-  { slug: 'files', name: 'Files', role: 'R2-backed file delivery', status: 'planned' },
-  { slug: 'license', name: 'License', role: 'License key validation', status: 'planned' },
-  { slug: 'flags', name: 'Flags', role: 'Feature flags / remote config', status: 'planned' },
-  { slug: 'monitor', name: 'Monitor', role: 'Web page change monitoring', status: 'planned' },
-  { slug: 'forms', name: 'Forms', role: 'Form backend', status: 'planned' },
+  { slug: 'mcp', name: 'MCP', role: 'MCP hosting / Remote conversion', status: 'active', pricing: 'Paid from $1/mo' },
+  { slug: 'mock', name: 'Mock', role: 'Mock API', status: 'active', pricing: 'Paid from $1/mo' },
+  { slug: 'hooks', name: 'Hooks', role: 'Webhook inbox / replay', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'rss', name: 'RSS', role: 'Web → RSS', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'mail', name: 'Mail', role: 'Email → Webhook', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'shot', name: 'Shot', role: 'Screenshot / PDF', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'fetch', name: 'Fetch', role: 'URL → Markdown / metadata', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'qr', name: 'QR', role: 'Dynamic QR / redirect', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'cron', name: 'Cron', role: 'Cron execution / monitoring', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'functions', name: 'Functions', role: 'Tiny serverless functions', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'json', name: 'JSON', role: 'JSON API / tiny database', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'files', name: 'Files', role: 'R2-backed file delivery', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'license', name: 'License', role: 'License key validation', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'flags', name: 'Flags', role: 'Feature flags / remote config', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'monitor', name: 'Monitor', role: 'Web page change monitoring', status: 'planned', pricing: 'Pricing TBD' },
+  { slug: 'forms', name: 'Forms', role: 'Form backend', status: 'planned', pricing: 'Pricing TBD' },
 ];
 
 const API_URL = (process.env.NEXT_PUBLIC_FACTORY_API_URL || '').replace(/\/$/, '');
@@ -188,10 +189,10 @@ export default function Home() {
       <section className="hero shell">
         <div className="eyebrow"><span className="dot" /> Small developer infrastructure</div>
         <h1>Tiny services.<br />One account.</h1>
-        <p className="lede">Mock APIs, webhook inboxes, RSS, screenshots, Remote MCP hosting and other small infrastructure without another heavyweight platform. Free to start, Tiny from $1/month, Pro from $3/month.</p>
+        <p className="lede">Mock APIs, webhook inboxes, RSS, screenshots, Remote MCP hosting and other small infrastructure without another heavyweight platform. Each service has its own plan, so you pay only for what you use. When several services fit together, bundles can lower the combined price.</p>
 
         <div className="flow">
-          <span>One login</span><i>→</i><span>One dashboard</span><i>→</i><span>Product-scoped plans</span><i>→</i><span>Cloudflare edge</span><em>MCP + Mock live first</em>
+          <span>One login</span><i>→</i><span>Separate product plans</span><i>→</i><span>Bundle when useful</span><i>→</i><span>Cloudflare edge</span><em>MCP + Mock live first</em>
         </div>
       </section>
 
@@ -206,11 +207,11 @@ export default function Home() {
               </div>
               <div className="runtime">
                 <span className={product.status === 'active' ? 'edgePill' : 'fallbackPill'}>{product.status === 'active' ? 'Available now' : 'Planned'}</span>
-                <span>Free</span><span>$1 Tiny</span><span>$3 Pro</span>
+                <span>{product.pricing}</span><span>Standalone plan</span><span>Bundle eligible</span>
               </div>
               <div className="deploymentBottom">
                 <code>{product.slug}</code>
-                {product.slug === 'mock' ? <a href="/mock">Open dashboard →</a> : <span>shared PicoSvc account</span>}
+                {product.slug === 'mock' ? <a href="/mock">Open dashboard →</a> : <span>shared login, separate billing</span>}
               </div>
             </article>
           ))}
@@ -227,7 +228,7 @@ export default function Home() {
           )}
           {!signedIn ? (
             <div className="signinState">
-              <div><strong>Deploy your first MCP</strong><p>Your PicoSvc login will be shared with every product.</p></div>
+              <div><strong>Deploy your first MCP</strong><p>Your PicoSvc login is shared across products; product subscriptions stay separate.</p></div>
               <button className="primary" disabled={!clerk} onClick={() => clerk?.openSignIn()}>Sign in to PicoSvc</button>
             </div>
           ) : (
@@ -275,12 +276,12 @@ export default function Home() {
       </section>
 
       <section className="features shell">
-        <article><span>01</span><h3>Shared account</h3><p>One Clerk identity across every PicoSvc product. Organizations can become shared owners without separate product accounts.</p></article>
-        <article><span>02</span><h3>Product-scoped plans</h3><p>Use Free on one product, Tiny on another and Pro only where you need more capacity.</p></article>
-        <article><span>03</span><h3>Edge first</h3><p>Most services stay small Cloudflare Workers. MCP keeps its Dynamic Worker and Sandbox runtime for arbitrary server code.</p></article>
+        <article><span>01</span><h3>Shared account</h3><p>One Clerk identity across every PicoSvc product. Organizations can share ownership without creating separate accounts for every service.</p></article>
+        <article><span>02</span><h3>Separate plans</h3><p>MCP, Mock, Hooks and every other service are billed independently. Upgrade one without paying for products you do not use.</p></article>
+        <article><span>03</span><h3>Bundle and save</h3><p>When several services belong together, a bundle can grant multiple product plans at a lower combined price without turning PicoSvc into one giant subscription.</p></article>
       </section>
 
-      <footer className="shell"><span>PicoSvc</span><span>Tiny developer services from $1/month.</span></footer>
+      <footer className="shell"><span>PicoSvc</span><span><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></span></footer>
     </main>
   );
 }

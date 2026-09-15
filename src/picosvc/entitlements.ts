@@ -1,14 +1,43 @@
 import type { Env } from '../types.js';
 import { PICOSVC_PRODUCT_MAP, type PicoSvcProductSlug, type PicoSvcTier } from './catalog.js';
 
+const TIER_RANK: Record<PicoSvcTier, number> = { free: 0, tiny: 1, pro: 2 };
+
+function normalizeTier(value: unknown): PicoSvcTier {
+  return value === 'tiny' || value === 'pro' ? value : 'free';
+}
+
+function higherTier(a: PicoSvcTier, b: PicoSvcTier): PicoSvcTier {
+  return TIER_RANK[b] > TIER_RANK[a] ? b : a;
+}
+
 export async function resolveProductTier(env: Env, owner: string, product: PicoSvcProductSlug): Promise<PicoSvcTier> {
-  const row = await env.DB.prepare(`
+  const direct = await env.DB.prepare(`
     SELECT tier
     FROM product_entitlements
     WHERE owner=? AND product=? AND active=1
   `).bind(owner, product).first<{ tier: PicoSvcTier }>();
 
-  return row?.tier === 'tiny' || row?.tier === 'pro' ? row.tier : 'free';
+  let tier = normalizeTier(direct?.tier);
+
+  // Bundle grants are additive to standalone subscriptions. Keep this query tolerant
+  // during a rolling deploy so an older database without migration 0008 still falls
+  // back to the standalone entitlement instead of breaking the product.
+  try {
+    const bundleRows = await env.DB.prepare(`
+      SELECT tier
+      FROM bundle_entitlements
+      WHERE owner=? AND product=? AND active=1
+    `).bind(owner, product).all<{ tier: PicoSvcTier }>();
+
+    for (const row of bundleRows.results || []) {
+      tier = higherTier(tier, normalizeTier(row.tier));
+    }
+  } catch {
+    // Migration may not have reached this environment yet.
+  }
+
+  return tier;
 }
 
 export async function productLimit(
