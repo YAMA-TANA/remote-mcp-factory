@@ -67,33 +67,45 @@ if out["runtime"] == "unknown" and pyproject.exists():
     out["runtime"] = "python"
     text = pyproject.read_text()
     scripts = {}
+    requires_python = None
     if tomllib is not None:
         data = tomllib.loads(text)
-        scripts = data.get("project", {}).get("scripts", {})
+        project = data.get("project", {})
+        scripts = project.get("scripts", {})
+        requires_python = project.get("requires-python")
     else:
-        # Python 3.10 (used by current Sandbox images) has no stdlib tomllib.
-        # We only need the first console-script key, so parse that narrow TOML table
-        # without adding a runtime dependency just for MCP detection.
+        # Python 3.10 (used by the base Sandbox image) has no stdlib tomllib.
+        # We only need the first console-script key and requires-python metadata, so
+        # parse those narrow TOML fields without adding a dependency just for detection.
         in_scripts = False
         for raw in text.splitlines():
             line = raw.strip()
             if line.startswith('[') and line.endswith(']'):
                 in_scripts = line == '[project.scripts]'
                 continue
+            if requires_python is None:
+                m_req = re.match(r'requires-python\s*=\s*["\']([^"\']+)["\']', line)
+                if m_req:
+                    requires_python = m_req.group(1)
             if in_scripts:
                 m = re.match(r'([A-Za-z0-9_.-]+)\s*=\s*["\']', line)
                 if m:
                     scripts[m.group(1)] = True
                     break
         out["notes"].append("Detected pyproject.toml using Python 3.10-compatible fallback parser.")
+    if requires_python:
+        out["notes"].append("Project requires Python " + str(requires_python) + "; uv will select/download a compatible interpreter.")
     if scripts:
         name = next(iter(scripts.keys()))
-        out["command"] = name
-    out["install"] = ["python3 -m venv .venv", ".venv/bin/pip install -e ."]
+        out["command"] = ".venv/bin/" + name
+    # uv respects project.requires-python and .python-version, downloading a managed
+    # interpreter when the base image Python is too old. This keeps the Sandbox image
+    # small while supporting modern MCPs that require Python 3.11/3.12+.
+    out["install"] = ["uv venv .venv", "uv pip install --python .venv/bin/python -e ."]
 
 if out["runtime"] == "unknown" and (root / "requirements.txt").exists():
     out["runtime"] = "python"
-    out["install"] = ["python3 -m venv .venv", ".venv/bin/pip install -r requirements.txt"]
+    out["install"] = ["uv venv .venv", "uv pip install --python .venv/bin/python -r requirements.txt"]
     for candidate in ["server.py", "main.py", "app.py"]:
         if (root / candidate).exists():
             out["command"] = ".venv/bin/python " + candidate
