@@ -214,7 +214,11 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
       compatibility_flags: ['nodejs_compat'],
     };
     await sandbox.writeFile(`${cwd}/wrangler.edge.jsonc`, JSON.stringify(config, null, 2));
-    await execOk(sandbox, 'rm -rf .edge-dist && wrangler deploy --dry-run --config wrangler.edge.jsonc --outdir .edge-dist', cwd);
+    await execOk(
+      sandbox,
+      'rm -rf .edge-dist && npx --yes wrangler@4.131.2 deploy --dry-run --config wrangler.edge.jsonc --outdir .edge-dist',
+      cwd,
+    );
 
     const emitted = await findSingleBundle(sandbox, cwd);
     if (emitted.size > MAX_D1_BUNDLE_BYTES) {
@@ -255,3 +259,4 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
     return { ok: false, assessment, reason };
   }
 }
+
