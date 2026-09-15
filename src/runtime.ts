@@ -1,6 +1,7 @@
 import { getSandbox, type Sandbox } from '@cloudflare/sandbox';
 import { detectMcp, type Detection } from './analyze.js';
 import { tryCompileToEdge } from './edge-compiler.js';
+import { ensureEdgeBuildSchema } from './schema-compat.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { Env, ServerRow } from './types.js';
 
@@ -76,6 +77,9 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     .bind('building', new Date().toISOString(), row.id).run();
 
   try {
+    // Keep deploys safe during rolling upgrades: the compiler can bring an older D1 schema
+    // forward before it writes the richer R2/compatibility metadata.
+    await ensureEdgeBuildSchema(env);
     await cloneRepository(sandbox, row);
     const detection = await detectMcp(sandbox, row.subdir);
     const command = row.command?.trim() || detection.command;
@@ -84,7 +88,7 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     const edge = await tryCompileToEdge(env, sandbox, row, detection);
     if (edge.ok) {
       await env.DB.prepare(`UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=NULL, updated_at=? WHERE id=?`)
-        .bind('ready', 'edge-node', command, new Date().toISOString(), row.id).run();
+        .bind('ready', edge.compatibility.runtime === 'edge-with-bridge-candidate' ? 'edge-node-bridge-candidate' : 'edge-node', command, new Date().toISOString(), row.id).run();
       return;
     }
 
