@@ -20,8 +20,6 @@ export interface BridgeCompileResult {
 }
 
 export async function restoreBridgeSource(sandbox: Sandbox, row: ServerRow): Promise<void> {
-  // The source clone is disposable. Revert only compiler-generated edits and files so
-  // a later Linux fallback always runs the upstream repository, not our Edge shim.
   const cwd = repoWorkdir(row);
   const result = await sandbox.exec('git reset --hard HEAD && git clean -fd', { cwd });
   if (!result.success) throw new Error(result.stderr || 'Could not restore source after bridge compilation');
@@ -30,22 +28,26 @@ export async function restoreBridgeSource(sandbox: Sandbox, row: ServerRow): Pro
 /**
  * Extremely conservative first bridge transform.
  *
- * We only rewrite a deployment when all native evidence consists of ffprobe,
- * there are no local-machine semantics, a signing key is configured, and the
- * standalone transformer finds exactly one pure "file -> ffprobe JSON" helper.
- * The source is then analyzed again. Promotion happens only when the rewritten
- * source has zero remaining native/browser/local blockers.
+ * Static analysis is intentionally only a filter. Dynamic command construction such as
+ * `${FFPROBE}` can appear as an unknown subprocess, so the source transformer itself
+ * proves the exact helper shape. Promotion happens only after a second full scan says
+ * the transformed source has zero remaining native/browser/local blockers.
  */
 export async function prepareBinaryBridge(env: Env, sandbox: Sandbox, row: ServerRow): Promise<BridgeCompileResult> {
   const before = await analyzeRuntimeCompatibility(sandbox, row);
-  if (before.runtime !== 'edge-with-bridge-candidate') return { active: false, compatibility: before };
+  if (before.runtime === 'edge' || before.runtime === 'local-bound') return { active: false, compatibility: before };
   if (!env.BRIDGE_SIGNING_KEY) return { active: false, compatibility: before };
-  if (before.bridgeCommands.length !== 1 || before.bridgeCommands[0] !== 'ffprobe') {
+  if (before.evidence.some((item) => item.kind === 'browser' || item.kind === 'local-bound')) {
+    return { active: false, compatibility: before };
+  }
+  if (before.bridgeCommands.some((command) => command !== 'ffprobe')) {
     return { active: false, compatibility: before };
   }
 
   const files = [...new Set(before.evidence
-    .filter((item) => item.kind === 'binary' && item.command === 'ffprobe' && item.bridgeCandidate)
+    .filter((item) =>
+      (item.kind === 'binary' && item.command === 'ffprobe' && item.bridgeCandidate) ||
+      (item.kind === 'subprocess' && item.command === null))
     .map((item) => item.file))];
   if (!files.length || files.length > 4) return { active: false, compatibility: before };
 
