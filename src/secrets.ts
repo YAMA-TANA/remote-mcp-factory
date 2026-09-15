@@ -25,6 +25,12 @@ function base64ToBytes(value: string): Uint8Array {
   return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function encryptionKey(env: Env): Promise<CryptoKey> {
   const encoded = env.DEPLOYMENT_SECRETS_KEY?.trim();
   if (!encoded) throw new Error('DEPLOYMENT_SECRETS_KEY is not configured');
@@ -35,7 +41,7 @@ async function encryptionKey(env: Env): Promise<CryptoKey> {
     throw new Error('DEPLOYMENT_SECRETS_KEY must be base64');
   }
   if (raw.byteLength !== 32) throw new Error('DEPLOYMENT_SECRETS_KEY must decode to exactly 32 bytes');
-  return await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  return await crypto.subtle.importKey('raw', toArrayBuffer(raw), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
 export function validateSecretName(name: string): string {
@@ -61,7 +67,11 @@ export async function putDeploymentSecrets(env: Env, serverId: string, input: Re
     if (rawValue.length > 16_384) throw new Error(`${name} exceeds the 16 KiB value limit`);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const plaintext = new TextEncoder().encode(rawValue);
-    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: toArrayBuffer(iv) },
+      key,
+      toArrayBuffer(plaintext),
+    );
     await env.DB.prepare(`
       INSERT INTO server_secrets (server_id,name,iv,ciphertext,updated_at)
       VALUES (?,?,?,?,?)
@@ -95,7 +105,11 @@ export async function loadDeploymentSecrets(env: Env, serverId: string): Promise
     const name = validateSecretName(row.name);
     const iv = base64ToBytes(row.iv);
     const encrypted = base64ToBytes(row.ciphertext);
-    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encrypted);
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: toArrayBuffer(iv) },
+      key,
+      toArrayBuffer(encrypted),
+    );
     values[name] = new TextDecoder().decode(plaintext);
   }
   return { values, names: Object.keys(values).sort() };
