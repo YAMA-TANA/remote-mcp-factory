@@ -1,6 +1,12 @@
 import { clerkIdentity } from '../auth.js';
 import type { Env } from '../types.js';
-import { PICOSVC_PRODUCT_MAP, PICOSVC_PRODUCTS, type PicoSvcProductSlug } from './catalog.js';
+import {
+  PICOSVC_BILLING_MODEL,
+  PICOSVC_BUNDLES,
+  PICOSVC_PRODUCT_MAP,
+  PICOSVC_PRODUCTS,
+  type PicoSvcProductSlug,
+} from './catalog.js';
 import { mockManagementRoutes } from './mock.js';
 
 function json(body: unknown, status = 200): Response {
@@ -18,7 +24,12 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   if (mockResponse) return mockResponse;
 
   if (request.method === 'GET' && url.pathname === '/api/picosvc/catalog') {
-    return json({ brand: 'PicoSvc', products: PICOSVC_PRODUCTS });
+    return json({
+      brand: 'PicoSvc',
+      billing: PICOSVC_BILLING_MODEL,
+      products: PICOSVC_PRODUCTS,
+      bundles: PICOSVC_BUNDLES,
+    });
   }
 
   const productMatch = url.pathname.match(/^\/api\/picosvc\/products\/([a-z-]+)$/);
@@ -38,6 +49,19 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
       ORDER BY product
     `).bind(identity.ownerId).all();
 
+    let bundleEntitlements: unknown[] = [];
+    try {
+      const rows = await env.DB.prepare(`
+        SELECT bundle, product, tier, source, active, updated_at
+        FROM bundle_entitlements
+        WHERE owner=?
+        ORDER BY bundle, product
+      `).bind(identity.ownerId).all();
+      bundleEntitlements = rows.results || [];
+    } catch {
+      // Rolling deploy compatibility before migration 0008 has run.
+    }
+
     const usage = await env.DB.prepare(`
       SELECT product, metric, quantity, updated_at
       FROM product_usage_monthly
@@ -50,7 +74,9 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
       orgId: identity.orgId,
       ownerId: identity.ownerId,
       month: monthKey(),
+      billing: PICOSVC_BILLING_MODEL,
       entitlements: entitlements.results,
+      bundleEntitlements,
       usage: usage.results,
     });
   }
