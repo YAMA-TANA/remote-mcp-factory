@@ -63,6 +63,7 @@ export interface Env {
   CLERK_SIGN_IN_URL?: string;
   CLERK_PRICING_URL?: string;
   DEPLOYMENT_SECRETS_KEY?: string;
+  BRIDGE_SIGNING_KEY?: string;
   ALLOW_DEV_AUTH?: string;
   PUBLIC_MCP_ORIGIN?: string;
   WEB_ORIGINS?: string;
