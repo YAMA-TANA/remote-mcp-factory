@@ -7,6 +7,18 @@ const BRIDGE_COMMANDS = new Set([
 const BROWSER_COMMANDS = new Set(['chromium', 'chromium-browser', 'google-chrome', 'playwright', 'puppeteer']);
 const SOURCE_EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.ts', '.mts', '.cts', '.jsx', '.tsx']);
 
+// These are intentionally high-confidence signals. Generic fs usage is NOT local-bound: a remotely
+// hosted MCP can legitimately use /tmp or files it downloaded itself. We only reject repos that
+// clearly reference the operator's workstation/home folders or a user-local filesystem server.
+const LOCAL_BOUND_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
+  { pattern: /\b(?:os\.)?homedir\s*\(/, reason: 'home directory access' },
+  { pattern: /process\.env\.(?:HOME|USERPROFILE)\b/, reason: 'user home environment' },
+  { pattern: /(?:['"`])(?:Desktop|Documents|Downloads|Videos|Pictures|Music)(?:['"`])/, reason: 'user media/document folder' },
+  { pattern: /(?:['"`])\/(?:Users|home)\/[A-Za-z0-9._-]+\//, reason: 'absolute user home path' },
+  { pattern: /[A-Za-z]:\\Users\\[A-Za-z0-9._-]+\\/i, reason: 'Windows user home path' },
+  { pattern: /@modelcontextprotocol\/server-filesystem/, reason: 'local filesystem MCP' },
+];
+
 function repoWorkdir(row: ServerRow): string {
   const subdir = row.subdir.trim().replace(/^\/+|\/+$/g, '');
   return subdir ? `/workspace/repo/${subdir}` : '/workspace/repo';
@@ -33,8 +45,25 @@ function nearbyToolName(text: string, index: number): string | null {
   return best?.name ?? null;
 }
 
+function localBoundEvidence(file: string, text: string): NativeDependencyEvidence[] {
+  const out: NativeDependencyEvidence[] = [];
+  for (const { pattern, reason } of LOCAL_BOUND_PATTERNS) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    out.push({
+      kind: 'local-bound',
+      command: reason,
+      file,
+      line: lineOf(text, match.index),
+      tool: nearbyToolName(text, match.index),
+      bridgeCandidate: false,
+    });
+  }
+  return out;
+}
+
 function detectInFile(file: string, text: string): NativeDependencyEvidence[] {
-  const evidence: NativeDependencyEvidence[] = [];
+  const evidence: NativeDependencyEvidence[] = [...localBoundEvidence(file, text)];
   const subprocessImport = /(?:node:)?child_process/.test(text);
   const calls = /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*(?:['"]([^'"]+)['"]|`([^`$]+)`)/g;
   let match: RegExpExecArray | null;
@@ -53,7 +82,7 @@ function detectInFile(file: string, text: string): NativeDependencyEvidence[] {
     });
   }
 
-  if (subprocessImport && evidence.length === 0) {
+  if (subprocessImport && !evidence.some((item) => item.kind === 'binary' || item.kind === 'browser' || item.kind === 'subprocess')) {
     const index = text.search(/(?:node:)?child_process/);
     evidence.push({
       kind: 'subprocess', command: null, file, line: lineOf(text, Math.max(0, index)), tool: nearbyToolName(text, Math.max(0, index)), bridgeCandidate: false,
@@ -93,13 +122,22 @@ export async function analyzeRuntimeCompatibility(sandbox: Sandbox, row: ServerR
   const unique = evidence.filter((item, index, all) => all.findIndex((other) =>
     other.file === item.file && other.line === item.line && other.command === item.command && other.kind === item.kind,
   ) === index);
+  const local = unique.filter((item) => item.kind === 'local-bound');
   const bridgeCommands = [...new Set(unique.filter((item) => item.bridgeCandidate && item.command).map((item) => item.command!))].sort();
-  const hard = unique.filter((item) => !item.bridgeCandidate);
-  const runtime = hard.length ? 'heavy' : bridgeCommands.length ? 'edge-with-bridge-candidate' : 'edge';
+  const hard = unique.filter((item) => item.kind !== 'local-bound' && !item.bridgeCandidate);
+  const runtime = local.length
+    ? 'local-bound'
+    : hard.length
+      ? 'heavy'
+      : bridgeCommands.length
+        ? 'edge-with-bridge-candidate'
+        : 'edge';
   const summary = runtime === 'edge'
     ? 'No native runtime blockers detected'
     : runtime === 'edge-with-bridge-candidate'
       ? `Bridge candidates detected: ${bridgeCommands.join(', ')}`
-      : `Native/browser runtime blockers detected: ${hard.slice(0, 4).map((item) => item.command || item.kind).join(', ')}`;
+      : runtime === 'local-bound'
+        ? `Local workstation dependency detected: ${local.slice(0, 3).map((item) => item.command || item.file).join(', ')}`
+        : `Native/browser runtime blockers detected: ${hard.slice(0, 4).map((item) => item.command || item.kind).join(', ')}`;
   return { runtime, bridgeCommands, evidence: unique.slice(0, 100), summary };
 }
