@@ -67,6 +67,13 @@ export interface Env {
   ALLOW_DEV_AUTH?: string;
   PUBLIC_MCP_ORIGIN?: string;
   WEB_ORIGINS?: string;
+  GITHUB_APP_ID?: string;
+  GITHUB_APP_CLIENT_ID?: string;
+  GITHUB_APP_CLIENT_SECRET?: string;
+  GITHUB_APP_PRIVATE_KEY?: string;
+  GITHUB_APP_SLUG?: string;
+  GITHUB_WEBHOOK_SECRET?: string;
+  GITHUB_OAUTH_CALLBACK_URL?: string;
 }
 
 export interface AuthIdentity {
@@ -93,6 +100,11 @@ export interface ServerRow {
   error: string | null;
   created_at: string;
   updated_at: string;
+  github_installation_id: number | null;
+  github_repo_id: number | null;
+  github_repo_full_name: string | null;
+  auto_deploy: number;
+  redeploy_pending: number;
 }
 
 export interface EdgeBuildRow {
