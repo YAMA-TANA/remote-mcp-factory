@@ -1,6 +1,7 @@
 import { proxyToSandbox } from '@cloudflare/sandbox';
 import { Hono } from 'hono';
 import { clerkConfigured, clerkIdentity } from './auth.js';
+import { serveEdgeRequest } from './edge-runtime.js';
 import {
   PLANS,
   deploymentCount,
@@ -70,6 +71,7 @@ app.get('/healthz', (c) => c.json({
   ok: true,
   service: 'remote-mcp-factory',
   auth: clerkConfigured(c.env) ? 'clerk' : 'unconfigured',
+  edgeRuntime: c.env.LOADER ? 'dynamic-workers' : 'unconfigured',
 }));
 
 app.get('/api/plans', (c) => c.json(Object.values(PLANS)));
@@ -80,21 +82,21 @@ app.get('/', (c) => {
   return c.html(`<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Remote MCP Factory</title>
 <style>body{font:16px system-ui;max-width:980px;margin:56px auto;padding:0 20px;background:#0b0d10;color:#e8eaed}a{color:#9ecbff}.card{border:1px solid #292d34;border-radius:14px;padding:22px;margin:20px 0;background:#11141a}code{background:#171b22;padding:2px 6px;border-radius:6px}h1{font-size:46px;letter-spacing:-1.5px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.price{font-size:26px;font-weight:700}.muted{color:#aab0b8}.cta{display:inline-block;padding:10px 14px;border:1px solid #45505f;border-radius:10px;text-decoration:none;margin-right:8px}</style></head>
-<body><h1>GitHub → Remote MCP.</h1><p>Paste a stdio MCP repository. We build it in an isolated Cloudflare Sandbox and give you a Streamable HTTP endpoint.</p>
+<body><h1>GitHub → Remote MCP.</h1><p>Paste a stdio MCP repository. We compile compatible Node MCPs to Cloudflare Dynamic Workers and fall back to an isolated Linux Sandbox only when the MCP really needs one.</p>
 <p><a class="cta" href="${signIn}">Sign in / Dashboard</a><a class="cta" href="${pricing}">Pricing</a></p>
-<div class="grid"><div class="card"><b>Public</b><p class="muted">Anyone can connect. Great for open-source tools and public MCPs.</p></div><div class="card"><b>Protected</b><p class="muted">A generated bearer token is required. Rotate it whenever you want.</p></div></div>
-<h2 id="pricing">Vercel-style plans</h2><div class="grid">
+<div class="grid"><div class="card"><b>Edge-first</b><p class="muted">SDK migration, stdio→Web adaptation, Worker bundling, then a real MCP initialize/tools-list smoke test.</p></div><div class="card"><b>Heavy fallback</b><p class="muted">Native binaries, subprocesses and other incompatible MCPs automatically stay on Sandbox.</p></div><div class="card"><b>Protected</b><p class="muted">A generated bearer token is required. Rotate it whenever you want.</p></div></div>
+<h2 id="pricing">Current plans</h2><div class="grid">
 <div class="card"><b>Hobby</b><div class="price">$0</div><p>1 deployment · 5k MCP requests/month · 20 builds/month</p></div>
 <div class="card"><b>Pro</b><div class="price">$20/mo</div><p>10 deployments · 250k requests/month · 200 builds/month</p></div>
 <div class="card"><b>Team</b><div class="price">$20/seat/mo</div><p>50 deployments · 1M requests/month · 1,000 builds/month · Clerk Organizations</p></div>
-</div><p class="muted">Usage is metered now; overage charging is intentionally not enabled until a metered billing backend is added.</p>
+</div><p class="muted">Edge-specific $1 pricing is not enabled yet; compatibility and runtime accounting are being proven first.</p>
 </body></html>`);
 });
 
 app.get('/dashboard', (c) => c.html(`<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Remote MCP Factory Dashboard</title>
 <style>body{font:16px system-ui;max-width:980px;margin:45px auto;padding:0 20px;background:#0b0d10;color:#e8eaed}input,select,button{font:inherit;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #333;background:#15181d;color:#fff}input{width:100%;box-sizing:border-box}select{width:100%}button{cursor:pointer}.card{border:1px solid #292d34;border-radius:12px;padding:18px;margin:16px 0}code{word-break:break-all}pre{white-space:pre-wrap}</style></head>
-<body><h1>Remote MCP Factory</h1><p>This dashboard uses your Clerk session. If API calls return 401, sign in through the configured Clerk sign-in page first.</p>
+<body><h1>Remote MCP Factory</h1><p>Deploys are analyzed automatically. If the Edge compiler passes a real MCP smoke test, requests run in a Dynamic Worker; otherwise they use the Linux fallback.</p>
 <div class="card"><input id="repo" placeholder="https://github.com/owner/mcp-repo"><input id="branch" placeholder="branch (default: main)"><input id="command" placeholder="optional stdio start command override"><select id="visibility"><option value="public">Public — anyone can connect</option><option value="token" selected>Protected — bearer token required</option></select><button onclick="add()">Deploy MCP</button><pre id="out"></pre></div>
 <div class="card"><button onclick="account()">Refresh account & usage</button><pre id="acct"></pre></div>
 <div class="card"><button onclick="load()">Refresh deployments</button><pre id="list"></pre></div>
@@ -118,7 +120,12 @@ app.get('/api/account', async (c) => {
 app.get('/api/servers', async (c) => {
   const identity = await requireIdentity(c);
   if (identity instanceof Response) return identity;
-  const result = await c.env.DB.prepare(`SELECT id,name,repo_url,branch,subdir,status,visibility,enabled,detected_runtime,detected_command,error,created_at,updated_at FROM servers WHERE owner=? ORDER BY created_at DESC`).bind(identity.ownerId).all();
+  const result = await c.env.DB.prepare(`
+    SELECT s.id,s.name,s.repo_url,s.branch,s.subdir,s.status,s.visibility,s.enabled,s.detected_runtime,s.detected_command,s.error,s.created_at,s.updated_at,
+           e.status AS edge_status,e.size_bytes AS edge_size_bytes,e.tool_count AS edge_tool_count,e.reason AS edge_reason,e.compiler_version AS edge_compiler_version
+    FROM servers s LEFT JOIN edge_builds e ON e.server_id=s.id
+    WHERE s.owner=? ORDER BY s.created_at DESC
+  `).bind(identity.ownerId).all();
   return c.json(result.results);
 });
 
@@ -215,6 +222,17 @@ app.all('/mcp/:id', async (c) => {
   await incrementUsage(c.env, row.owner, 'requests');
 
   if (row.status === 'error') return c.text('Deployment unavailable', 503);
+  if (row.status === 'queued' || row.status === 'building') return c.text('Deployment is still building', 503, { 'Retry-After': '3' });
+
+  // Fast path: compiled MCP bundle in a Dynamic Worker. Clone the request so a loader failure can safely fall back to Linux.
+  try {
+    const edgeResponse = await serveEdgeRequest(c.env, row, c.req.raw.clone());
+    if (edgeResponse) return edgeResponse;
+  } catch (error) {
+    console.error('EDGE_RUNTIME_FALLBACK', row.id, error instanceof Error ? error.stack || error.message : String(error));
+  }
+
+  // Heavy/native path, or emergency fallback if a previously valid Edge bundle stops loading.
   const tunnelBase = await ensureRuntime(c.env, row);
   const target = `${tunnelBase}/mcp`;
   const headers = new Headers(c.req.raw.headers);
