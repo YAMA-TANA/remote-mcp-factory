@@ -105,7 +105,7 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
       await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
         .bind('incompatible', reason, new Date().toISOString(), row.id).run();
       await env.DB.prepare('UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=?, updated_at=? WHERE id=?')
-        .bind('local-bound', 'local-bound', command, reason.slice(0, 8000), new Date().toISOString(), row.id).run();
+        .bind('error', 'local-bound', command, reason.slice(0, 8000), new Date().toISOString(), row.id).run();
       return;
     }
 
@@ -147,7 +147,7 @@ export async function stopRuntime(env: Env, row: Pick<ServerRow, 'id' | 'owner'>
 }
 
 export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
-  if (row.status === 'local-bound' || row.detected_runtime === 'local-bound') {
+  if (row.detected_runtime === 'local-bound') {
     throw new Error('Local-bound MCPs require a local relay and cannot run in the cloud runtime');
   }
   const sandbox = serverSandbox(env, row);
