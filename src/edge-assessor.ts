@@ -1,5 +1,5 @@
 export const EDGE_ASSESS_SCRIPT = String.raw`
-import json, os, pathlib, re, sys
+import json, os, pathlib, re
 
 root = pathlib.Path(os.environ['TARGET'])
 command = os.environ.get('COMMAND', '').strip()
@@ -45,7 +45,16 @@ skip = {'node_modules','.git','dist','build','coverage','.next','.turbo','vendor
 source_suffixes = {'.js','.mjs','.cjs','.ts','.mts','.cts','.jsx','.tsx'}
 files = []
 for path in root.rglob('*'):
-    if not path.is_file() or any(part in skip for part in path.parts):
+    if not path.is_file():
+        continue
+    try:
+        rel_path = path.relative_to(root)
+    except ValueError:
+        continue
+    # Only ignore generated/test directories *inside* the selected package root.
+    # The selected root itself may legitimately live under monorepo paths such as
+    # fixtures/foo, examples/bar, or tests/mcp-server.
+    if any(part in skip for part in rel_path.parts[:-1]):
         continue
     if path.suffix.lower() not in source_suffixes:
         continue
@@ -55,7 +64,7 @@ for path in root.rglob('*'):
         text = path.read_text(errors='ignore')
     except Exception:
         continue
-    files.append((path, text, str(path.relative_to(root)).replace('\\', '/')))
+    files.append((path, text, str(rel_path).replace('\\', '/')))
 
 
 def script_entry(value):
