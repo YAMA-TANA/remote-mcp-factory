@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/**'
       - 'scripts/test-real-repo-corpus.mjs'
+      - 'scripts/test-real-repo-corpus-v2.mjs'
       - 'Dockerfile'
       - 'schema.sql'
       - 'wrangler.jsonc'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'src/**'
       - 'scripts/test-real-repo-corpus.mjs'
+      - 'scripts/test-real-repo-corpus-v2.mjs'
       - 'Dockerfile'
       - 'schema.sql'
       - 'wrangler.jsonc'
@@ -26,7 +28,7 @@ permissions:
 jobs:
   real-repos:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -67,11 +69,12 @@ jobs:
           cat /tmp/factory-wrangler.log
           exit 1
 
-      - name: Deploy unchanged public MCP repositories through Factory
+      - name: Deploy 21 unchanged public MCP cases through Factory
         env:
           FACTORY_URL: http://127.0.0.1:8787
-          REPO_TIMEOUT_MS: 600000
-        run: node scripts/test-real-repo-corpus.mjs
+          REPO_TIMEOUT_MS: 240000
+          CORPUS_CONCURRENCY: 3
+        run: node scripts/test-real-repo-corpus-v2.mjs
 
       - name: Upload corpus report
         if: always()
