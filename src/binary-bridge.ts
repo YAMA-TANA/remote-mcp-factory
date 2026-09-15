@@ -1,4 +1,4 @@
-import { serverSandbox } from './runtime.js';
+import { getSandbox, type Sandbox } from '@cloudflare/sandbox';
 import type { Env, ServerRow } from './types.js';
 
 export type BridgeCapability = 'ffmpeg' | 'ffprobe' | 'jq';
@@ -13,6 +13,11 @@ const VERSION_COMMANDS: Record<BridgeCapability, string> = {
   ffprobe: "ffprobe -version | head -1",
   jq: "jq --version | head -1",
 };
+
+function bridgeSandbox(env: Env, row: Pick<ServerRow, 'id' | 'owner'>): Sandbox {
+  const key = `bridge-${row.owner}-${row.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 60);
+  return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '30s' });
+}
 
 function shell(value: string): string {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
@@ -38,10 +43,10 @@ async function withMediaWorkspace<T>(
   row: ServerRow,
   dataBase64: string,
   filename: string | undefined,
-  action: (sandbox: ReturnType<typeof serverSandbox>, inputPath: string, dir: string) => Promise<T>,
+  action: (sandbox: Sandbox, inputPath: string, dir: string) => Promise<T>,
 ): Promise<T> {
   assertBase64(dataBase64, MAX_MEDIA_INPUT_BYTES);
-  const sandbox = serverSandbox(env, row);
+  const sandbox = bridgeSandbox(env, row);
   const id = crypto.randomUUID().replace(/-/g, '');
   const dir = `/tmp/factory-bridge-${id}`;
   const inputPath = `${dir}/${safeFilename(filename, 'input.bin')}`;
@@ -56,7 +61,7 @@ async function withMediaWorkspace<T>(
 }
 
 export async function binaryBridgeStatus(env: Env, row: ServerRow): Promise<Record<BridgeCapability, { available: boolean; version: string | null }>> {
-  const sandbox = serverSandbox(env, row);
+  const sandbox = bridgeSandbox(env, row);
   const entries = await Promise.all((Object.keys(VERSION_COMMANDS) as BridgeCapability[]).map(async (name) => {
     const result = await sandbox.exec(VERSION_COMMANDS[name]);
     return [name, {
