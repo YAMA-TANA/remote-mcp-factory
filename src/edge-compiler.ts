@@ -5,9 +5,10 @@ import { analyzeRuntimeCompatibility } from './compat-analysis.js';
 import { EDGE_ADAPTER_SCRIPT } from './edge-adapter.js';
 import { EDGE_ASSESS_SCRIPT } from './edge-assessor.js';
 import { EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
+import { EDGE_TOP_LEVEL_ADAPTER_SCRIPT } from './edge-top-level-adapter.js';
 import type { CompatibilityReport, EdgeBuildRow, Env, ServerRow } from './types.js';
 
-const EDGE_COMPILER_VERSION = '0.2.1';
+const EDGE_COMPILER_VERSION = '0.2.2';
 const EDGE_COMPATIBILITY_DATE = '2026-09-15';
 const EDGE_SMOKE_PORT = 8793;
 const MAX_D1_BUNDLE_BYTES = 1_800_000;
@@ -265,9 +266,27 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
 
     if (assessment.strategy !== 'native-http') {
       await sandbox.writeFile('/tmp/factory-edge-adapt.mjs', EDGE_ADAPTER_SCRIPT);
+      await sandbox.writeFile('/tmp/factory-edge-top-level-adapt.mjs', EDGE_TOP_LEVEL_ADAPTER_SCRIPT);
       const outputName = edgeEntryName(assessment.entry);
       const outputPath = `${cwd}/${outputName}`;
-      await execOk(sandbox, `node /tmp/factory-edge-adapt.mjs ${shell(sourceEntry)} ${shell(outputPath)}`, cwd);
+      const primary = await sandbox.exec(
+        `node /tmp/factory-edge-adapt.mjs ${shell(sourceEntry)} ${shell(outputPath)}`,
+        { cwd },
+      );
+      if (!primary.success) {
+        const primaryError = (primary.stderr || primary.stdout || 'Edge adapter failed').slice(0, 8000);
+        if (!primaryError.includes('No self-contained stdio server factory function found')) {
+          throw new Error(primaryError);
+        }
+        const fallback = await sandbox.exec(
+          `node /tmp/factory-edge-top-level-adapt.mjs ${shell(sourceEntry)} ${shell(outputPath)}`,
+          { cwd },
+        );
+        if (!fallback.success) {
+          const fallbackError = (fallback.stderr || fallback.stdout || 'Top-level Edge adapter failed').slice(0, 8000);
+          throw new Error(`Primary Edge adapter: ${primaryError}\nTop-level fallback: ${fallbackError}`);
+        }
+      }
       workerEntry = outputName;
     }
 
