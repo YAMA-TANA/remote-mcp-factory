@@ -1,5 +1,6 @@
 import { getSandbox, type Sandbox } from '@cloudflare/sandbox';
 import { detectMcp, type Detection } from './analyze.js';
+import { prepareBinaryBridge, restoreBridgeSource } from './bridge-compiler.js';
 import { tryCompileToEdge } from './edge-compiler.js';
 import { ensureEdgeBuildSchema } from './schema-compat.js';
 import { loadDeploymentSecrets } from './secrets.js';
@@ -82,18 +83,44 @@ export async function buildServer(env: Env, row: ServerRow): Promise<void> {
     const detection = await detectMcp(sandbox, row.subdir);
     const command = row.command?.trim() || detection.command;
 
+    // Try a narrowly-scoped native rewrite before the ordinary Edge compiler. The bridge
+    // stage self-verifies the transformed source and only becomes active for a single,
+    // pure ffprobe helper. Everything else remains a normal Edge/Sandbox decision.
+    const bridge = await prepareBinaryBridge(env, sandbox, row);
     const edge = await tryCompileToEdge(env, sandbox, row, detection);
-    if (edge.ok && edge.compatibility.runtime === 'edge') {
+
+    if (bridge.active) {
+      // The artifact has already been materialized by tryCompileToEdge. Restore the source
+      // clone so emergency Linux fallback always executes pristine upstream code.
+      await restoreBridgeSource(sandbox, row);
+      if (edge.ok) {
+        edge.compatibility = bridge.compatibility;
+        await env.DB.prepare('UPDATE edge_builds SET compatibility_json=?, reason=?, updated_at=? WHERE server_id=?')
+          .bind(JSON.stringify(bridge.compatibility), bridge.compatibility.summary, new Date().toISOString(), row.id).run();
+      }
+    }
+
+    if (edge.compatibility.runtime === 'local-bound') {
+      const reason = `${edge.compatibility.summary}. This MCP depends on the user's local machine and cannot preserve its semantics on a cloud host without a local relay.`;
+      await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
+        .bind('incompatible', reason, new Date().toISOString(), row.id).run();
+      await env.DB.prepare('UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=?, updated_at=? WHERE id=?')
+        .bind('error', 'local-bound', command, reason.slice(0, 8000), new Date().toISOString(), row.id).run();
+      return;
+    }
+
+    if (edge.ok && (edge.compatibility.runtime === 'edge' || edge.compatibility.runtime === 'edge-with-bridge')) {
+      const detectedRuntime = edge.compatibility.runtime === 'edge-with-bridge' ? 'edge-node-bridge' : 'edge-node';
       await env.DB.prepare(`UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=NULL, updated_at=? WHERE id=?`)
-        .bind('ready', 'edge-node', command, new Date().toISOString(), row.id).run();
+        .bind('ready', detectedRuntime, command, new Date().toISOString(), row.id).run();
       return;
     }
 
     if (edge.ok && edge.compatibility.runtime !== 'edge') {
-      // The compiler can prove the Web/MCP shape is valid, but until tool-level bridge
-      // rewrites exist we must not expose a Worker whose native tool calls would fail.
+      // A candidate is not an active bridge. It stays on Linux unless the compiler
+      // has rewritten and verified the native call, represented by edge-with-bridge.
       await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
-        .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is enabled.`, new Date().toISOString(), row.id).run();
+        .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is verified.`, new Date().toISOString(), row.id).run();
     }
 
     await prepareSandboxFallback(env, row, sandbox, detection);
@@ -120,6 +147,9 @@ export async function stopRuntime(env: Env, row: Pick<ServerRow, 'id' | 'owner'>
 }
 
 export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
+  if (row.detected_runtime === 'local-bound') {
+    throw new Error('Local-bound MCPs require a local relay and cannot run in the cloud runtime');
+  }
   const sandbox = serverSandbox(env, row);
 
   if (!(await processRunning(sandbox))) {

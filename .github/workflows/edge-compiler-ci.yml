@@ -2,19 +2,21 @@ name: Edge compiler CI
 
 on:
   push:
-    branches: [edge-compiler-poc, compat-runtime-v1]
+    branches: [edge-compiler-poc, compat-runtime-v1, bridge-compiler-v1]
   pull_request:
     paths:
       - 'src/edge-*.ts'
       - 'src/artifact-store.ts'
       - 'src/compat-analysis.ts'
       - 'src/binary-bridge.ts'
+      - 'src/bridge-*.ts'
       - 'src/schema-compat.ts'
       - 'src/runtime.ts'
       - 'src/entry.ts'
       - 'src/index.ts'
       - 'src/types.ts'
       - 'scripts/test-edge-compiler-assets.mjs'
+      - 'scripts/test-bridge-rewrite.mjs'
       - 'schema.sql'
       - 'migrations/**'
       - 'wrangler.jsonc'
@@ -40,3 +42,5 @@ jobs:
         run: npx wrangler types --config wrangler.jsonc --env-interface GeneratedEnv /tmp/factory-worker-configuration.d.ts
       - name: External MCP compiler integration test
         run: node scripts/test-edge-compiler-assets.mjs
+      - name: Binary Bridge rewrite regression test
+        run: node scripts/test-bridge-rewrite.mjs
