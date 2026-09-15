@@ -84,17 +84,21 @@ function pkcs1ToPkcs8(pkcs1: Uint8Array): Uint8Array {
   return der(0x30, concat(version, rsaEncryptionAlgorithm, der(0x04, pkcs1)));
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function appPrivateKey(env: Env): Promise<CryptoKey> {
   const parsed = pemBytes(configured(env.GITHUB_APP_PRIVATE_KEY, 'GITHUB_APP_PRIVATE_KEY'));
   let bytes: Uint8Array;
   if (parsed.label === 'RSA PRIVATE KEY') bytes = pkcs1ToPkcs8(parsed.bytes);
   else if (parsed.label === 'PRIVATE KEY') bytes = parsed.bytes;
   else throw new Error(`Unsupported GitHub App private key format: ${parsed.label}`);
-  const copy = new Uint8Array(bytes.length);
-  copy.set(bytes);
   return crypto.subtle.importKey(
     'pkcs8',
-    copy.buffer,
+    toArrayBuffer(bytes),
     { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
     false,
     ['sign'],
@@ -241,7 +245,7 @@ export async function verifyGitHubWebhook(env: Env, payload: Uint8Array, signatu
     false,
     ['verify'],
   );
-  return crypto.subtle.verify('HMAC', key, signature, payload);
+  return crypto.subtle.verify('HMAC', key, toArrayBuffer(signature), toArrayBuffer(payload));
 }
 
 export function randomUrlToken(bytes = 32): string {
