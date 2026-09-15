@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "repo": "https://github.com/YAMA-TANA/CALCULATE_MCP.git",
+  "factoryModule": "src/server.ts",
+  "factoryExport": "createCalculateServer",
+  "toolCount": 13,
+  "tools": [
+    "calculate_expression",
+    "calculate_decimal",
+    "convert_units",
+    "list_units",
+    "summarize_statistics",
+    "calculate_percentage",
+    "calculate_finance",
+    "solve_root",
+    "calculate_matrix",
+    "calculate_complex",
+    "calculate_calculus",
+    "calculate_probability",
+    "calculate_date"
+  ],
+  "initialization": {
+    "name": "calculate-mcp",
+    "version": "0.2.0"
+  },
+  "runtime": "cloudflare-workerd-local",
+  "generatedAt": "2026-09-15T00:10:46.171Z"
+}
