@@ -6,9 +6,10 @@ import { EDGE_ADAPTER_SCRIPT } from './edge-adapter.js';
 import { EDGE_ASSESS_SCRIPT } from './edge-assessor.js';
 import { EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
 import { EDGE_TOP_LEVEL_ADAPTER_SCRIPT } from './edge-top-level-adapter.js';
+import { loadDeploymentSecrets } from './secrets.js';
 import type { CompatibilityReport, EdgeBuildRow, Env, ServerRow } from './types.js';
 
-const EDGE_COMPILER_VERSION = '0.2.2';
+const EDGE_COMPILER_VERSION = '0.2.3';
 const EDGE_COMPATIBILITY_DATE = '2026-09-15';
 const EDGE_SMOKE_PORT = 8793;
 const MAX_D1_BUNDLE_BYTES = 1_800_000;
@@ -141,11 +142,11 @@ async function persistEdgeBuild(env: Env, row: ServerRow, values: Omit<EdgeBuild
   ).run();
 }
 
-async function smokeTest(sandbox: Sandbox, row: ServerRow, cwd: string): Promise<string[]> {
+async function smokeTest(sandbox: Sandbox, row: ServerRow, cwd: string, configFile = 'wrangler.edge.jsonc'): Promise<string[]> {
   await sandbox.writeFile('/tmp/factory-edge-smoke.mjs', EDGE_SMOKE_SCRIPT);
   const processId = `edge-smoke-${row.id}`.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 63);
   const dev = await sandbox.startProcess(
-    `wrangler dev --local --config wrangler.edge.jsonc --port ${EDGE_SMOKE_PORT}`,
+    `wrangler dev --local --config ${shell(configFile)} --port ${EDGE_SMOKE_PORT}`,
     { cwd, processId },
   );
   try {
@@ -302,7 +303,12 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
     await execOk(sandbox, 'rm -rf .edge-dist && wrangler deploy --dry-run --config wrangler.edge.jsonc --outdir .edge-dist', cwd);
 
     const emitted = await collectEmittedModules(sandbox, cwd, workerEntry);
-    const tools = await smokeTest(sandbox, row, cwd);
+    const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
+    const smokeConfig = deploymentSecrets.names.length ? { ...config, vars: deploymentSecrets.values } : config;
+    const smokeConfigFile = 'wrangler.edge-smoke.jsonc';
+    await sandbox.writeFile(`${cwd}/${smokeConfigFile}`, JSON.stringify(smokeConfig, null, 2));
+    const tools = await smokeTest(sandbox, row, cwd, smokeConfigFile);
+    await sandbox.exec(`rm -f ${shell(`${cwd}/${smokeConfigFile}`)}`).catch(() => undefined);
     const bundleHash = await artifactHash(emitted.modules);
 
     let artifactKey: string | null = null;
