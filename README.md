@@ -1,8 +1,8 @@
 # Remote MCP Factory
 
-> Status: early MVP — Clerk auth, plan quotas, public/protected endpoints, and isolated Cloudflare Sandbox execution are implemented.
+> Status: early MVP — Clerk auth, plan quotas, public/protected endpoints, Edge compilation, isolated Cloudflare Sandbox execution, and real MCP health checks are implemented.
 
-**GitHub → Remote MCP.** Paste a GitHub repository containing a stdio MCP server and get a remote Streamable HTTP endpoint running in an isolated Cloudflare Sandbox.
+**GitHub → Remote MCP.** Paste a GitHub repository containing a stdio MCP server and get a remote Streamable HTTP endpoint running on Cloudflare Dynamic Workers when compatible, with an isolated Cloudflare Sandbox fallback for heavier MCPs.
 
 The product goal is deliberately Vercel-like: connect a repo, let the platform detect how it runs, deploy it, and receive a stable URL.
 
@@ -10,12 +10,13 @@ The product goal is deliberately Vercel-like: connect a repo, let the platform d
 
 1. Sign in with **Clerk**.
 2. Paste a public GitHub MCP repository URL.
-3. Factory clones it into a dedicated Cloudflare Sandbox.
+3. Factory clones and analyzes it in a dedicated Cloudflare Sandbox.
 4. It detects Node/Python, installs dependencies, builds, and detects the stdio start command.
-5. `mcp-proxy` exposes the original stdio MCP as Streamable HTTP.
-6. Factory returns `/mcp/<deployment-id>`.
-7. Choose **Public** or **Protected** access.
-8. Usage is metered per owner and enforced against the current Clerk Billing plan.
+5. Compatible Node MCPs compile to a Dynamic Worker; heavier/native MCPs stay on the Sandbox fallback.
+6. Factory runs a real MCP `initialize` + `tools/list` health check before marking the deployment ready.
+7. Factory returns `/mcp/<deployment-id>`.
+8. Choose **Public** or **Protected** access.
+9. Usage is metered per owner and enforced against the current Clerk Billing plan.
 
 ## Access model
 
@@ -67,19 +68,20 @@ Clerk Billing currently handles recurring plans and seat billing, but not true u
 - Node MCPs using `package.json` scripts/bin
 - Python MCPs using `pyproject.toml` / `requirements.txt`
 - Manual stdio command override
+- Edge-first runtime selection with isolated Linux Sandbox fallback
+- Real `initialize` + `tools/list` health checks for both Edge and Sandbox runtimes
 - Public and bearer-protected Remote MCP endpoints
 - Clerk user + Organization ownership
 - Clerk Billing plan lookup with a short D1 cache
 - Monthly deployment/request/build quotas
 - Per-server and per-client Cloudflare rate limits
-- One isolated Cloudflare Sandbox per MCP deployment
+- One isolated Cloudflare Sandbox per MCP deployment/fallback runtime
 
 ## Planned
 
 - GitHub App integration for private repositories
-- User-supplied encrypted environment secrets
+- User-supplied encrypted environment secrets management API/UI
 - R2 build snapshots to avoid reinstalling after Sandbox sleep
-- `tools/list` health checks before marking a build healthy
 - GitHub webhook auto-deploy on push
 - Deployment logs and analytics dashboard
 - Custom domains
