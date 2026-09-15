@@ -75,4 +75,3 @@ print(json.dumps(out))
   if (!result.success) throw new Error(result.stderr || 'MCP detection failed');
   return JSON.parse(result.stdout) as Detection;
 }
-

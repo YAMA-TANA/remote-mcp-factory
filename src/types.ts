@@ -3,6 +3,7 @@ import type { Sandbox } from '@cloudflare/sandbox';
 export type Visibility = 'public' | 'token';
 export type PlanId = 'hobby' | 'pro' | 'team';
 export type EdgeBuildStatus = 'ready' | 'failed' | 'incompatible';
+export type CompatibilityRuntime = 'edge' | 'edge-with-bridge-candidate' | 'heavy';
 
 export interface RateLimiter {
   limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -13,11 +14,21 @@ export interface DynamicWorkerLimits {
   subRequests?: number;
 }
 
+export type DynamicWorkerModule =
+  | string
+  | { js: string }
+  | { cjs: string }
+  | { py: string }
+  | { text: string }
+  | { data: ArrayBuffer }
+  | { wasm: ArrayBuffer }
+  | { json: unknown };
+
 export interface DynamicWorkerCode {
   compatibilityDate: string;
   compatibilityFlags?: string[];
   mainModule: string;
-  modules: Record<string, string | { js: string } | { cjs: string } | { text: string } | { json: unknown }>;
+  modules: Record<string, DynamicWorkerModule>;
   env?: Record<string, unknown>;
   globalOutbound?: unknown;
   limits?: DynamicWorkerLimits;
@@ -39,6 +50,7 @@ export interface WorkerLoader {
 export interface Env {
   Sandbox: DurableObjectNamespace<Sandbox>;
   DB: D1Database;
+  ARTIFACTS?: R2Bucket;
   LOADER?: WorkerLoader;
   MCP_SERVER_RATE_LIMITER: RateLimiter;
   MCP_CLIENT_RATE_LIMITER: RateLimiter;
@@ -88,9 +100,29 @@ export interface EdgeBuildRow {
   compiler_version: string;
   bundle_hash: string | null;
   bundle: string | null;
+  artifact_key: string | null;
+  main_module: string | null;
+  module_count: number;
   size_bytes: number;
   tool_count: number;
   tools_json: string;
+  compatibility_json: string;
   reason: string | null;
   updated_at: string;
+}
+
+export interface NativeDependencyEvidence {
+  kind: 'subprocess' | 'binary' | 'browser';
+  command: string | null;
+  file: string;
+  line: number;
+  tool: string | null;
+  bridgeCandidate: boolean;
+}
+
+export interface CompatibilityReport {
+  runtime: CompatibilityRuntime;
+  bridgeCommands: string[];
+  evidence: NativeDependencyEvidence[];
+  summary: string;
 }
