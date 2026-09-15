@@ -1,13 +1,16 @@
 import type { Sandbox } from '@cloudflare/sandbox';
 import type { Detection } from './analyze.js';
+import { putEdgeArtifact, type EdgeArtifactModuleType } from './artifact-store.js';
+import { analyzeRuntimeCompatibility } from './compat-analysis.js';
 import { EDGE_ADAPTER_SCRIPT } from './edge-adapter.js';
 import { EDGE_ASSESS_SCRIPT, EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
-import type { EdgeBuildRow, Env, ServerRow } from './types.js';
+import type { CompatibilityReport, EdgeBuildRow, Env, ServerRow } from './types.js';
 
-const EDGE_COMPILER_VERSION = '0.1.2';
+const EDGE_COMPILER_VERSION = '0.2.0';
 const EDGE_COMPATIBILITY_DATE = '2026-09-15';
 const EDGE_SMOKE_PORT = 8793;
 const MAX_D1_BUNDLE_BYTES = 1_800_000;
+const MAX_R2_ARTIFACT_BYTES = 60_000_000;
 
 export interface EdgeAssessment {
   eligible: boolean;
@@ -21,10 +24,18 @@ export interface EdgeAssessment {
 export interface EdgeCompileResult {
   ok: boolean;
   assessment: EdgeAssessment;
+  compatibility: CompatibilityReport;
   bundleHash?: string;
   sizeBytes?: number;
   tools?: string[];
   reason?: string;
+}
+
+interface EmittedModule {
+  name: string;
+  type: EdgeArtifactModuleType;
+  bytes: Uint8Array;
+  size: number;
 }
 
 function repoWorkdir(row: ServerRow, root = '/workspace/repo'): string {
@@ -42,10 +53,15 @@ function edgeEntryName(source: string): string {
   return /\.(?:ts|mts|cts|tsx)$/i.test(source) ? '.factory-edge-entry.ts' : '.factory-edge-entry.mjs';
 }
 
-async function digestHex(value: string): Promise<string> {
-  const bytes = new TextEncoder().encode(value);
+async function digestHex(value: string | Uint8Array): Promise<string> {
+  const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function decodeBase64(value: string): Uint8Array {
+  const binary = atob(value.trim());
+  return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
 }
 
 async function readSandboxText(sandbox: Sandbox, path: string): Promise<string> {
@@ -53,6 +69,12 @@ async function readSandboxText(sandbox: Sandbox, path: string): Promise<string> 
   if (typeof file?.content === 'string') return file.content;
   if (file?.content instanceof ReadableStream) return await new Response(file.content).text();
   return String(file?.content ?? '');
+}
+
+async function readSandboxBytes(sandbox: Sandbox, path: string): Promise<Uint8Array> {
+  const result = await sandbox.exec(`base64 -w0 ${shell(path)}`);
+  if (!result.success) throw new Error(result.stderr || `Could not read emitted module: ${path}`);
+  return decodeBase64(result.stdout);
 }
 
 async function execOk(sandbox: Sandbox, command: string, cwd?: string): Promise<string> {
@@ -82,16 +104,22 @@ async function assessEdge(sandbox: Sandbox, row: ServerRow, detection: Detection
 
 async function persistEdgeBuild(env: Env, row: ServerRow, values: Omit<EdgeBuildRow, 'server_id' | 'updated_at'>): Promise<void> {
   await env.DB.prepare(`
-    INSERT INTO edge_builds (server_id,status,compiler_version,bundle_hash,bundle,size_bytes,tool_count,tools_json,reason,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO edge_builds (
+      server_id,status,compiler_version,bundle_hash,bundle,artifact_key,main_module,module_count,
+      size_bytes,tool_count,tools_json,compatibility_json,reason,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(server_id) DO UPDATE SET
       status=excluded.status,
       compiler_version=excluded.compiler_version,
       bundle_hash=excluded.bundle_hash,
       bundle=excluded.bundle,
+      artifact_key=excluded.artifact_key,
+      main_module=excluded.main_module,
+      module_count=excluded.module_count,
       size_bytes=excluded.size_bytes,
       tool_count=excluded.tool_count,
       tools_json=excluded.tools_json,
+      compatibility_json=excluded.compatibility_json,
       reason=excluded.reason,
       updated_at=excluded.updated_at
   `).bind(
@@ -100,9 +128,13 @@ async function persistEdgeBuild(env: Env, row: ServerRow, values: Omit<EdgeBuild
     values.compiler_version,
     values.bundle_hash,
     values.bundle,
+    values.artifact_key,
+    values.main_module,
+    values.module_count,
     values.size_bytes,
     values.tool_count,
     values.tools_json,
+    values.compatibility_json,
     values.reason,
     new Date().toISOString(),
   ).run();
@@ -130,7 +162,17 @@ async function smokeTest(sandbox: Sandbox, row: ServerRow, cwd: string): Promise
   }
 }
 
-async function findSingleBundle(sandbox: Sandbox, cwd: string): Promise<{ path: string; size: number }> {
+function moduleType(name: string): EdgeArtifactModuleType {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.cjs')) return 'cjs';
+  if (lower.endsWith('.js') || lower.endsWith('.mjs')) return 'js';
+  if (lower.endsWith('.json')) return 'json';
+  if (lower.endsWith('.wasm')) return 'wasm';
+  if (lower.endsWith('.txt') || lower.endsWith('.html') || lower.endsWith('.sql') || lower.endsWith('.css')) return 'text';
+  return 'data';
+}
+
+async function collectEmittedModules(sandbox: Sandbox, cwd: string, workerEntry: string): Promise<{ mainModule: string; modules: EmittedModule[]; totalBytes: number }> {
   const listing = await execOk(
     sandbox,
     `find .edge-dist -type f ! -name '*.map' -printf '%s %p\\n' | sort -nr`,
@@ -139,18 +181,54 @@ async function findSingleBundle(sandbox: Sandbox, cwd: string): Promise<{ path: 
   const files = listing.trim().split('\n').filter(Boolean).map((line) => {
     const match = line.match(/^(\d+)\s+(.+)$/);
     if (!match) throw new Error(`Unexpected Wrangler output entry: ${line}`);
-    return { size: Number(match[1]), path: match[2] };
+    return { size: Number(match[1]), path: match[2], name: match[2].replace(/^\.edge-dist\//, '') };
   });
-  const js = files.filter((file) => /\.(?:js|mjs)$/i.test(file.path));
-  const other = files.filter((file) => !/\.(?:js|mjs)$/i.test(file.path));
-  if (js.length !== 1 || other.length > 0) {
-    throw new Error(`Edge MVP only stores one JavaScript module; Wrangler emitted ${js.length} JS module(s) and ${other.length} additional module(s)`);
+  if (!files.length) throw new Error('Wrangler emitted no Edge modules');
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > MAX_R2_ARTIFACT_BYTES) throw new Error(`Edge artifact is ${totalBytes} bytes; current limit is ${MAX_R2_ARTIFACT_BYTES}`);
+
+  const modules: EmittedModule[] = [];
+  for (const file of files) {
+    const bytes = await readSandboxBytes(sandbox, `${cwd}/${file.path.replace(/^\.\//, '')}`);
+    modules.push({ name: file.name, type: moduleType(file.name), bytes, size: bytes.byteLength });
   }
-  if (!Number.isFinite(js[0].size) || js[0].size <= 0) throw new Error('Invalid Worker bundle size');
-  return { size: js[0].size, path: `${cwd}/${js[0].path.replace(/^\.\//, '')}` };
+
+  const js = modules.filter((module) => module.type === 'js' || module.type === 'cjs');
+  if (!js.length) throw new Error('Wrangler emitted no JavaScript entry module');
+  const wanted = workerEntry.replace(/^.*[\\/]/, '').replace(/\.(?:ts|mts|cts|tsx)$/i, '.js');
+  const main = js.find((module) => module.name === wanted || module.name.endsWith(`/${wanted}`)) ?? js.sort((a, b) => b.size - a.size)[0];
+  return { mainModule: main.name, modules, totalBytes };
+}
+
+async function artifactHash(modules: EmittedModule[]): Promise<string> {
+  const rows: string[] = [];
+  for (const module of [...modules].sort((a, b) => a.name.localeCompare(b.name))) {
+    rows.push(`${module.name}:${module.type}:${await digestHex(module.bytes)}`);
+  }
+  return await digestHex(rows.join('\n'));
+}
+
+function emptyBuild(compatibility: CompatibilityReport, reason: string, status: 'failed' | 'incompatible'): Omit<EdgeBuildRow, 'server_id' | 'updated_at'> {
+  return {
+    status,
+    compiler_version: EDGE_COMPILER_VERSION,
+    bundle_hash: null,
+    bundle: null,
+    artifact_key: null,
+    main_module: null,
+    module_count: 0,
+    size_bytes: 0,
+    tool_count: 0,
+    tools_json: '[]',
+    compatibility_json: JSON.stringify(compatibility),
+    reason: reason.slice(0, 4000),
+  };
 }
 
 export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRow, detection: Detection): Promise<EdgeCompileResult> {
+  const compatibility = await analyzeRuntimeCompatibility(sandbox, row).catch(() => ({
+    runtime: 'heavy' as const, bridgeCommands: [], evidence: [], summary: 'Runtime compatibility analysis failed',
+  }));
   let assessment: EdgeAssessment;
   try {
     assessment = await assessEdge(sandbox, row, detection);
@@ -160,17 +238,8 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
   }
 
   if (!assessment.eligible || !assessment.entry) {
-    await persistEdgeBuild(env, row, {
-      status: 'incompatible',
-      compiler_version: EDGE_COMPILER_VERSION,
-      bundle_hash: null,
-      bundle: null,
-      size_bytes: 0,
-      tool_count: 0,
-      tools_json: '[]',
-      reason: assessment.reason.slice(0, 4000),
-    });
-    return { ok: false, assessment, reason: assessment.reason };
+    await persistEdgeBuild(env, row, emptyBuild(compatibility, assessment.reason, 'incompatible'));
+    return { ok: false, assessment, compatibility, reason: assessment.reason };
   }
 
   const edgeRoot = '/workspace/edge-build';
@@ -187,8 +256,6 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
         { cwd },
       );
       if (markers.stdout.trim()) throw new Error(`MCP SDK codemod requires manual migration: ${markers.stdout.trim()}`);
-      // The upstream codemod is intentionally import-driven and can leave CommonJS JavaScript imports untouched.
-      // Always ensure the runtime-neutral v2 packages are present; the adapter below removes any leftover v1 paths.
       await execOk(
         sandbox,
         `npm pkg set 'dependencies.@modelcontextprotocol/server=^2.0.0' 'dependencies.@modelcontextprotocol/core=^2.0.0'`,
@@ -204,7 +271,6 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
       workerEntry = outputName;
     }
 
-    // Cheap Edge builds never run arbitrary package lifecycle scripts. Repos that require native/postinstall setup fall back to Linux.
     await execOk(sandbox, 'npm install --ignore-scripts --no-audit --no-fund', cwd);
 
     const config = {
@@ -216,42 +282,42 @@ export async function tryCompileToEdge(env: Env, sandbox: Sandbox, row: ServerRo
     await sandbox.writeFile(`${cwd}/wrangler.edge.jsonc`, JSON.stringify(config, null, 2));
     await execOk(sandbox, 'rm -rf .edge-dist && wrangler deploy --dry-run --config wrangler.edge.jsonc --outdir .edge-dist', cwd);
 
-    const emitted = await findSingleBundle(sandbox, cwd);
-    if (emitted.size > MAX_D1_BUNDLE_BYTES) {
-      throw new Error(`Edge bundle is ${emitted.size} bytes; D1-backed MVP limit is ${MAX_D1_BUNDLE_BYTES}`);
-    }
-
+    const emitted = await collectEmittedModules(sandbox, cwd, workerEntry);
     const tools = await smokeTest(sandbox, row, cwd);
-    const bundle = await readSandboxText(sandbox, emitted.path);
-    const sizeBytes = new TextEncoder().encode(bundle).byteLength;
-    if (sizeBytes > MAX_D1_BUNDLE_BYTES) {
-      throw new Error(`Bundled Worker exceeds D1-backed MVP limit after read (${sizeBytes} bytes)`);
+    const bundleHash = await artifactHash(emitted.modules);
+
+    let artifactKey: string | null = null;
+    let legacyBundle: string | null = null;
+    if (env.ARTIFACTS) {
+      artifactKey = await putEdgeArtifact(env, row.id, bundleHash, emitted.mainModule, emitted.modules);
+    } else {
+      if (emitted.modules.length !== 1 || emitted.modules[0].type !== 'js') {
+        throw new Error('Multi-module Edge output requires the ARTIFACTS R2 binding');
+      }
+      if (emitted.totalBytes > MAX_D1_BUNDLE_BYTES) {
+        throw new Error(`Edge bundle is ${emitted.totalBytes} bytes; legacy D1 limit is ${MAX_D1_BUNDLE_BYTES}. Configure ARTIFACTS R2.`);
+      }
+      legacyBundle = new TextDecoder().decode(emitted.modules[0].bytes);
     }
-    const bundleHash = await digestHex(bundle);
 
     await persistEdgeBuild(env, row, {
       status: 'ready',
       compiler_version: EDGE_COMPILER_VERSION,
       bundle_hash: bundleHash,
-      bundle,
-      size_bytes: sizeBytes,
+      bundle: legacyBundle,
+      artifact_key: artifactKey,
+      main_module: emitted.mainModule,
+      module_count: emitted.modules.length,
+      size_bytes: emitted.totalBytes,
       tool_count: tools.length,
       tools_json: JSON.stringify(tools),
-      reason: assessment.reason,
+      compatibility_json: JSON.stringify(compatibility),
+      reason: compatibility.runtime === 'edge-with-bridge-candidate' ? compatibility.summary : assessment.reason,
     });
-    return { ok: true, assessment, bundleHash, sizeBytes, tools };
+    return { ok: true, assessment, compatibility, bundleHash, sizeBytes: emitted.totalBytes, tools };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    await persistEdgeBuild(env, row, {
-      status: 'failed',
-      compiler_version: EDGE_COMPILER_VERSION,
-      bundle_hash: null,
-      bundle: null,
-      size_bytes: 0,
-      tool_count: 0,
-      tools_json: '[]',
-      reason: reason.slice(0, 4000),
-    });
-    return { ok: false, assessment, reason };
+    await persistEdgeBuild(env, row, emptyBuild(compatibility, reason, 'failed'));
+    return { ok: false, assessment, compatibility, reason };
   }
 }
