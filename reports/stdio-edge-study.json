@@ -1,0 +1,1755 @@
+{
+  "generatedAt": "2026-09-15T00:13:32.960Z",
+  "source": "Official MCP Registry npm+stdio packages",
+  "seed": "remote-mcp-factory-stdio-edge-v1",
+  "summary": {
+    "sampleSize": 100,
+    "counts": {
+      "uncertain": 31,
+      "sandbox-required": 7,
+      "inaccessible": 23,
+      "local-bound": 8,
+      "remote-wrapper": 4,
+      "edge-adaptable": 27
+    },
+    "analyzableRemoteHostable": 34,
+    "edgeCandidates": 27,
+    "sandboxRequired": 7,
+    "edgeShare": 79.4
+  },
+  "results": [
+    {
+      "name": "Appfigures",
+      "registryName": "com.appfigures/mcp",
+      "description": "Access your app analytics, ASO tools, and app market intelligence with Appfigures.",
+      "repoUrl": "https://github.com/appfigures/cli",
+      "registrySubfolder": "",
+      "packageIdentifier": "@appfigures/cli",
+      "packageVersion": "3.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 1
+    },
+    {
+      "name": "ZenBrain Memory",
+      "registryName": "ai.zensation/zenbrain",
+      "description": "Seven-layer agent memory: episodic, semantic, procedural and core. Local SQLite, no account.",
+      "repoUrl": "https://github.com/zensation-ai/zenbrain",
+      "registrySubfolder": "packages/mcp",
+      "packageIdentifier": "@zensation/mcp",
+      "packageVersion": "0.1.3",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "native database"
+      ],
+      "warnings": [],
+      "packagePath": "packages/mcp",
+      "filesScanned": 4
+    },
+    {
+      "name": "com.feedback-magic/feedback-magic",
+      "registryName": "com.feedback-magic/feedback-magic",
+      "description": "Create Feedback Magic widgets — feedback, surveys, changelog, roadmap — from your AI editor.",
+      "repoUrl": "https://github.com/DenneyTech/FeedbackMagic",
+      "registrySubfolder": "distribution/mcp/feedback-magic-mcp",
+      "packageIdentifier": "feedback-magic-mcp",
+      "packageVersion": "1.3.1",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/DenneyTech/FeedbackMagic /tmp/stdio-edge-study-0fgoig/002\nCloning into '/tmp/stdio-edge-study-0fgoig/002'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Telbase",
+      "registryName": "ai.telbase/deploy",
+      "description": "Deploy any web project with one command. AI-native platform with self-healing feedback.",
+      "repoUrl": "https://github.com/Victor-EU/telbase",
+      "registrySubfolder": "",
+      "packageIdentifier": "telbase",
+      "packageVersion": "0.14.0-beta.2",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Victor-EU/telbase /tmp/stdio-edge-study-0fgoig/003\nCloning into '/tmp/stdio-edge-study-0fgoig/003'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "AgentUtility Model Router",
+      "registryName": "ai.agentutility/mcp-model-router",
+      "description": "MCP server for the @agentutility model-router cluster — pay-per-call x402 tools, no API keys, USDC…",
+      "repoUrl": "https://github.com/rooz21/x402",
+      "registrySubfolder": "packages/mcp-model-router",
+      "packageIdentifier": "@agentutility/mcp-model-router",
+      "packageVersion": "0.1.1",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/rooz21/x402 /tmp/stdio-edge-study-0fgoig/004\nCloning into '/tmp/stdio-edge-study-0fgoig/004'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.decionis/mcp",
+      "registryName": "com.decionis/mcp",
+      "description": "Authorize consequential AI agent actions before execution",
+      "repoUrl": "https://github.com/decionis/agent-safe-pipeline",
+      "registrySubfolder": "",
+      "packageIdentifier": "@decionis/mcp",
+      "packageVersion": "0.2.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "com.cortex-mem/memory",
+      "registryName": "com.cortex-mem/memory",
+      "description": "Shared, persistent memory for AI agents — works with Claude, Kiro, Cursor, or any MCP client.",
+      "repoUrl": "https://github.com/arjunkumargiri/cortex",
+      "registrySubfolder": "",
+      "packageIdentifier": "cortex-memory-mcp",
+      "packageVersion": "1.2.5",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/arjunkumargiri/cortex /tmp/stdio-edge-study-0fgoig/006\nCloning into '/tmp/stdio-edge-study-0fgoig/006'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "co.leafwright/leafwright",
+      "registryName": "co.leafwright/leafwright",
+      "description": "Render HTML, URLs, and templates to PDF. AI drafts templates and fixes them from logs.",
+      "repoUrl": "https://github.com/Tactic-Systems/leafwright",
+      "registrySubfolder": "mcp",
+      "packageIdentifier": "@leafwright/mcp",
+      "packageVersion": "0.2.4",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Tactic-Systems/leafwright /tmp/stdio-edge-study-0fgoig/007\nCloning into '/tmp/stdio-edge-study-0fgoig/007'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Google Analytics 4",
+      "registryName": "com.getmcpads/google-analytics",
+      "description": "Google Analytics 4: 27 read-only tools across the Data API and the Admin API.",
+      "repoUrl": "https://github.com/getmcpads-com/google-analytics-mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "@getmcpads/google-analytics-mcp-server",
+      "packageVersion": "1.0.2",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 29
+    },
+    {
+      "name": "com.letta/memory-mcp",
+      "registryName": "com.letta/memory-mcp",
+      "description": "MCP server for AI memory management using Letta - Standard MCP format",
+      "repoUrl": "https://github.com/letta-ai/memory-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@letta-ai/memory-mcp",
+      "packageVersion": "2.0.2",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/letta-ai/memory-mcp /tmp/stdio-edge-study-0fgoig/009\nCloning into '/tmp/stdio-edge-study-0fgoig/009'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "AIOProductOS MCP",
+      "registryName": "com.aioproductos/mcp",
+      "description": "AIOProductOS: revenue, feedback, work and analytics on one customer record. 71 tools, 3 apps.",
+      "repoUrl": "https://github.com/AIOProductOS/claude-plugin",
+      "registrySubfolder": "",
+      "packageIdentifier": "@aioproductoscom/mcp",
+      "packageVersion": "0.19.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "Fodda Knowledge Graphs",
+      "registryName": "ai.fodda/mcp-server",
+      "description": "Expert-curated knowledge, brand, research & earnings intelligence — 47 tools, 220+ graphs.",
+      "repoUrl": "https://github.com/piers-fawkes/fodda-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "fodda-mcp",
+      "packageVersion": "1.46.31",
+      "classification": "remote-wrapper",
+      "confidence": "high",
+      "reasons": [
+        "package primarily bridges local stdio to an already-remote MCP/service"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 109
+    },
+    {
+      "name": "ai.clawfetch/mcp",
+      "registryName": "ai.clawfetch/mcp",
+      "description": "Web intelligence for AI agents: fetch, render, extract, research. x402 micropayments, no API keys.",
+      "repoUrl": "https://github.com/clawfetch/clawfetch-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@clawfetch/mcp",
+      "packageVersion": "0.2.2",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 12
+    },
+    {
+      "name": "AgentUtility Rollforge",
+      "registryName": "ai.agentutility/mcp-rollforge",
+      "description": "MCP server for the @agentutility rollforge cluster — pay-per-call x402 tools, no API keys, USDC on…",
+      "repoUrl": "https://github.com/rooz21/x402",
+      "registrySubfolder": "packages/mcp-rollforge",
+      "packageIdentifier": "@agentutility/mcp-rollforge",
+      "packageVersion": "0.1.5",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/rooz21/x402 /tmp/stdio-edge-study-0fgoig/013\nCloning into '/tmp/stdio-edge-study-0fgoig/013'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.mambabuilt/mcp-funding-investor-record",
+      "registryName": "com.mambabuilt/mcp-funding-investor-record",
+      "description": "Get a company funding record from SEC Form D, Companies House and press, each labelled.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-funding-investor-record",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-funding-investor-record",
+      "packageVersion": "1.0.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "Familiar",
+      "registryName": "com.familiarvtt/familiar",
+      "description": "AI co-pilot for Foundry VTT: runs combat, scenes, voices and audio. Requires the Familiar module.",
+      "repoUrl": "https://github.com/Ryanjansen92/familiar-releases",
+      "registrySubfolder": "",
+      "packageIdentifier": "familiar-vtt",
+      "packageVersion": "2.25.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "GTM API: LinkedIn MCP Server",
+      "registryName": "com.gtm-api/linkedin-mcp",
+      "description": "Managed LinkedIn MCP server for AI agents: search, connect, message and enrich on accounts you own.",
+      "repoUrl": "https://github.com/gtm-api/linkedin-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@gtm-api/linkedin-mcp",
+      "packageVersion": "1.1.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": "npm",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.goldpopcon/openapi-mcp",
+      "registryName": "com.goldpopcon/openapi-mcp",
+      "description": "금방 Open API MCP 서버 — 스펙 조회·JWT 서명 코드 생성·로컬 서명/검증",
+      "repoUrl": "https://github.com/keumbang/goldpopcon-openapi-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@keumbang/goldpopcon-openapi-mcp",
+      "packageVersion": "0.3.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 7
+    },
+    {
+      "name": "HasData YouTube",
+      "registryName": "com.hasdata/youtube",
+      "description": "Search YouTube and read video, channel and transcript data as JSON. No Google Cloud project.",
+      "repoUrl": "https://github.com/HasData/youtube-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/youtube-mcp",
+      "packageVersion": "1.0.7",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "Giveaway & Raffle Winner Picker (provably fair)",
+      "registryName": "app.promptcoin/giveaway-raffle-winner-picker",
+      "description": "Pick giveaway and raffle winners nobody can rig — verifiable by anyone, no API key.",
+      "repoUrl": "https://github.com/promptcoinapp/provably-fair-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "provably-fair-mcp",
+      "packageVersion": "1.0.4",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/promptcoinapp/provably-fair-mcp /tmp/stdio-edge-study-0fgoig/019\nCloning into '/tmp/stdio-edge-study-0fgoig/019'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "HasData Web Scraping",
+      "registryName": "com.hasdata/web-scraping",
+      "description": "Fetch any public web page through managed proxies, with optional JS rendering and extraction rules.",
+      "repoUrl": "https://github.com/HasData/web-scraping-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/web-scraping-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.mambabuilt/mcp-pinterest-brand-presence-mapper",
+      "registryName": "com.mambabuilt/mcp-pinterest-brand-presence-mapper",
+      "description": "Resolve a company domain to its Pinterest account with exact follower and pin counts.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-pinterest-brand-presence-mapper",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-pinterest-brand-presence-mapper",
+      "packageVersion": "1.0.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "app.formatika/mcp",
+      "registryName": "app.formatika/mcp",
+      "description": "Convert, compress, resize and trim images, audio, video and PDFs from local paths.",
+      "repoUrl": "https://github.com/formatika-app/mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@formatika/mcp",
+      "packageVersion": "0.1.2",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 7
+    },
+    {
+      "name": "Cleared Index",
+      "registryName": "com.clearedindex/mcp",
+      "description": "Cleared Check before pay: lookup_merchant, cleared_check, route_gateway for x402 agents.",
+      "repoUrl": "https://github.com/N747AI/clearedindex-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@n747ai/clearedindex-mcp-server",
+      "packageVersion": "1.4.2",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "ai.myspaice/spaces",
+      "registryName": "ai.myspaice/spaces",
+      "description": "myspAIce, give your AI a social life: games, music, friendships. An immersive world. Just walk in.",
+      "repoUrl": "https://github.com/neltomw/spaces-mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "spaces-mcp-server",
+      "packageVersion": "1.7.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "ai.foura/mcp",
+      "registryName": "ai.foura/mcp",
+      "description": "Reliable web access for AI agents: smart HTTP, rotating proxies, and full-browser rendering.",
+      "repoUrl": "https://github.com/fouradata/mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@fouradata/mcp",
+      "packageVersion": "0.6.0",
+      "classification": "remote-wrapper",
+      "confidence": "high",
+      "reasons": [
+        "package primarily bridges local stdio to an already-remote MCP/service"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 20
+    },
+    {
+      "name": "Popdot AI",
+      "registryName": "ai.popdot/popdot-mcp",
+      "description": "Rent verified subdomains by the hour, day, or month. Free 24h trials, x402 USDC on Base.",
+      "repoUrl": "https://github.com/popdot-ai/popdot-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "popdot-mcp",
+      "packageVersion": "2.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "Central Bank Rates (AllRatesToday)",
+      "registryName": "com.allratestoday/central-bank-mcp",
+      "description": "Official central-bank & tax-authority rates from 100+ sources. No API key needed to start.",
+      "repoUrl": "https://github.com/AllRates-Today/central-bank-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@allratestoday/central-bank-mcp",
+      "packageVersion": "0.2.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 6
+    },
+    {
+      "name": "app.businys/mcp-server",
+      "registryName": "app.businys/mcp-server",
+      "description": "221 MCP tools across 26 practices for independent professionals. Clients, invoices, contracts.",
+      "repoUrl": "https://github.com/hiatys/businys-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@businys/mcp-server",
+      "packageVersion": "1.0.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 4
+    },
+    {
+      "name": "com.mambabuilt/mcp-team-page-people-extractor",
+      "registryName": "com.mambabuilt/mcp-team-page-people-extractor",
+      "description": "Extract the people a company publishes on its own team, leadership or about page.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-team-page-people-extractor",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-team-page-people-extractor",
+      "packageVersion": "1.0.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.bounceprotect.www/mcp",
+      "registryName": "com.bounceprotect.www/mcp",
+      "description": "Email validation and SMTP verification for Claude Desktop, Cursor, and Claude Code.",
+      "repoUrl": "https://github.com/bounceprotect/bounceprotect-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@bounceprotect/mcp",
+      "packageVersion": "1.0.6",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "APICK",
+      "registryName": "app.apick/all",
+      "description": "APICK Korean data, OCR, search, conversion, image and video generation, and asynchronous TTS",
+      "repoUrl": "https://github.com/lead788/apick-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "apick-mcp",
+      "packageVersion": "3.3.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 3
+    },
+    {
+      "name": "Google Search Console",
+      "registryName": "com.getmcpads/google-search-console",
+      "description": "Google Search Console: 20 read-only tools for Search Analytics, sitemaps and indexing.",
+      "repoUrl": "https://github.com/getmcpads-com/google-search-console-mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "@getmcpads/google-search-console-mcp-server",
+      "packageVersion": "1.0.2",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 27
+    },
+    {
+      "name": "com.mambabuilt/mcp-gtm-tech-stack-signal-scraper",
+      "registryName": "com.mambabuilt/mcp-gtm-tech-stack-signal-scraper",
+      "description": "Detects a company CRM, sequencer, and marketing automation from its public website. Clay-ready.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-gtm-tech-stack-signal-scraper",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-gtm-tech-stack-signal-scraper",
+      "packageVersion": "1.3.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "ai.sentfrom/mcp",
+      "registryName": "ai.sentfrom/mcp",
+      "description": "Email for AI agents: inboxes, send/reply/forward, search, threads, webhooks — 21 SentFromAI tools.",
+      "repoUrl": "https://github.com/samuelar2/sentfromai-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "sentfromai-mcp",
+      "packageVersion": "0.3.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "ai.mentu/navigator",
+      "registryName": "ai.mentu/navigator",
+      "description": "Read-only repo navigation and progressive disclosure; BM25 locator with registered evidence.",
+      "repoUrl": "https://github.com/mentu-ai/mentu-navigator",
+      "registrySubfolder": "",
+      "packageIdentifier": "mentu-navigator",
+      "packageVersion": "1.0.2",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 24
+    },
+    {
+      "name": "Agent Domains",
+      "registryName": "ai.clize/domains",
+      "description": "Domains your AI agent can buy, point and monitor, with four-layer health checks and alerts.",
+      "repoUrl": "https://github.com/cooldk/clize-cli",
+      "registrySubfolder": "",
+      "packageIdentifier": "@clize/domains",
+      "packageVersion": "0.35.5",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "Chronary",
+      "registryName": "ai.chronary/mcp",
+      "description": "Calendar API for AI agents: events, availability, Google/Microsoft setup, scheduling, and iCal.",
+      "repoUrl": "https://github.com/Chronary/chronary-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@chronary/mcp",
+      "packageVersion": "1.5.2",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 4
+    },
+    {
+      "name": "brainCloud MCP Helper",
+      "registryName": "com.braincloudservers/braincloud-mcp-helper",
+      "description": "Helper for brainCloud MCP that gives it local file access, enabling easy git sync of cloud code.",
+      "repoUrl": "https://github.com/getbraincloud/braincloud-mcp-helper",
+      "registrySubfolder": "packages/mcp-helper",
+      "packageIdentifier": "@braincloud/mcp-helper",
+      "packageVersion": "6.0.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": "packages/mcp-helper",
+      "filesScanned": 8
+    },
+    {
+      "name": "com.donnyautomation/dex-data",
+      "registryName": "com.donnyautomation/dex-data",
+      "description": "DEX data, geocoding, weather, search, holidays, LEI, yield curve. 22 free tools, 1 paid.",
+      "repoUrl": "https://github.com/donnywin85/dex-data-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "dex-data-mcp",
+      "packageVersion": "1.6.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 4
+    },
+    {
+      "name": "app.odyssey365/mcp-server",
+      "registryName": "app.odyssey365/mcp-server",
+      "description": "Odyssey 앱의 할일·메모·프로젝트·타임라인을 MCP 클라이언트에서 관리",
+      "repoUrl": "https://github.com/Odyssey365App/odyssey30_60",
+      "registrySubfolder": "",
+      "packageIdentifier": "@odyssey365/mcp-server",
+      "packageVersion": "0.6.4",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Odyssey365App/odyssey30_60 /tmp/stdio-edge-study-0fgoig/040\nCloning into '/tmp/stdio-edge-study-0fgoig/040'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.echosaw/mcp-server",
+      "registryName": "com.echosaw/mcp-server",
+      "description": "Media intelligence analysis for audio, video, and images via the Echosaw MCP server.",
+      "repoUrl": "https://github.com/Orange-Sky-Software-Inc/echosaw-com",
+      "registrySubfolder": "",
+      "packageIdentifier": "@echosaw/mcp-server",
+      "packageVersion": "2.1.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/Orange-Sky-Software-Inc/echosaw-com /tmp/stdio-edge-study-0fgoig/041\nCloning into '/tmp/stdio-edge-study-0fgoig/041'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.mambabuilt/mcp-meta-brand-presence-mapper",
+      "registryName": "com.mambabuilt/mcp-meta-brand-presence-mapper",
+      "description": "Resolve a company domain to Instagram, Threads and Facebook accounts and counts.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-meta-brand-presence-mapper",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-meta-brand-presence-mapper",
+      "packageVersion": "1.0.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "IMBA Agent Docs",
+      "registryName": "com.imbawallet/agent-docs",
+      "description": "Read-only IMBA Agent API docs MCP. No register, deposit, buy, or withdraw.",
+      "repoUrl": "https://github.com/IMBAwallet/IMBA_front",
+      "registrySubfolder": "",
+      "packageIdentifier": "@imba_wallet/agent-mcp-docs",
+      "packageVersion": "0.1.4",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/IMBAwallet/IMBA_front /tmp/stdio-edge-study-0fgoig/043\nCloning into '/tmp/stdio-edge-study-0fgoig/043'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Hovercode",
+      "registryName": "com.hovercode/mcp",
+      "description": "Create and manage QR codes, short links, landing pages, and forms in your Hovercode workspace.",
+      "repoUrl": "https://github.com/Hovercode-Ltd/hovercode-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "hovercode-mcp",
+      "packageVersion": "1.0.1",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "HasData Instagram",
+      "registryName": "com.hasdata/instagram",
+      "description": "Public Instagram profiles and post feeds by handle, with hashtags and mentions parsed.",
+      "repoUrl": "https://github.com/HasData/instagram-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/instagram-mcp",
+      "packageVersion": "1.0.5",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.mambabuilt/mcp-review-platform-reputation-enricher",
+      "registryName": "com.mambabuilt/mcp-review-platform-reputation-enricher",
+      "description": "Resolve a company domain to its Trustpilot rating, review count and claimed status.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-review-platform-reputation-enricher",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-review-platform-reputation-enricher",
+      "packageVersion": "1.0.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "JobYap Job Search",
+      "registryName": "com.jobyap/jobs",
+      "description": "Search job postings aggregated from companies' careers sites, plus each job's discussion thread.",
+      "repoUrl": "https://github.com/jobyap/agent-skills",
+      "registrySubfolder": "",
+      "packageIdentifier": "jobyap-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": "npm",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.htmlradar/share",
+      "registryName": "com.htmlradar/share",
+      "description": "Publish HTML as a tracked link and see who opened it and which sections they read.",
+      "repoUrl": "https://github.com/htmlradar/htmlradar",
+      "registrySubfolder": "packages/mcp",
+      "packageIdentifier": "htmlradar-mcp",
+      "packageVersion": "0.3.1",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": "packages/mcp",
+      "filesScanned": 8
+    },
+    {
+      "name": "CertScore MCP",
+      "registryName": "ai.certscore/mcp",
+      "description": "CertScore website risk-signal tools for scans, findings, evidence, and latest-domain lookups.",
+      "repoUrl": "https://github.com/ergoveritas1-alt/certscore.ai",
+      "registrySubfolder": "",
+      "packageIdentifier": "@certscore/mcp",
+      "packageVersion": "0.2.4",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": "packages/certscore-mcp",
+      "filesScanned": 8
+    },
+    {
+      "name": "HasData Booking.com",
+      "registryName": "com.hasdata/booking",
+      "description": "Booking.com stays by destination and dates, and full property details, as structured JSON.",
+      "repoUrl": "https://github.com/HasData/booking-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/booking-mcp",
+      "packageVersion": "1.0.6",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "DBConvert Streams (Federated SQL)",
+      "registryName": "com.dbconvert/streams",
+      "description": "Read-only SQL across your PostgreSQL, MySQL, S3 buckets and local data files, in one query.",
+      "repoUrl": "https://github.com/slotix/dbconvert-streams-public",
+      "registrySubfolder": "",
+      "packageIdentifier": "@dbconvert/stream-mcp",
+      "packageVersion": "2.7.3",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "AgentUtility Matchpoint",
+      "registryName": "ai.agentutility/mcp-matchpoint",
+      "description": "MCP server for the @agentutility matchpoint cluster — pay-per-call x402 tools, no API keys, USDC…",
+      "repoUrl": "https://github.com/rooz21/x402",
+      "registrySubfolder": "packages/mcp-matchpoint",
+      "packageIdentifier": "@agentutility/mcp-matchpoint",
+      "packageVersion": "0.1.4",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/rooz21/x402 /tmp/stdio-edge-study-0fgoig/052\nCloning into '/tmp/stdio-edge-study-0fgoig/052'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.juicedresume/mcp",
+      "registryName": "com.juicedresume/mcp",
+      "description": "Score, tailor, and export resumes from any MCP client — 60+ ATS checks and JD tailoring.",
+      "repoUrl": "https://github.com/HarshitSingh-PM/juicedresume-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@juicedresume/mcp",
+      "packageVersion": "0.4.2",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 6
+    },
+    {
+      "name": "Synapse RMCP",
+      "registryName": "ai.dinglebear/synapse",
+      "description": "Host, Docker, Compose, SSH, logs, ZFS, and file operations over MCP and CLI.",
+      "repoUrl": "https://github.com/dinglebear-ai/synapse",
+      "registrySubfolder": "",
+      "packageIdentifier": "@dinglebear/synapse",
+      "packageVersion": "1.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": "packages/synapse-rmcp",
+      "filesScanned": 6
+    },
+    {
+      "name": "com.cituna/cituna-mcp",
+      "registryName": "com.cituna/cituna-mcp",
+      "description": "Track how 6 AI engines cite your brand, daily, with live Google Search Console.",
+      "repoUrl": "https://github.com/cituna/cituna-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "cituna-mcp",
+      "packageVersion": "1.5.0",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 6
+    },
+    {
+      "name": "Claidex MCP",
+      "registryName": "com.claidex/failure-intelligence",
+      "description": "Biomedical failure intelligence platform for terminated trials and translational analysis.",
+      "repoUrl": "https://github.com/ssatanis/claidex-sentinel",
+      "registrySubfolder": "",
+      "packageIdentifier": "@claidex-mcp/claidex-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/ssatanis/claidex-sentinel /tmp/stdio-edge-study-0fgoig/056\nCloning into '/tmp/stdio-edge-study-0fgoig/056'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "ai.autoblocks/ctxl",
+      "registryName": "ai.autoblocks/ctxl",
+      "description": "Personal context management for AI assistants",
+      "repoUrl": "https://github.com/autoblocksai/ctxl",
+      "registrySubfolder": "",
+      "packageIdentifier": "ctxl",
+      "packageVersion": "0.0.2",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/autoblocksai/ctxl /tmp/stdio-edge-study-0fgoig/057\nCloning into '/tmp/stdio-edge-study-0fgoig/057'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Borough NYC Real Estate API",
+      "registryName": "app.qwady/borough",
+      "description": "Search NYC rentals and sales, property details, building data, and market analytics",
+      "repoUrl": "https://github.com/jdmay2/borough",
+      "registrySubfolder": "packages/mcp-server",
+      "packageIdentifier": "@borough/mcp",
+      "packageVersion": "1.1.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/jdmay2/borough /tmp/stdio-edge-study-0fgoig/058\nCloning into '/tmp/stdio-edge-study-0fgoig/058'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "AgentUtility Statline",
+      "registryName": "ai.agentutility/mcp-statline",
+      "description": "MCP server for the @agentutility statline cluster — pay-per-call x402 tools, no API keys, USDC on…",
+      "repoUrl": "https://github.com/rooz21/x402",
+      "registrySubfolder": "packages/mcp-statline",
+      "packageIdentifier": "@agentutility/mcp-statline",
+      "packageVersion": "0.1.3",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/rooz21/x402 /tmp/stdio-edge-study-0fgoig/059\nCloning into '/tmp/stdio-edge-study-0fgoig/059'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Gotify RMCP",
+      "registryName": "ai.dinglebear/gotify-rmcp",
+      "description": "Rust MCP server and CLI for Gotify push notifications and message management.",
+      "repoUrl": "https://github.com/jmagar/gotify-rmcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "gotify-rmcp",
+      "packageVersion": "0.1.3",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "ai.rolli/mcp",
+      "registryName": "ai.rolli/mcp",
+      "description": "Social media search, expert discovery, and analytics across X, Reddit, YouTube, and more",
+      "repoUrl": "https://github.com/rolliinc/rolli-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@rolli/mcp",
+      "packageVersion": "1.2.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 14
+    },
+    {
+      "name": "Uplink",
+      "registryName": "build.uplink/uplink",
+      "description": "Automate a real, logged-in browser on your own device — no stored credentials, no bot detection.",
+      "repoUrl": "https://github.com/uplink-code/mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@uplink-code/mcp",
+      "packageVersion": "0.1.4",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "cloud.nordicdata/nordic-data",
+      "registryName": "cloud.nordicdata/nordic-data",
+      "description": "Global B2B intelligence for AI agents: 35M+ companies, 1.6M sanctions, KYB pack. 78 tools.",
+      "repoUrl": "https://github.com/sofiajameson20-star/Nordicdata",
+      "registrySubfolder": "",
+      "packageIdentifier": "@nordic-data/mcp",
+      "packageVersion": "0.1.1",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "Roamer MCP",
+      "registryName": "com.mathismeadows/roamer-mcp",
+      "description": "Project registry, behavioral specs, and engineering threads for AI coding agent workflows.",
+      "repoUrl": "https://github.com/mathismeadows/roamer-mcp-plugin",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mathismeadows/roamer-device-auth",
+      "packageVersion": "1.3.1",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "One",
+      "registryName": "ai.withone/mcp",
+      "description": "Search, document and execute authenticated API calls across 700+ apps via one MCP server",
+      "repoUrl": "https://github.com/withoneai/mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@withone/mcp",
+      "packageVersion": "1.2.4",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 7
+    },
+    {
+      "name": "ai.autonomad/computeback",
+      "registryName": "ai.autonomad/computeback",
+      "description": "Agent Rewards Marketplace: earn $NOMD on B2B work, spend on agent capabilities.",
+      "repoUrl": "https://github.com/Autonomad1/computeback-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@autonomad1/computeback-mcp",
+      "packageVersion": "1.1.3",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 5
+    },
+    {
+      "name": "Affiliate Networks MCP",
+      "registryName": "ai.agenticaffiliate/affiliate-networks-mcp",
+      "description": "Affiliate network reporting in your AI client. Bring your own keys. Most adapters experimental.",
+      "repoUrl": "https://github.com/bobberrisford/affiliatemcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "affiliate-networks-mcp",
+      "packageVersion": "0.19.0",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 155
+    },
+    {
+      "name": "harukibox",
+      "registryName": "com.harukibox/harukibox",
+      "description": "Run a Japan proxy-buying business from your AI: inventory, orders, buyers, shipping fee split.",
+      "repoUrl": "https://github.com/cosmopig/harukibox-agent",
+      "registrySubfolder": "packages/mcp",
+      "packageIdentifier": "@harukibox/mcp",
+      "packageVersion": "0.2.1",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": "packages/mcp",
+      "filesScanned": 6
+    },
+    {
+      "name": "Klarefi",
+      "registryName": "com.klarefi/mcp",
+      "description": "Complete regulated intake work and retrieve cited case files without deciding the case.",
+      "repoUrl": "https://github.com/jmqcooper-ai/klarefi-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@klarefi/mcp",
+      "packageVersion": "0.3.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "Ausca",
+      "registryName": "com.ausca/agent-services",
+      "description": "Pay-per-call APIs and MCP services for agents, no accounts or keys, with verifiable receipts.",
+      "repoUrl": "https://github.com/auscahq/ausca",
+      "registrySubfolder": "",
+      "packageIdentifier": "ausca",
+      "packageVersion": "0.0.4",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": "packages/ausca",
+      "filesScanned": 6
+    },
+    {
+      "name": "Easyparser — Amazon Product & Seller Data",
+      "registryName": "com.easyparser/easyparser",
+      "description": "Real-time Amazon product, seller, and search data for AI agents across 21 marketplaces.",
+      "repoUrl": "https://github.com/easyparser-com/mcp-easyparser",
+      "registrySubfolder": "",
+      "packageIdentifier": "easyparser-mcp",
+      "packageVersion": "1.3.1",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 10
+    },
+    {
+      "name": "com.findagencyhq/agency-pricing-index",
+      "registryName": "com.findagencyhq/agency-pricing-index",
+      "description": "FindAgency HQ: the median advertised marketing retainer starting price per month, read from...",
+      "repoUrl": "https://github.com/joeetdev/venture-estate",
+      "registrySubfolder": "",
+      "packageIdentifier": "@ellul-estate/findagencyhq-com-agency-pricing-index-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/joeetdev/venture-estate /tmp/stdio-edge-study-0fgoig/072\nCloning into '/tmp/stdio-edge-study-0fgoig/072'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Cellarion",
+      "registryName": "app.cellarion/cellarion",
+      "description": "Wine cellar manager: bottles, racks, drink windows, pairings and a shared wine registry.",
+      "repoUrl": "https://github.com/jagduvi1/Cellarion",
+      "registrySubfolder": "cellarion-mcp",
+      "packageIdentifier": "cellarion-mcp",
+      "packageVersion": "0.1.1",
+      "classification": "remote-wrapper",
+      "confidence": "high",
+      "reasons": [
+        "package primarily bridges local stdio to an already-remote MCP/service"
+      ],
+      "warnings": [],
+      "packagePath": "cellarion-mcp",
+      "filesScanned": 3
+    },
+    {
+      "name": "com.adrianczuczka/mason",
+      "registryName": "com.adrianczuczka/mason",
+      "description": "Engineering decisions, change impact, documentation audits, and CI evidence for coding assistants.",
+      "repoUrl": "https://github.com/adrianczuczka/mason",
+      "registrySubfolder": "",
+      "packageIdentifier": "mason-context",
+      "packageVersion": "0.16.3",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 136
+    },
+    {
+      "name": "com.damagerestorehq/claims-index",
+      "registryName": "com.damagerestorehq/claims-index",
+      "description": "DamageRestore HQ: the median paid water damage claim, read from NFIP claim records (2023 to...",
+      "repoUrl": "https://github.com/joeetdev/venture-estate",
+      "registrySubfolder": "",
+      "packageIdentifier": "@ellul-estate/damagerestorehq-com-claims-index-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/joeetdev/venture-estate /tmp/stdio-edge-study-0fgoig/075\nCloning into '/tmp/stdio-edge-study-0fgoig/075'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Vertical Marketplace",
+      "registryName": "ai.verticalmarketplace/vertical-marketplace",
+      "description": "Agent-to-agent marketplace: AI agents list and buy data, services and compute. Signed receipts.",
+      "repoUrl": "https://github.com/ilya7-eng/replit-vertical-market-place-website",
+      "registrySubfolder": "",
+      "packageIdentifier": "vertical-marketplace-mcp",
+      "packageVersion": "0.1.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/ilya7-eng/replit-vertical-market-place-website /tmp/stdio-edge-study-0fgoig/076\nCloning into '/tmp/stdio-edge-study-0fgoig/076'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "Synchronex",
+      "registryName": "ai.synchronex/mcp-proxy",
+      "description": "Connect any AI agent to your Synchronex workspace — portable memory, decisions, and workers.",
+      "repoUrl": "https://github.com/kmdesle/synchronex",
+      "registrySubfolder": "",
+      "packageIdentifier": "@synchronex/mcp-proxy",
+      "packageVersion": "1.2.1",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/kmdesle/synchronex /tmp/stdio-edge-study-0fgoig/077\nCloning into '/tmp/stdio-edge-study-0fgoig/077'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.driflyte/driflyte-mcp-server",
+      "registryName": "com.driflyte/driflyte-mcp-server",
+      "description": "Driflyte MCP server which lets AI assistants query topic-specific knowledge from web and GitHub.",
+      "repoUrl": "https://github.com/serkan-ozal/driflyte-mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "@driflyte/mcp-server",
+      "packageVersion": "0.1.15",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 14
+    },
+    {
+      "name": "InstantClips",
+      "registryName": "ai.instantclips/instantclips",
+      "description": "Create branded vertical video ads from ecommerce product URLs or product photos.",
+      "repoUrl": "https://github.com/InstantStudioAI/instantclips-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "instantclips-mcp",
+      "packageVersion": "1.6.0",
+      "classification": "remote-wrapper",
+      "confidence": "high",
+      "reasons": [
+        "package primarily bridges local stdio to an already-remote MCP/service"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 3
+    },
+    {
+      "name": "cloud.krova/mcp",
+      "registryName": "cloud.krova/mcp",
+      "description": "Provision and manage Krova Cloud Cubes — Firecracker microVMs with root access and no public IP.",
+      "repoUrl": "https://github.com/krovacloud/krova-node",
+      "registrySubfolder": "packages/mcp",
+      "packageIdentifier": "@krovacloud/mcp",
+      "packageVersion": "0.3.12",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": "packages/mcp",
+      "filesScanned": 6
+    },
+    {
+      "name": "com.kernelcad/kernelcad",
+      "registryName": "com.kernelcad/kernelcad",
+      "description": "Agent-first CAD: editable .kcad.ts source, deterministic review, OpenCASCADE kernel.",
+      "repoUrl": "https://github.com/w1ne/kernelCAD-web",
+      "registrySubfolder": "",
+      "packageIdentifier": "kernelcad",
+      "packageVersion": "0.11.2",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process",
+        "browser automation",
+        "native media/image"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 401
+    },
+    {
+      "name": "Raven",
+      "registryName": "ai.ravenmcp/raven-mcp",
+      "description": "Design intelligence for coding agents: audits, design systems, and a taste profile agents consult.",
+      "repoUrl": "https://github.com/rhinocap/raven-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "raven-mcp",
+      "packageVersion": "2.5.1",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 93
+    },
+    {
+      "name": "Fidensa",
+      "registryName": "com.fidensa/mcp-server",
+      "description": "Independent AI certification authority. Trust scores, search, comparison, and verification.",
+      "repoUrl": "https://github.com/fidensa/mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "@fidensa/mcp-server",
+      "packageVersion": "0.4.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 11
+    },
+    {
+      "name": "HasData Google Images",
+      "registryName": "com.hasdata/google-images",
+      "description": "Google Images results with source pages, thumbnails and full-resolution URLs, as JSON.",
+      "repoUrl": "https://github.com/HasData/google-images-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/google-images-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.mambabuilt/mcp-people-finder",
+      "registryName": "com.mambabuilt/mcp-people-finder",
+      "description": "Find people at a company by role, seniority and department, with verified business emails.",
+      "repoUrl": "https://github.com/mambalabsdev/mcp-people-finder",
+      "registrySubfolder": "",
+      "packageIdentifier": "@mambalabsdev/mcp-people-finder",
+      "packageVersion": "1.0.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "com.focusgts/aep",
+      "registryName": "com.focusgts/aep",
+      "description": "Full-CRUD server for AEP, Journey Optimizer and CJA. 61 tools from one OAuth credential.",
+      "repoUrl": "https://github.com/Focus-GTS/aep-mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "@focusgts/aep-mcp-server",
+      "packageVersion": "0.11.1",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 103
+    },
+    {
+      "name": "AIOProductOS Studio",
+      "registryName": "com.aioproductos/mcp-studio",
+      "description": "Turn your AI host into a product videographer: scripted app demos, voice-over, captions, MP4/GIF.",
+      "repoUrl": "https://github.com/AIOProductOS/studio-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@aioproductoscom/mcp-studio",
+      "packageVersion": "0.2.3",
+      "classification": "sandbox-required",
+      "confidence": "high",
+      "reasons": [
+        "child_process",
+        "browser automation",
+        "native media/image"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 4
+    },
+    {
+      "name": "dxpert.ai — free UNS tools (no API key)",
+      "registryName": "ai.dxpert/uns-tools",
+      "description": "Free Sparkplug B topic linting, UNS naming checks and AI-readiness screening. No API key.",
+      "repoUrl": "https://github.com/dxpert-ai/uns-tools",
+      "registrySubfolder": "",
+      "packageIdentifier": "@dxpert/uns-tools",
+      "packageVersion": "0.1.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 5
+    },
+    {
+      "name": "Arcane RMCP",
+      "registryName": "ai.dinglebear/arcane-rmcp",
+      "description": "Rust MCP server and CLI for Arcane Docker and container management.",
+      "repoUrl": "https://github.com/jmagar/arcane-rmcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "arcane-rmcp",
+      "packageVersion": "0.4.2",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "com.billingserv/mcp",
+      "registryName": "com.billingserv/mcp",
+      "description": "BillingServ MCP server for customers, invoices, orders, packages, licenses, and revenue reports.",
+      "repoUrl": "https://github.com/billingserv/mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@billingserv/mcp-server",
+      "packageVersion": "0.2.1",
+      "classification": "local-bound",
+      "confidence": "medium",
+      "reasons": [
+        "documented behavior depends on resources on the end user's machine"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 3
+    },
+    {
+      "name": "com.brick-byte/footnote",
+      "registryName": "com.brick-byte/footnote",
+      "description": "Every number in an AI answer traces back to the rows that produced it.",
+      "repoUrl": "https://github.com/brick-byte/footnote",
+      "registrySubfolder": "",
+      "packageIdentifier": "@brick-byte/footnote",
+      "packageVersion": "0.1.1",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 9
+    },
+    {
+      "name": "com.cadencercs/cadence",
+      "registryName": "com.cadencercs/cadence",
+      "description": "Send RCS messages from your agent and get typed replies. Automatic SMS fallback.",
+      "repoUrl": "https://github.com/dwixom/rcs-agent-mvp",
+      "registrySubfolder": "packages/mcp",
+      "packageIdentifier": "@cadencercs/mcp",
+      "packageVersion": "0.3.1",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/dwixom/rcs-agent-mvp /tmp/stdio-edge-study-0fgoig/092\nCloning into '/tmp/stdio-edge-study-0fgoig/092'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.bellwethermetrics/bellwether-mcp",
+      "registryName": "com.bellwethermetrics/bellwether-mcp",
+      "description": "Live prediction market data from Polymarket and Kalshi with VWAP pricing and reportability.",
+      "repoUrl": "https://github.com/elliotjames-paschal/bellwether-platform",
+      "registrySubfolder": "packages/mcp",
+      "packageIdentifier": "bellwether-mcp",
+      "packageVersion": "0.1.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "could not locate package.json matching the Registry npm identifier"
+      ],
+      "warnings": [],
+      "packagePath": null
+    },
+    {
+      "name": "HasData Indeed",
+      "registryName": "com.hasdata/indeed",
+      "description": "Indeed job listings by keyword and location, and full postings, as structured JSON.",
+      "repoUrl": "https://github.com/HasData/indeed-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/indeed-mcp",
+      "packageVersion": "1.0.6",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "AgentUtility Mediakit",
+      "registryName": "ai.agentutility/mcp-mediakit",
+      "description": "MCP server for the @agentutility mediakit cluster — pay-per-call x402 tools, no API keys, USDC on…",
+      "repoUrl": "https://github.com/rooz21/x402",
+      "registrySubfolder": "packages/mcp-mediakit",
+      "packageIdentifier": "@agentutility/mcp-mediakit",
+      "packageVersion": "0.11.9",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/rooz21/x402 /tmp/stdio-edge-study-0fgoig/095\nCloning into '/tmp/stdio-edge-study-0fgoig/095'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "com.clientvo/clientvo-tools",
+      "registryName": "com.clientvo/clientvo-tools",
+      "description": "Clientvo: the monthly searches, read from search (a month), served as an agent-callable dataset...",
+      "repoUrl": "https://github.com/joeetdev/venture-estate",
+      "registrySubfolder": "",
+      "packageIdentifier": "@ellul-estate/clientvo-com-clientvo-tools-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "inaccessible",
+      "confidence": "high",
+      "reasons": [
+        "repository could not be cloned/scanned"
+      ],
+      "warnings": [],
+      "error": "Error: Command failed: git clone --depth 1 --single-branch --no-tags https://github.com/joeetdev/venture-estate /tmp/stdio-edge-study-0fgoig/096\nCloning into '/tmp/stdio-edge-study-0fgoig/096'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+    },
+    {
+      "name": "HasData Yellow Pages",
+      "registryName": "com.hasdata/yellowpages",
+      "description": "Yellow Pages local business search and full business listings, as structured JSON.",
+      "repoUrl": "https://github.com/HasData/yellowpages-mcp",
+      "registrySubfolder": "",
+      "packageIdentifier": "@hasdata/yellowpages-mcp",
+      "packageVersion": "1.0.0",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "BidSparq",
+      "registryName": "com.bidsparq/mcp",
+      "description": "55 tools for federal/state/local RFPs, awards, vendors, contact graph, contract vehicles, pursuits.",
+      "repoUrl": "https://github.com/n0edlg/bidsparq-mcp-server",
+      "registrySubfolder": "",
+      "packageIdentifier": "bidsparq-mcp-server",
+      "packageVersion": "0.1.7",
+      "classification": "edge-adaptable",
+      "confidence": "medium",
+      "reasons": [
+        "stdio transport must be replaced by a Web-standard MCP handler",
+        "@modelcontextprotocol/sdk v1 requires import/transport migration to the v2 runtime-neutral packages"
+      ],
+      "warnings": [
+        "Node CLI bootstrap/process lifecycle code must be stripped from the Worker entrypoint"
+      ],
+      "packagePath": ".",
+      "filesScanned": 2
+    },
+    {
+      "name": "YTDL RMCP",
+      "registryName": "ai.dinglebear/rytdl",
+      "description": "yt-dlp search, download, metadata, delivery, and Plex workflows over MCP and CLI.",
+      "repoUrl": "https://github.com/dinglebear-ai/rytdl",
+      "registrySubfolder": "",
+      "packageIdentifier": "@dinglebear/rytdl",
+      "packageVersion": "1.0.4",
+      "classification": "uncertain",
+      "confidence": "low",
+      "reasons": [
+        "published npm package does not declare a recognized MCP server SDK dependency"
+      ],
+      "warnings": [],
+      "packagePath": "packages/ytdl-rmcp",
+      "filesScanned": 6
+    }
+  ]
+}
