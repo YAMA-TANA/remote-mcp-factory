@@ -98,6 +98,12 @@ if out["runtime"] == "unknown" and pyproject.exists():
     if scripts:
         name = next(iter(scripts.keys()))
         out["command"] = ".venv/bin/" + name
+    else:
+        for candidate in ["server.py", "main.py", "app.py", "startup.py"]:
+            if (root / candidate).exists():
+                out["command"] = ".venv/bin/python " + candidate
+                out["notes"].append("No project console script found; using Python entry file " + candidate + ".")
+                break
     # uv respects project.requires-python and .python-version, downloading a managed
     # interpreter when the base image Python is too old. This keeps the Sandbox image
     # small while supporting modern MCPs that require Python 3.11/3.12+.
@@ -106,7 +112,7 @@ if out["runtime"] == "unknown" and pyproject.exists():
 if out["runtime"] == "unknown" and (root / "requirements.txt").exists():
     out["runtime"] = "python"
     out["install"] = ["uv venv .venv", "uv pip install --python .venv/bin/python -r requirements.txt"]
-    for candidate in ["server.py", "main.py", "app.py"]:
+    for candidate in ["server.py", "main.py", "app.py", "startup.py"]:
         if (root / candidate).exists():
             out["command"] = ".venv/bin/python " + candidate
             break
