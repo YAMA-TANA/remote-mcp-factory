@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 const FACTORY_URL = (process.env.FACTORY_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
 const BRANCH = process.env.E2E_BRANCH || 'main';
 const FIXTURE_SDK = resolve('fixtures/bridge-e2e-mcp/node_modules/@modelcontextprotocol/sdk');
-const USER = 'factory-bridge-e2e-user';
+let USER = 'factory-bridge-e2e-probe-user';
 
 function sleep(ms) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
@@ -127,6 +127,7 @@ async function mcpClient(id) {
 }
 
 async function testProbe(wavBase64) {
+  USER = 'factory-bridge-e2e-probe-user';
   const { created } = await createDeployment('fixtures/bridge-e2e-mcp', 'bridge-ffprobe-e2e');
   await assertCompatibility(created.id, 'ffprobe');
 
@@ -174,6 +175,7 @@ async function testProbe(wavBase64) {
 }
 
 async function testTranscode(wavBase64) {
+  USER = 'factory-bridge-e2e-transcode-user';
   const { created } = await createDeployment('fixtures/bridge-ffmpeg-e2e-mcp', 'bridge-ffmpeg-e2e');
   await assertCompatibility(created.id, 'ffmpeg');
 
