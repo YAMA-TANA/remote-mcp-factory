@@ -1,6 +1,6 @@
 {
   "name": "remote-mcp-factory",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:init": "wrangler d1 execute remote-mcp-factory --file=./schema.sql",
+    "db:migrate": "wrangler d1 migrations apply remote-mcp-factory --remote",
     "study:compat": "node scripts/compatibility-study.mjs"
   },
   "dependencies": {
