@@ -20,6 +20,7 @@ interface MockEndpointRow {
 
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']);
 const BLOCKED_RESPONSE_HEADERS = new Set(['content-length', 'transfer-encoding', 'connection']);
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -92,7 +93,8 @@ export async function mockRuntimeRoute(request: Request, env: Env): Promise<Resp
   headers.set('x-picosvc-mock', row.public_id);
 
   await incrementProductUsage(env, row.owner, 'mock', 'requests', 1);
-  return new Response(request.method === 'HEAD' ? null : row.body, { status: row.status_code, headers });
+  const noBody = request.method === 'HEAD' || NULL_BODY_STATUSES.has(row.status_code);
+  return new Response(noBody ? null : row.body, { status: row.status_code, headers });
 }
 
 export async function mockManagementRoutes(request: Request, env: Env): Promise<Response | null> {
@@ -137,7 +139,7 @@ export async function mockManagementRoutes(request: Request, env: Env): Promise<
 
     if (!name) return json({ error: 'name is required' }, 400);
     if (!METHODS.has(method)) return json({ error: 'Unsupported HTTP method' }, 400);
-    if (!Number.isInteger(statusCode) || statusCode < 100 || statusCode > 599) return json({ error: 'statusCode must be 100-599' }, 400);
+    if (!Number.isInteger(statusCode) || statusCode < 200 || statusCode > 599) return json({ error: 'statusCode must be 200-599' }, 400);
     if (path.length > 500) return json({ error: 'path is too long' }, 400);
     if (responseBody.length > 256 * 1024) return json({ error: 'Mock response body is limited to 256 KiB' }, 413);
 
@@ -182,7 +184,7 @@ export async function mockManagementRoutes(request: Request, env: Env): Promise<
 
     if (!name) return json({ error: 'name is required' }, 400);
     if (!METHODS.has(method)) return json({ error: 'Unsupported HTTP method' }, 400);
-    if (!Number.isInteger(statusCode) || statusCode < 100 || statusCode > 599) return json({ error: 'statusCode must be 100-599' }, 400);
+    if (!Number.isInteger(statusCode) || statusCode < 200 || statusCode > 599) return json({ error: 'statusCode must be 200-599' }, 400);
     if (path.length > 500) return json({ error: 'path is too long' }, 400);
     if (responseBody.length > 256 * 1024) return json({ error: 'Mock response body is limited to 256 KiB' }, 413);
 
