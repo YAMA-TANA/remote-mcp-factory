@@ -1,4 +1,5 @@
 import { loadEdgeArtifact } from './artifact-store.js';
+import { createBridgeToken } from './bridge-auth.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
@@ -34,8 +35,15 @@ export async function serveEdgeRequest(env: Env, row: ServerRow, request: Reques
   if (!env.LOADER) throw new Error('Dynamic Worker loader binding is not configured');
 
   const workerId = `mcp:${row.id}:${edge.bundle_hash}:${row.updated_at}`;
+  const requestOrigin = new URL(request.url).origin;
   const stub = env.LOADER.get(workerId, async () => {
     const deploymentSecrets = await loadDeploymentSecrets(env, row.id);
+    const runtimeEnv: Record<string, unknown> = { ...deploymentSecrets.values };
+    if (env.BRIDGE_SIGNING_KEY) {
+      runtimeEnv.FACTORY_BRIDGE_BASE_URL = `${requestOrigin}/internal/bridge/${row.id}`;
+      runtimeEnv.FACTORY_BRIDGE_TOKEN = await createBridgeToken(env, row.id, edge.bundle_hash!);
+    }
+
     if (edge.artifact_key) {
       const artifact = await loadEdgeArtifact(env, edge.artifact_key);
       return {
@@ -43,7 +51,7 @@ export async function serveEdgeRequest(env: Env, row: ServerRow, request: Reques
         compatibilityFlags: ['nodejs_compat'],
         mainModule: artifact.mainModule,
         modules: artifact.modules,
-        env: deploymentSecrets.values,
+        env: runtimeEnv,
         limits: {
           cpuMs: EDGE_CPU_MS_PER_REQUEST,
           subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
@@ -59,7 +67,7 @@ export async function serveEdgeRequest(env: Env, row: ServerRow, request: Reques
       modules: {
         [mainModule]: { js: edge.bundle! },
       },
-      env: deploymentSecrets.values,
+      env: runtimeEnv,
       limits: {
         cpuMs: EDGE_CPU_MS_PER_REQUEST,
         subRequests: EDGE_SUBREQUESTS_PER_REQUEST,
