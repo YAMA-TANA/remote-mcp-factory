@@ -171,7 +171,7 @@ async function callbackRoute(request: Request, env: Env): Promise<Response> {
         account_login=excluded.account_login,
         account_type=excluded.account_type,
         repository_selection=excluded.repository_selection,
-        active=1,
+        active=excluded.active,
         updated_at=excluded.updated_at
     `).bind(
       row.owner,
@@ -403,18 +403,18 @@ async function webhookRoute(request: Request, env: Env, ctx: ExecutionContext): 
   }
   if (!verified) return json({ error: 'Invalid GitHub webhook signature' }, 401);
 
-  await ensureGitHubSchema(env);
-  const event = request.headers.get('x-github-event') || 'unknown';
-  const deliveryId = request.headers.get('x-github-delivery') || '';
-  if (!deliveryId || deliveryId.length > 200) return json({ error: 'Missing GitHub delivery id' }, 400);
-  if (!(await markDelivery(env, deliveryId, event))) return json({ ok: true, duplicate: true, deliveryId });
-
   let payload: any;
   try {
     payload = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return json({ error: 'Invalid webhook JSON' }, 400);
   }
+
+  await ensureGitHubSchema(env);
+  const event = request.headers.get('x-github-event') || 'unknown';
+  const deliveryId = request.headers.get('x-github-delivery') || '';
+  if (!deliveryId || deliveryId.length > 200) return json({ error: 'Missing GitHub delivery id' }, 400);
+  if (!(await markDelivery(env, deliveryId, event))) return json({ ok: true, duplicate: true, deliveryId });
 
   let result: unknown = { ignored: true };
   if (event === 'push') result = await queuePushRedeploys(env, payload as PushPayload, ctx);
