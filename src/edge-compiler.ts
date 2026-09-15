@@ -3,10 +3,11 @@ import type { Detection } from './analyze.js';
 import { putEdgeArtifact, type EdgeArtifactModuleType } from './artifact-store.js';
 import { analyzeRuntimeCompatibility } from './compat-analysis.js';
 import { EDGE_ADAPTER_SCRIPT } from './edge-adapter.js';
-import { EDGE_ASSESS_SCRIPT, EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
+import { EDGE_ASSESS_SCRIPT } from './edge-assessor.js';
+import { EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
 import type { CompatibilityReport, EdgeBuildRow, Env, ServerRow } from './types.js';
 
-const EDGE_COMPILER_VERSION = '0.2.0';
+const EDGE_COMPILER_VERSION = '0.2.1';
 const EDGE_COMPATIBILITY_DATE = '2026-09-15';
 const EDGE_SMOKE_PORT = 8793;
 const MAX_D1_BUNDLE_BYTES = 1_800_000;
