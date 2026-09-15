@@ -1,5 +1,5 @@
 import { clerkIdentity } from './auth.js';
-import { binaryBridgeStatus } from './binary-bridge.js';
+import { binaryBridgeStatus, probeMedia, transcodeMedia } from './binary-bridge.js';
 import core from './index.js';
 import { deleteDeploymentSecret, listDeploymentSecretNames, putDeploymentSecrets } from './secrets.js';
 import { stopRuntime } from './runtime.js';
@@ -45,6 +45,38 @@ async function ownedServer(request: Request, env: Env, id: string): Promise<{ ro
   const row = await env.DB.prepare('SELECT * FROM servers WHERE id=? AND owner=?').bind(id, identity.ownerId).first<ServerRow>();
   if (!row) return { response: json({ error: 'Not found' }, 404) };
   return { row };
+}
+
+async function bridgeRoutes(request: Request, env: Env): Promise<Response | null> {
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/servers\/([a-z0-9][a-z0-9-]{5,40})\/bridge\/(probe|transcode)$/);
+  if (!match) return null;
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: { allow: 'POST' } });
+
+  const owned = await ownedServer(request, env, match[1]);
+  if ('response' in owned) return owned.response;
+  const body = await request.json().catch(() => null) as any;
+  if (!body || typeof body.dataBase64 !== 'string') return json({ error: 'Body must include dataBase64' }, 400);
+
+  try {
+    if (match[2] === 'probe') {
+      const result = await probeMedia(env, owned.row, {
+        dataBase64: body.dataBase64,
+        filename: typeof body.filename === 'string' ? body.filename : undefined,
+      });
+      return json({ serverId: owned.row.id, capability: 'ffprobe', result });
+    }
+
+    const result = await transcodeMedia(env, owned.row, {
+      dataBase64: body.dataBase64,
+      filename: typeof body.filename === 'string' ? body.filename : undefined,
+      format: body.format,
+    });
+    return json({ serverId: owned.row.id, capability: 'ffmpeg', result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return json({ error: message }, /exceeds|must be|valid base64/i.test(message) ? 400 : 422);
+  }
 }
 
 async function diagnosticRoutes(request: Request, env: Env): Promise<Response | null> {
@@ -129,6 +161,8 @@ export default {
       return withCors(new Response(null, { status: 204 }), origin);
     }
 
+    const bridgeResponse = await bridgeRoutes(request, env);
+    if (bridgeResponse) return withCors(bridgeResponse, origin);
     const diagnosticResponse = await diagnosticRoutes(request, env);
     if (diagnosticResponse) return withCors(diagnosticResponse, origin);
     const secretResponse = await secretRoutes(request, env, ctx);
