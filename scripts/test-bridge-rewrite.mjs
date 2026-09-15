@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile, access } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -35,7 +35,7 @@ async function runRewrite(scriptPath, target, files) {
 }
 
 async function main() {
-  const asset = await readFile(resolve(ROOT, 'src/bridge-rewrite-v2.ts'), 'utf8');
+  const asset = await readFile(resolve(ROOT, 'src/bridge-rewrite-v3.ts'), 'utf8');
   const rewrite = embeddedScript(asset);
   const temp = await mkdtemp(join(tmpdir(), 'factory-bridge-rewrite-'));
   const scriptPath = join(temp, 'rewrite.mjs');
@@ -43,7 +43,7 @@ async function main() {
 
   try {
     const positive = join(temp, 'positive');
-    await import('node:fs/promises').then(({ mkdir }) => mkdir(positive));
+    await mkdir(positive);
     const positiveFile = join(positive, 'server.ts');
     await writeFile(positiveFile, `
 import { exec } from 'node:child_process';
@@ -77,24 +77,38 @@ export async function inspect(filepath: string) {
       throw new Error('Bridge client was not generated correctly');
     }
 
-    const negative = join(temp, 'negative');
-    await import('node:fs/promises').then(({ mkdir }) => mkdir(negative));
-    const negativeFile = join(negative, 'server.ts');
-    await writeFile(negativeFile, `
+    const unsafe = join(temp, 'unsafe');
+    await mkdir(unsafe);
+    await writeFile(join(unsafe, 'server.ts'), `
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 const execAsync = promisify(exec);
 async function ffprobe(filepath: string) {
-  const { stdout } = await execAsync(\`ffprobe -of json \"\${filepath}\"\`);
+  const { stdout } = await execAsync(\`ffprobe -print_format json -show_format -show_streams \"\${filepath}\"\`);
   await execAsync(\`ffmpeg -i \"\${filepath}\" output.mp3\`);
   return JSON.parse(stdout);
 }
 export { ffprobe };
 `);
-    const no = await runRewrite(scriptPath, negative, ['server.ts']);
-    if (no.rewritten !== 0) throw new Error(`Unsafe ffprobe helper must not be rewritten: ${JSON.stringify(no)}`);
+    const unsafeResult = await runRewrite(scriptPath, unsafe, ['server.ts']);
+    if (unsafeResult.rewritten !== 0) throw new Error(`Unsafe helper must not be rewritten: ${JSON.stringify(unsafeResult)}`);
 
-    console.log('PASS conservative ffprobe bridge rewrite: positive=1 unsafe=0');
+    const shapeMismatch = join(temp, 'shape-mismatch');
+    await mkdir(shapeMismatch);
+    await writeFile(join(shapeMismatch, 'server.ts'), `
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+const execAsync = promisify(exec);
+async function ffprobe(filepath: string) {
+  const { stdout } = await execAsync(\`ffprobe -of json -show_streams \"\${filepath}\"\`);
+  return JSON.parse(stdout);
+}
+export { ffprobe };
+`);
+    const mismatchResult = await runRewrite(scriptPath, shapeMismatch, ['server.ts']);
+    if (mismatchResult.rewritten !== 0) throw new Error(`Different ffprobe output shape must not be rewritten: ${JSON.stringify(mismatchResult)}`);
+
+    console.log('PASS ffprobe bridge rewrite: exact=1 unsafe=0 shape-mismatch=0');
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
