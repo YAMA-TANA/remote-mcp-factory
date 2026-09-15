@@ -29,7 +29,7 @@
     {
       "binding": "DB",
       "database_name": "remote-mcp-factory",
-      "database_id": "REPLACE_ME"
+      "database_id": "ed125151-c02c-40ff-832c-085745ebc51b"
     }
   ],
   "ratelimits": [
@@ -48,6 +48,7 @@
     "ALLOW_DEV_AUTH": "false",
     "SANDBOX_TRANSPORT": "rpc",
     "CLERK_PRO_PLAN_SLUG": "pro",
-    "CLERK_TEAM_PLAN_SLUG": "team"
+    "CLERK_TEAM_PLAN_SLUG": "team",
+    "WEB_ORIGINS": "https://remote-mcp-factory.pages.dev"
   }
 }
