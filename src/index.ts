@@ -10,7 +10,12 @@ import {
   resolvePlan,
   resolvePlanForOwner,
 } from './plans.js';
-import { buildServer, ensureRuntime } from './runtime.js';
+import { buildServer, ensureRuntime, stopRuntime } from './runtime.js';
+import {
+  deleteDeploymentSecret,
+  listDeploymentSecretNames,
+  putDeploymentSecrets,
+} from './secrets.js';
 import type { AuthIdentity, Env, ServerRow, Visibility } from './types.js';
 
 export { Sandbox } from '@cloudflare/sandbox';
@@ -47,6 +52,16 @@ function endpointFor(env: Env, requestUrl: string, id: string): string {
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
+}
+
+function secretError(c: any, error: unknown): Response {
+  const message = error instanceof Error ? error.message : String(error);
+  const status = message.includes('DEPLOYMENT_SECRETS_KEY') ? 503 : 400;
+  return c.json({ error: message }, status);
+}
+
+function validSecretsObject(value: unknown): value is Record<string, string> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function requireIdentity(c: any): Promise<AuthIdentity | Response> {
@@ -95,14 +110,14 @@ app.get('/', (c) => {
 
 app.get('/dashboard', (c) => c.html(`<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Remote MCP Factory Dashboard</title>
-<style>body{font:16px system-ui;max-width:980px;margin:45px auto;padding:0 20px;background:#0b0d10;color:#e8eaed}input,select,button{font:inherit;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #333;background:#15181d;color:#fff}input{width:100%;box-sizing:border-box}select{width:100%}button{cursor:pointer}.card{border:1px solid #292d34;border-radius:12px;padding:18px;margin:16px 0}code{word-break:break-all}pre{white-space:pre-wrap}</style></head>
+<style>body{font:16px system-ui;max-width:980px;margin:45px auto;padding:0 20px;background:#0b0d10;color:#e8eaed}input,textarea,select,button{font:inherit;padding:10px;margin:5px 0;border-radius:8px;border:1px solid #333;background:#15181d;color:#fff}input,textarea{width:100%;box-sizing:border-box}textarea{min-height:90px;resize:vertical}select{width:100%}button{cursor:pointer}.card{border:1px solid #292d34;border-radius:12px;padding:18px;margin:16px 0}code{word-break:break-all}pre{white-space:pre-wrap}</style></head>
 <body><h1>Remote MCP Factory</h1><p>Deploys are analyzed automatically. If the Edge compiler passes a real MCP smoke test, requests run in a Dynamic Worker; otherwise they use the Linux fallback.</p>
-<div class="card"><input id="repo" placeholder="https://github.com/owner/mcp-repo"><input id="branch" placeholder="branch (default: main)"><input id="command" placeholder="optional stdio start command override"><select id="visibility"><option value="public">Public — anyone can connect</option><option value="token" selected>Protected — bearer token required</option></select><button onclick="add()">Deploy MCP</button><pre id="out"></pre></div>
+<div class="card"><input id="repo" placeholder="https://github.com/owner/mcp-repo"><input id="branch" placeholder="branch (default: main)"><input id="command" placeholder="optional stdio start command override"><textarea id="secrets" placeholder='optional encrypted env secrets JSON, e.g. {"API_KEY":"..."}'></textarea><select id="visibility"><option value="public">Public — anyone can connect</option><option value="token" selected>Protected — bearer token required</option></select><button onclick="add()">Deploy MCP</button><pre id="out"></pre></div>
 <div class="card"><button onclick="account()">Refresh account & usage</button><pre id="acct"></pre></div>
 <div class="card"><button onclick="load()">Refresh deployments</button><pre id="list"></pre></div>
 <script>
 async function json(r){const j=await r.json().catch(()=>({error:'Invalid response'}));if(r.status===401&&j.signInUrl)j.hint='Sign in at '+j.signInUrl;return j}
-async function add(){out.textContent='creating…';const r=await fetch('/api/servers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({repoUrl:repo.value,branch:branch.value||'main',command:command.value||null,visibility:visibility.value})});out.textContent=JSON.stringify(await json(r),null,2);load();account()}
+async function add(){out.textContent='creating…';let env;try{env=secrets.value.trim()?JSON.parse(secrets.value):undefined}catch(e){out.textContent='Secrets must be valid JSON';return}const r=await fetch('/api/servers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({repoUrl:repo.value,branch:branch.value||'main',command:command.value||null,visibility:visibility.value,secrets:env})});out.textContent=JSON.stringify(await json(r),null,2);load();account()}
 async function load(){const r=await fetch('/api/servers');list.textContent=JSON.stringify(await json(r),null,2)}
 async function account(){const r=await fetch('/api/account');acct.textContent=JSON.stringify(await json(r),null,2)}
 load();account();
@@ -138,9 +153,10 @@ app.post('/api/servers', async (c) => {
   if (deployments >= plan.deployments) return c.json({ error: 'Deployment limit reached', plan }, 402);
   if (usage.builds >= plan.buildsPerMonth) return c.json({ error: 'Monthly build limit reached', plan, usage }, 402);
 
-  const body = await c.req.json<{ repoUrl: string; branch?: string; subdir?: string; command?: string | null; name?: string; visibility?: Visibility }>();
+  const body = await c.req.json<{ repoUrl: string; branch?: string; subdir?: string; command?: string | null; name?: string; visibility?: Visibility; secrets?: unknown }>();
   const visibility = body.visibility ?? 'token';
   if (!VISIBILITIES.has(visibility)) return c.json({ error: 'visibility must be public or token' }, 400);
+  if (body.secrets !== undefined && !validSecretsObject(body.secrets)) return c.json({ error: 'secrets must be a JSON object of environment variable names to string values' }, 400);
 
   const token = randomToken();
   const slug = `mcp-${crypto.randomUUID().slice(0, 8)}`;
@@ -149,13 +165,21 @@ app.post('/api/servers', async (c) => {
 
   await c.env.DB.prepare(`INSERT INTO servers (id,owner,owner_org,name,repo_url,branch,subdir,command,token_hash,visibility,enabled,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(slug, identity.ownerId, identity.orgId, name, body.repoUrl, body.branch || 'main', body.subdir || '', body.command || null, await sha256(token), visibility, 1, 'queued', now, now).run();
-  await incrementUsage(c.env, identity.ownerId, 'builds');
 
+  try {
+    if (body.secrets && Object.keys(body.secrets).length) await putDeploymentSecrets(c.env, slug, body.secrets);
+  } catch (error) {
+    await c.env.DB.prepare('DELETE FROM servers WHERE id=? AND owner=?').bind(slug, identity.ownerId).run();
+    return secretError(c, error);
+  }
+
+  await incrementUsage(c.env, identity.ownerId, 'builds');
   const row = await c.env.DB.prepare('SELECT * FROM servers WHERE id=?').bind(slug).first<ServerRow>();
   if (!row) return c.json({ error: 'Failed to create server' }, 500);
   c.executionCtx.waitUntil(buildServer(c.env, row).catch(() => undefined));
 
-  return c.json({ id: slug, status: 'queued', visibility, endpoint: endpointFor(c.env, c.req.url, slug), ...(visibility === 'token' ? { bearerToken: token } : {}), plan: plan.id }, 202);
+  const secretNames = await listDeploymentSecretNames(c.env, slug);
+  return c.json({ id: slug, status: 'queued', visibility, endpoint: endpointFor(c.env, c.req.url, slug), secretNames, ...(visibility === 'token' ? { bearerToken: token } : {}), plan: plan.id }, 202);
 });
 
 app.patch('/api/servers/:id', async (c) => {
@@ -183,6 +207,47 @@ app.post('/api/servers/:id/token/rotate', async (c) => {
   await c.env.DB.prepare('UPDATE servers SET token_hash=?, updated_at=? WHERE id=? AND owner=?')
     .bind(await sha256(token), new Date().toISOString(), id, identity.ownerId).run();
   return c.json({ id, bearerToken: token });
+});
+
+app.get('/api/servers/:id/secrets', async (c) => {
+  const identity = await requireIdentity(c);
+  if (identity instanceof Response) return identity;
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare('SELECT id FROM servers WHERE id=? AND owner=?').bind(id, identity.ownerId).first<{ id: string }>();
+  if (!row) return c.json({ error: 'Not found' }, 404);
+  return c.json({ id, names: await listDeploymentSecretNames(c.env, id) });
+});
+
+app.put('/api/servers/:id/secrets', async (c) => {
+  const identity = await requireIdentity(c);
+  if (identity instanceof Response) return identity;
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare('SELECT * FROM servers WHERE id=? AND owner=?').bind(id, identity.ownerId).first<ServerRow>();
+  if (!row) return c.json({ error: 'Not found' }, 404);
+  const body = await c.req.json<{ secrets?: unknown }>();
+  if (!validSecretsObject(body.secrets)) return c.json({ error: 'secrets must be a JSON object of environment variable names to string values' }, 400);
+  try {
+    await putDeploymentSecrets(c.env, id, body.secrets);
+    await stopRuntime(c.env, row);
+    return c.json({ id, names: await listDeploymentSecretNames(c.env, id) });
+  } catch (error) {
+    return secretError(c, error);
+  }
+});
+
+app.delete('/api/servers/:id/secrets/:name', async (c) => {
+  const identity = await requireIdentity(c);
+  if (identity instanceof Response) return identity;
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare('SELECT * FROM servers WHERE id=? AND owner=?').bind(id, identity.ownerId).first<ServerRow>();
+  if (!row) return c.json({ error: 'Not found' }, 404);
+  try {
+    await deleteDeploymentSecret(c.env, id, c.req.param('name'));
+    await stopRuntime(c.env, row);
+    return c.json({ id, names: await listDeploymentSecretNames(c.env, id) });
+  } catch (error) {
+    return secretError(c, error);
+  }
 });
 
 app.post('/api/servers/:id/rebuild', async (c) => {
