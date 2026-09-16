@@ -34,7 +34,7 @@ export const PICOSVC_QUOTAS = [
   { service: 'JSON', free: '1 store · 10k req', pico: '10 stores · 100k req', picoPlus: '50 stores · 1M req' },
   { service: 'Files', free: '1 space · 20 files · 100 MB', pico: '5 spaces · 1k files · 1 GB', picoPlus: '25 spaces · 10k files · 10 GB' },
   { service: 'License', free: '1 project · 10 keys · 1k checks', pico: '3 projects · 100 keys · 25k checks', picoPlus: '10 projects · 1k keys · 250k checks' },
-  { service: 'Flags', free: '1 project · 10 flags · 50k req', pico: '3 projects · 100 flags · 250k req', picoPlus: '10 projects · 500 flags · 1M req' },
+  { service: 'Config', free: '1 project · 10 values · 50k req', pico: '3 projects · 100 values · 250k req', picoPlus: '10 projects · 500 values · 1M req' },
   { service: 'Monitor', free: '1 monitor · 750 checks · 60m min', pico: '20 monitors · 20k checks · 15m min', picoPlus: '100 monitors · 100k checks · 5m min' },
   { service: 'Forms', free: '3 forms · 100 submissions', pico: '20 forms · 2k submissions', picoPlus: '100 forms · 20k submissions' },
 ] as const;
