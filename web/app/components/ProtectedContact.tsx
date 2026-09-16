@@ -28,6 +28,7 @@ export default function ProtectedContact({ kind }: { kind: Kind }) {
     canvas.width = cssWidth * ratio;
     canvas.height = cssHeight * ratio;
     canvas.style.width = `${cssWidth}px`;
+    canvas.style.maxWidth = '100%';
     canvas.style.height = `${cssHeight}px`;
     const context = canvas.getContext('2d');
     if (!context) return;
@@ -46,7 +47,7 @@ export default function ProtectedContact({ kind }: { kind: Kind }) {
   }
 
   return (
-    <div className="protectedContact">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '4px 0 16px' }}>
       <canvas
         ref={canvasRef}
         role="img"
