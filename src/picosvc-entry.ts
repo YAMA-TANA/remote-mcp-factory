@@ -12,6 +12,7 @@ import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
 import { handleIncomingEmail } from './picosvc/mail-service.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
+import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
 import { qrRuntimeRoute } from './picosvc/utility-services.js';
@@ -72,6 +73,7 @@ export default {
 
     for (const handler of [
       hooksRuntimeRoute,
+      mockAdvancedRuntimeRoute,
       mockRuntimeRoute,
       qrRuntimeRoute,
       configRuntimeRoute,
