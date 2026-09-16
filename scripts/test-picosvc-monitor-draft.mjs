@@ -6,6 +6,7 @@ const route = read('src/picosvc/monitor-preview-draft.ts');
 const router = read('src/picosvc/routes.ts');
 const ui = read('web/app/monitor-diagnostics.tsx');
 const advanced = read('src/picosvc/monitor-advanced.ts');
+const rss = read('src/picosvc/reliable-onboarding.ts');
 
 assert.ok(router.includes('monitorDraftPreviewRoute,'), 'Draft preview must be registered');
 assert.ok(router.indexOf('monitorDraftPreviewRoute,') < router.indexOf('monitorAdvancedManagementRoutes,'), 'Draft preview must precede saved-only legacy preview');
@@ -21,4 +22,8 @@ assert.doesNotMatch(route, /(?:UPDATE|INSERT INTO|DELETE FROM)\s+(?:monitor_opti
 assert.match(ui, /JSON\.stringify\(\{ contentSelector: options\.contentSelector, ignoreSelector: options\.ignoreSelector, stripPattern: options\.stripPattern \}\)/, 'Test button must submit unsaved form values');
 assert.match(ui, /disabled=\{busy \|\| !dirty\}/, 'Unchanged settings must not reset the comparison baseline');
 assert.match(advanced, /last_content_hash=NULL,last_text=NULL/, 'Saving a new configuration intentionally resets the baseline');
-console.log('PicoSvc Monitor draft preview and unchanged-form safety contracts OK.');
+assert.match(rss, /SELECT id,owner,source_url,item_selector,last_checked_at FROM rss_feeds/, 'Check actual configured RSS selectors');
+assert.match(rss, /preview\.mode !== 'selectors' \|\| preview\.items\.length === 0/, 'An explicit selector must yield actual articles');
+assert.match(rss, /rss_selector_no_items/, 'Return a stable error for explicit selector failure');
+assert.match(rss, /DELETE FROM rss_feeds WHERE id=\? AND owner=\?/, 'Failed feeds must not occupy quota');
+console.log('PicoSvc Monitor draft preview and RSS selector onboarding safety contracts OK.');
