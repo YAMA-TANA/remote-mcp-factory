@@ -23,6 +23,7 @@ import { licenseAdvancedManagementRoutes } from './license-advanced.js';
 import { mailAdvancedManagementRoutes } from './mail-advanced.js';
 import { mailManualRetryGuard } from './mail-retry-guard.js';
 import { mailManagementRoutes } from './mail-service.js';
+import { mcpObservabilityManagementRoutes } from './mcp-observability.js';
 import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
 import { monitorAdvancedManagementRoutes } from './monitor-advanced.js';
@@ -41,6 +42,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   for (const handler of [
     picoSvcHealthRoute,
     picoSvcUsageDashboard,
+    mcpObservabilityManagementRoutes,
     filesAccessManagementRoutes,
     formsAdvancedManagementRoutes,
     monitorAdvancedManagementRoutes,
