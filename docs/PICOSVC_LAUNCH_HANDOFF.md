@@ -1,33 +1,34 @@
-# PicoSvc post-merge launch handoff
+# PicoSvc deployment and product-quality handoff
 
-Issue #30 is the implementation roadmap for the category-core PicoSvc feature set and its CI guardrails. Production/provider verification is intentionally tracked separately because it cannot be proven by repository CI alone.
+Repository CI checks types, contracts, selected simulated service behavior and static HTML generation. **It does not deploy the Worker, apply D1 migrations or verify that a real provider returns usable content.** Do not treat a green CI run as production acceptance for all 16 services.
 
-## Merge gate for PR #31
+## Required deployment order
 
-PR #31 may merge when all repository workflows are green on the final head and the branch remains mergeable.
+1. Back up and inspect the production D1 migration history. Apply pending migrations through **0029** (`0027_picosvc_monitor_advanced.sql` enables tracked Monitor errors and events; `0029_picosvc_shot_api_keys.sql` enables Screenshot-scoped API keys). Use `npx wrangler d1 migrations apply remote-mcp-factory --remote` from the repository root; check the actual target database before confirming a production migration.
+2. Deploy the **Worker** from this repository using `npx wrangler deploy`. A Cloudflare Pages UI deploy alone does **not** update the Screenshot, RSS or Monitor API. Confirm `DB`, `BROWSER`, R2, Dynamic Worker and Sandbox bindings and the required secrets on the Worker.
+3. Deploy the **Pages frontend** using the `web` root, `npm run build` and `out` output. Check `NEXT_PUBLIC_FACTORY_API_URL` points to the deployed Worker origin and that the Worker `WEB_ORIGINS` includes the actual Pages/custom origin.
+4. From outside Cloudflare, check `GET /api/picosvc/health` returns HTTP 200, then sign in on Pages and verify the account context and quotas. The health endpoint does not prove individual product features work.
 
-## Production launch gate (post-merge)
+## Real functional acceptance (not yet established by CI)
 
-Do not enable or market paid production traffic until these are verified against the real production account:
+| Product | Production test | Failure signal |
+| --- | --- | --- |
+| Screenshot | Issue a scoped API key, capture `https://example.com/` and a JavaScript-heavy page, verify image pixels and downloaded PDF, then revoke the key. See [`SCREENSHOT_API.md`](SCREENSHOT_API.md). | Empty/white PNG, PDF containing error JSON, missing Browser binding, key revocation not enforced. |
+| RSS | Create a feed from a reachable public page; verify `initialStatus=ready`, `initialItems>0`, and fetch the resulting `.xml`. Try a broken/blocked URL and check that HTTP 422 is shown and no ghost feed remains. | HTTP 201 with an empty/unreadable feed, silent initial fetch failure, orphaned feed. |
+| Monitor | Create a monitor and verify that it appears as tracked. Run the scheduled Worker (or wait for its configured cron), confirm `/events` records fetch errors separately from changes, and inspect the diagnostic panel in `/ja/monitor/`. | No scheduled checks, hidden HTTP failure, duplicate legacy/advanced checks, missing migration 0027. |
+| Billing | Perform a real $1 checkout and refund via Clerk/Stripe; verify webhook-driven entitlements and bundle precedence. | Paid access unchanged, improper downgrade or duplicate charges. |
 
-1. Apply D1 migrations 0012–0028 to the production database and run a post-migration smoke check.
-2. Deploy the Worker/Web build with the required D1, R2, Browser, Dynamic Worker and Sandbox bindings/secrets.
-3. Verify a real $1 checkout and refund through Clerk/Stripe, including webhook-driven entitlement changes.
-4. Verify standalone-vs-bundle entitlement precedence and downgrade behavior with real billing events.
-5. Exercise real provider paths: Cloudflare Email Routing multipart mail, Browser screenshot, Dynamic Worker function secret injection/rollback, Sandbox-required MCP, scheduled Cron retry/notification, private Files signed upload/download and Forms Turnstile.
-6. Configure Cloudflare account-level Browser/Sandbox spend notifications and verify the on-call destination.
-7. Observe real bundle utilization/cost distribution before treating the $5/$22 bundle margin model as validated.
-8. Publish and verify Terms, Privacy, AUP, refund, support and status URLs in production navigation.
-9. Add/verify external synthetic polling of `/api/picosvc/health` from outside Cloudflare.
+For RSS, a failed initial fetch may still consume a monthly check because upstream/provider work was attempted. Do not blindly refund quota without proof the specific request was charged; concurrent requests may share the same monthly counter.
 
-## Non-blocking hardening after merge
+## Additional launch gates
 
-These improve operations but are not required to merge the implementation PR:
+Verify Cloudflare Email Routing multipart mail, private Files signed upload/download, Functions secret injection and rollback, MCP edge/Sandbox paths, Cron retry/notification and Forms Turnstile. Configure account-level Browser/Sandbox spend alerts and an external synthetic health monitor. Publish and verify Terms, Privacy, AUP, refund, support and status URLs. Observe real bundle usage/cost rather than treating a modeled margin as production profit.
 
-- Unified request-ID/error envelope across every legacy and PicoSvc route.
-- Central structured-log sink/query beyond the bounded per-product histories already implemented.
-- Generated OpenAPI specification and expanded curl cookbook for all 16 services.
-- Provider-level orphan-object reconciliation for R2 in addition to bounded cleanup paths.
-- Email notification provider integration for products that currently use webhook notifications or delivery audit records.
+## Follow-up engineering
 
-The production launch issue should own this list and link back to Issue #30 and PR #31.
+- Unify structured error payloads and request IDs in legacy routes; `/api/picosvc/` now supplies `x-request-id`, but older `/api/servers` and public runtime routes remain separate.
+- Add real provider-backed E2E tests in a safe staging environment (with seeded test accounts, bounded spend and cleanup), not just regex/source-contract checks.
+- Generate a complete OpenAPI specification and curl cookbook for all supported services.
+- Improve provider-level orphaned R2-object reconciliation, notifications, and operational logs.
+
+The implementation roadmap is tracked in [Issue #30](https://github.com/YAMA-TANA/remote-mcp-factory/issues/30). Production/provider verification remains a separate acceptance requirement.
