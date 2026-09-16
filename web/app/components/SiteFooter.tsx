@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
 
+const PRICING_LABEL = { en: 'Pricing', ja: '料金', 'zh-CN': '价格' } as const;
+
 export default function SiteFooter({ legacyOnly = false }: { legacyOnly?: boolean }) {
-  const { messages, localizedHref } = useI18n();
+  const { locale, messages, localizedHref } = useI18n();
   const [showLegacy, setShowLegacy] = useState(false);
   const c = messages.common;
 
@@ -17,6 +19,8 @@ export default function SiteFooter({ legacyOnly = false }: { legacyOnly?: boolea
 
   return (
     <div className="globalLegalFooter shell">
+      <a href={localizedHref('/pricing')}>{PRICING_LABEL[locale]}</a>
+      <span> · </span>
       <a href={localizedHref('/contact')}>{c.contact} / {c.support}</a>
       <span> · </span>
       <a href={localizedHref('/terms')}>{c.terms}</a>
