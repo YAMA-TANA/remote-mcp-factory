@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../i18n';
 
 type Kind = 'email' | 'phone';
 
@@ -15,6 +16,7 @@ function decode(kind: Kind): string {
 }
 
 export default function ProtectedContact({ kind }: { kind: Kind }) {
+  const { messages } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -46,14 +48,14 @@ export default function ProtectedContact({ kind }: { kind: Kind }) {
     window.setTimeout(() => setCopied(false), 1200);
   }
 
+  const aria = kind === 'email'
+    ? `${messages.common.support} ${messages.common.email}`
+    : `${messages.common.support} ${messages.common.phone}`;
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '4px 0 16px' }}>
-      <canvas
-        ref={canvasRef}
-        role="img"
-        aria-label={kind === 'email' ? 'Support email address displayed visually' : 'Support telephone number displayed visually'}
-      />
-      <button className="ghost" type="button" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+      <canvas ref={canvasRef} role="img" aria-label={aria} />
+      <button className="ghost" type="button" onClick={copy}>{copied ? messages.common.copied : messages.common.copy}</button>
     </div>
   );
 }
