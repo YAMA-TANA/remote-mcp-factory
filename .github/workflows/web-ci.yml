@@ -51,6 +51,19 @@ jobs:
           test -f out/zh-cn/pricing/index.html
           test -f out/ja/contact/index.html
           test -f out/zh-cn/privacy/index.html
+          for service in rss mail shot fetch qr cron functions json files license flags monitor forms; do
+            test -f "out/en/$service/index.html"
+            test -f "out/ja/$service/index.html"
+            test -f "out/zh-cn/$service/index.html"
+            grep -q "https://picosvc.com/ja/$service/" "out/ja/$service/index.html"
+            grep -qi 'hreflang="en"' "out/ja/$service/index.html"
+            grep -qi 'hreflang="ja"' "out/ja/$service/index.html"
+            grep -qi 'hreflang="zh-CN"' "out/ja/$service/index.html"
+            grep -qi 'hreflang="x-default"' "out/ja/$service/index.html"
+            grep -q "https://picosvc.com/en/$service/" out/sitemap.xml
+            grep -q "https://picosvc.com/ja/$service/" out/sitemap.xml
+            grep -q "https://picosvc.com/zh-cn/$service/" out/sitemap.xml
+          done
           test -f out/sitemap.xml
           test -f out/robots.txt
           grep -q 'https://picosvc.com/ja/' out/ja/index.html
