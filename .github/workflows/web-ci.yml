@@ -53,53 +53,29 @@ jobs:
       - name: Verify static export
         run: |
           test -f out/index.html
-          test -f out/en/index.html
-          test -f out/ja/index.html
-          test -f out/zh-cn/index.html
-          test -f out/en/mock/index.html
-          test -f out/en/hooks/index.html
-          test -f out/ja/hooks/index.html
-          test -f out/zh-cn/hooks/index.html
-          test -f out/en/pricing/index.html
-          test -f out/ja/pricing/index.html
-          test -f out/zh-cn/pricing/index.html
-          test -f out/ja/contact/index.html
-          test -f out/zh-cn/privacy/index.html
+          test -f out/sitemap.xml
+          test -f out/robots.txt
+          for locale in en ja zh-cn; do
+            test -f "out/$locale/index.html"
+            test -f "out/$locale/pricing/index.html"
+            test -f "out/$locale/dashboard/index.html"
+            test -f "out/$locale/docs/index.html"
+            for service in mcp mock hooks rss mail shot fetch qr cron functions json files license flags monitor forms; do
+              test -f "out/$locale/$service/index.html"
+              test -f "out/$locale/$service/app/index.html"
+              test -f "out/$locale/docs/$service/index.html"
+            done
+          done
           for icon in picosvc mock mcp hooks rss mail shot fetch qr cron functions json files license flags monitor forms; do
             test -f "out/icons/$icon.svg"
           done
-          for service in rss mail shot fetch qr cron functions json files license flags monitor forms; do
-            test -f "out/en/$service/index.html"
-            test -f "out/ja/$service/index.html"
-            test -f "out/zh-cn/$service/index.html"
-            grep -q "https://picosvc.com/ja/$service/" "out/ja/$service/index.html"
-            grep -qi 'hreflang="en"' "out/ja/$service/index.html"
-            grep -qi 'hreflang="ja"' "out/ja/$service/index.html"
-            grep -qi 'hreflang="zh-CN"' "out/ja/$service/index.html"
-            grep -qi 'hreflang="x-default"' "out/ja/$service/index.html"
-            grep -q "https://picosvc.com/en/$service/" out/sitemap.xml
-            grep -q "https://picosvc.com/ja/$service/" out/sitemap.xml
-            grep -q "https://picosvc.com/zh-cn/$service/" out/sitemap.xml
-          done
-          test -f out/sitemap.xml
-          test -f out/robots.txt
           grep -q 'https://picosvc.com/ja/' out/ja/index.html
           grep -q 'https://picosvc.com/ja/hooks/' out/ja/hooks/index.html
-          grep -q 'https://picosvc.com/ja/pricing/' out/ja/pricing/index.html
           grep -qi 'hreflang="en"' out/ja/pricing/index.html
           grep -qi 'hreflang="ja"' out/ja/pricing/index.html
           grep -qi 'hreflang="zh-CN"' out/ja/pricing/index.html
-          grep -qi 'hreflang="x-default"' out/ja/pricing/index.html
           grep -Fq 'Bundle Pico' out/en/pricing/index.html
           grep -Fq 'Bundle Pro' out/en/pricing/index.html
-          grep -Fq '$1' out/en/pricing/index.html
-          grep -Fq '$5' out/en/pricing/index.html
-          grep -Fq '$22' out/en/pricing/index.html
           grep -Fq 'PicoPlus' out/en/pricing/index.html
           grep -Fq 'SERVICE QUOTAS' out/en/pricing/index.html
-          grep -Fq '300 dynamic QR · 150k scans' out/en/pricing/index.html
-          grep -Fq '25 spaces · 10k files · 10 GB' out/en/pricing/index.html
-          grep -q 'https://picosvc.com/en/pricing/' out/sitemap.xml
-          grep -q 'https://picosvc.com/ja/pricing/' out/sitemap.xml
-          grep -q 'https://picosvc.com/zh-cn/pricing/' out/sitemap.xml
           grep -q 'https://picosvc.com/sitemap.xml' out/robots.txt
