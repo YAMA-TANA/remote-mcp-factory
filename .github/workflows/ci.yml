@@ -29,6 +29,7 @@ jobs:
       - run: node --experimental-sqlite scripts/test-picosvc-files-access.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-mail-mime.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-mail-delivery.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-mail-retry-cap.mjs
       - run: node --experimental-sqlite --experimental-strip-types scripts/test-picosvc-cron-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-functions-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-migrations.mjs
