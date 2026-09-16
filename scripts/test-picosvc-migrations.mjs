@@ -9,7 +9,7 @@ const migrations = readdirSync(new URL('../migrations/', import.meta.url))
   .filter((file) => /^00(?:1[0-9]|[2-9][0-9])_.*\.sql$/.test(file))
   .filter((file) => Number(file.slice(0, 4)) >= 10)
   .sort();
-assert.ok(migrations.length >= 15, 'Expected PicoSvc additive migrations 0010–0024');
+assert.ok(migrations.length >= 16, 'Expected PicoSvc additive migrations 0010–0025');
 for (const migration of migrations) {
   const sql = readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8');
   try { db.exec(sql); }
@@ -43,6 +43,7 @@ assert.ok(columns('cron_job_options').has('expected_status'), 'Cron expected sta
 assert.ok(columns('function_apps').has('current_revision'), 'Function revision pointer missing');
 assert.ok(columns('function_revisions').has('revision_no'), 'Function revision log missing');
 assert.ok(columns('function_invocations').has('status_code'), 'Function execution log missing');
+assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='trg_mail_retry_cap'").get(), 'Mail retry cap trigger missing');
 assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), [], 'Foreign key validation failed');
 console.log(`D1 migration smoke OK: schema.sql + ${migrations.length} additive migrations (${migrations[0]} to ${migrations.at(-1)}).`);
 db.close();
