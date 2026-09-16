@@ -69,4 +69,9 @@ assert.match(data, /resourceCapacity\(env, owner, 'license', 'projects', 'licens
 assert.match(data, /resourceCapacity\(env, owner, 'flags', 'projects', 'flag_projects'\)/, 'Flags must cap projects');
 assert.match(data, /deleteR2Prefix/, 'Files space deletion must clean the full R2 prefix');
 
+const mcpRuntime = readFileSync(new URL('../src/runtime.ts', import.meta.url), 'utf8');
+assert.match(mcpRuntime, /productLimit\(env, row\.owner, 'mcp', 'sandboxMcps'\)/, 'MCP Sandbox fallback must be plan-gated');
+assert.match(mcpRuntime, /Sandbox fallback, but .* is Edge-only/, 'Edge-only tiers must reject Sandbox fallback');
+assert.match(mcpRuntime, /assertExistingSandboxAllowed/, 'Existing Sandbox MCPs must be rechecked after billing changes');
+
 console.log(`PicoSvc services OK: ${PICOSVC_PRODUCTS.length} active products, quota guards and runtime invariants present.`);
