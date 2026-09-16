@@ -97,8 +97,8 @@ export const PICOSVC_BUNDLES: PicoSvcBundleDefinition[] = [
 export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
   product({ slug: 'mcp', name: 'PicoSvc MCP', role: 'Edge-first MCP hosting / stdio-to-Remote conversion', status: 'active', endpointHost: 'mcp.picosvc.com', tiers: tiers(
     { mcps: 1, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 5_000, builds: 20 },
-    { mcps: 5, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 250_000, builds: 200 },
-    { mcps: 25, sandboxMcps: 2, sandboxActiveMinutes: 10_000, requests: 1_000_000, builds: 1_000 },
+    { mcps: 5, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 200_000, builds: 200 },
+    { mcps: 25, sandboxMcps: 2, sandboxActiveMinutes: 10_000, requests: 500_000, builds: 1_000 },
   ) }),
   product({ slug: 'mock', name: 'PicoSvc Mock', role: 'Rule-based Mock API / request inspector', status: 'active', endpointHost: 'mock.picosvc.com', tiers: tiers(
     { endpoints: 1, rules: 5, history: 100, requests: 1_500 },
