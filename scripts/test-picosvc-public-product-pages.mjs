@@ -3,46 +3,56 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Run AFTER `npm run build`; validate the prerendered output, not just source strings.
-const exportDirectory = fileURLToPath(new URL('../web/out/', import.meta.url));
+// Run AFTER next build: inspect emitted HTML, not only JSX and client bundles.
+const root = fileURLToPath(new URL('../web/out/', import.meta.url));
 const products = {
-  mcp: 'Smithery', mock: 'Mockoon Cloud', hooks: 'Webhook.site', rss: 'PolitePol',
-  mail: 'Resend Receiving', shot: 'Browserless', fetch: 'Firecrawl', qr: 'Bitly QR Codes',
-  cron: 'Upstash QStash', functions: 'Vercel Functions', json: 'JSONBin.io',
-  files: 'Supabase Storage', license: 'Keygen', flags: 'LaunchDarkly',
-  monitor: 'UptimeRobot', forms: 'Formspree',
+  mcp:'Smithery', mock:'Mockoon Cloud', hooks:'Webhook.site', rss:'PolitePol',
+  mail:'Resend Receiving', shot:'Browserless', fetch:'Firecrawl', qr:'Bitly QR Codes',
+  cron:'Upstash QStash', functions:'Vercel Functions', json:'JSONBin.io',
+  files:'Supabase Storage', license:'Keygen', flags:'LaunchDarkly',
+  monitor:'UptimeRobot', forms:'Formspree',
 };
-const phrases = {
-  en: ['Example use cases', 'Compared with alternatives', 'Frequently asked questions'],
-  ja: ['こんな場面で使えます', '競合・代替サービスとの違い', 'よくある質問'],
-  'zh-cn': ['典型使用场景', '与同类服务的差异', '常见问题'],
+const localeText = {
+  en:['What do I provide?', 'What do I get?', 'A concrete use case', 'Compare specific capabilities'],
+  ja:['何を入力する？','何ができあがる？','実際の利用例','機能を具体的に比較'],
+  'zh-cn':['需要提供什么？','会得到什么？','具体使用案例','具体功能比较'],
 };
-for (const [locale, expected] of Object.entries(phrases)) {
+for (const [locale, expected] of Object.entries(localeText)) {
+  const docsIndex=readFileSync(join(root,locale,'docs','index.html'),'utf8');
+  const dashboard=readFileSync(join(root,locale,'dashboard','index.html'),'utf8');
+  for (const service of Object.keys(products)) {
+    assert.ok(docsIndex.includes(`/${locale}/docs/${service}/`),`${locale}: docs index missing ${service}`);
+    assert.ok(dashboard.includes(`/${locale}/${service}/app/`),`${locale}: dashboard missing ${service} app`);
+  }
   for (const [slug, competitor] of Object.entries(products)) {
-    const file = join(exportDirectory, locale, slug, 'index.html');
-    const html = readFileSync(file, 'utf8');
-    const intro = html.indexOf('id="product-guide"');
-    const workspace = html.indexOf('id="workspace"');
-    const details = html.indexOf('id="product-features"');
-    assert.ok(intro >= 0 && workspace > intro && details > workspace,
-      `${file}: compact intro must be followed by workspace, then long-form guide`);
-    for (const id of ['product-features','product-use-cases','product-comparison','product-faq','product-pricing-title']) {
-      assert.ok(html.includes(`id="${id}"`), `${file}: missing public section ${id}`);
+    const base=join(root,locale,slug);
+    const publicHtml=readFileSync(join(base,'index.html'),'utf8');
+    const appHtml=readFileSync(join(base,'app','index.html'),'utf8');
+    const docsHtml=readFileSync(join(root,locale,'docs',slug,'index.html'),'utf8');
+    assert.ok(!publicHtml.includes('id="workspace"'),`${locale}/${slug}: product overview must not embed workspace`);
+    assert.ok(publicHtml.includes(`/${locale}/${slug}/app/`),`${locale}/${slug}: workspace URL missing`);
+    assert.ok(publicHtml.includes(`/${locale}/docs/${slug}/`),`${locale}/${slug}: docs URL missing`);
+    assert.ok(publicHtml.includes('customerUrlBox'),`${locale}/${slug}: explicit URL list missing`);
+    assert.ok(publicHtml.includes(competitor),`${locale}/${slug}: comparison source missing`);
+    assert.ok(publicHtml.includes('noopener noreferrer'),`${locale}/${slug}: external links need noreferrer`);
+    for (const phrase of expected) assert.ok(publicHtml.includes(phrase),`${locale}/${slug}: missing ${phrase}`);
+    assert.ok(appHtml.includes(`/${locale}/${slug}/`),`${locale}/${slug}: app should link back to explainer`);
+    assert.ok(appHtml.includes(`/${locale}/dashboard/`),`${locale}/${slug}: app should link to dashboard`);
+    assert.ok(!appHtml.includes('customerUrlBox'),`${locale}/${slug}: app embeds full landing`);
+    assert.ok(docsHtml.includes(`/${locale}/${slug}/app/`),`${locale}/${slug}: docs link to app missing`);
+    assert.ok(docsHtml.includes('/api/') || slug === 'mcp',`${locale}/${slug}: concrete API reference missing`);
+    assert.ok(!/cloudflare/i.test(publicHtml),`${locale}/${slug}: infrastructure vendor in product page`);
+    assert.ok(!/cloudflare/i.test(docsHtml),`${locale}/${slug}: infrastructure vendor in customer docs`);
+    if (slug === 'forms') {
+      assert.ok(docsHtml.includes('multipart'),`${locale}: forms file-upload limitation missing`);
+      assert.ok(docsHtml.includes('&lt;form'),`${locale}: real HTML form example missing`);
+      assert.ok(publicHtml.includes('Formspree'),`${locale}: forms comparison missing`);
     }
-    assert.ok(html.includes('productLandingCompare'), `${file}: comparison missing`);
-    assert.ok(html.includes(competitor), `${file}: official alternative missing`);
-    for (const phrase of expected) assert.ok(html.includes(phrase), `${file}: missing localized copy ${phrase}`);
-    assert.ok(html.includes('noopener noreferrer'), `${file}: official source link protection missing`);
-    assert.ok(html.includes(`/${locale}/pricing/`), `${file}: pricing link missing`);
-    assert.ok(html.includes('href="#workspace"'), `${file}: workspace shortcut missing`);
-    assert.ok(html.includes('https://github.com/YAMA-TANA/remote-mcp-factory/blob/main/docs/PICOSVC_API_GUIDE.md'), `${file}: API guide link missing`);
-    for (const plan of ['Free', 'Pico', 'PicoPlus']) assert.ok(html.includes(plan), `${file}: missing ${plan} quota`);
-    assert.ok(!/cloudflare/i.test(html), `${file}: implementation vendor must not appear in customer-facing page`);
     if (slug === 'mail') {
-      assert.ok(html.includes('PicoSvc Hooks'), `${file}: serverless webhook destination option missing`);
-      assert.ok(!html.includes('対象ドメインのメールルーティング'), `${file}: operator mail configuration shown as customer setup`);
+      assert.ok(publicHtml.includes('PicoSvc Hooks'),`${locale}: customer-owned webhook workaround missing`);
+      assert.ok(!publicHtml.includes('対象ドメインのメールルーティング'),`${locale}: operator preparation in customer guide`);
     }
   }
 }
-assert.equal(Object.keys(products).length, 16);
-console.log('PicoSvc product pages OK: 48 localized intros → workspaces → guides, provider-neutral copy, email onboarding, plan and comparison links.');
+assert.equal(Object.keys(products).length,16);
+console.log('PicoSvc public/service docs OK: 48 independent explainers + 48 app pages + 48 how-tos, 3 doc indexes and 3 dashboards.');
