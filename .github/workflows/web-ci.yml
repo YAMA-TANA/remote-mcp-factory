@@ -6,6 +6,7 @@ on:
       - 'web/**'
       - 'src/entry.ts'
       - 'src/types.ts'
+      - 'scripts/test-picosvc-workspace.mjs'
       - '.github/workflows/web-ci.yml'
   push:
     branches: [main, next-pages-ui]
@@ -13,6 +14,7 @@ on:
       - 'web/**'
       - 'src/entry.ts'
       - 'src/types.ts'
+      - 'scripts/test-picosvc-workspace.mjs'
       - '.github/workflows/web-ci.yml'
 
 permissions:
@@ -32,6 +34,7 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - run: node --experimental-strip-types ../scripts/test-picosvc-workspace.mjs
       - run: npm run build
         env:
           NEXT_PUBLIC_FACTORY_API_URL: https://factory.example.workers.dev
