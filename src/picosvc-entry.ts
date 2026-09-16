@@ -10,6 +10,7 @@ import {
 } from './picosvc/cost-guardrails.js';
 import { dataRuntimeRoute } from './picosvc/data-services.js';
 import { filesAccessRuntimeRoute } from './picosvc/files-access.js';
+import { formsAdvancedRuntimeRoute } from './picosvc/forms-advanced.js';
 import { functionsAdvancedRuntimeRoute } from './picosvc/functions-runtime-advanced.js';
 import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
@@ -36,11 +37,9 @@ function allowedOrigin(request: Request, env: Env): string | null {
     if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return origin;
     if (url.protocol === 'https:' && url.hostname.endsWith('.pages.dev')) return origin;
   } catch { return null; }
-  const configured = (env.WEB_ORIGINS || '')
-    .split(',').map((value) => value.trim().replace(/\/$/, '')).filter(Boolean);
+  const configured = (env.WEB_ORIGINS || '').split(',').map((value) => value.trim().replace(/\/$/, '')).filter(Boolean);
   return configured.includes(origin.replace(/\/$/, '')) ? origin : null;
 }
-
 function withCors(response: Response, origin: string | null): Response {
   if (!origin) return response;
   const headers = new Headers(response.headers);
@@ -61,12 +60,9 @@ export default {
     }
     const filesResponse = await filesAccessRuntimeRoute(request, env);
     if (filesResponse) return filesResponse;
-    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env)
-      || await jsonScopedWriteGuard(request, env);
+    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env) || await jsonScopedWriteGuard(request, env);
     if (guardrailResponse) {
-      return url.pathname.startsWith('/api/picosvc/')
-        ? withCors(guardrailResponse, allowedOrigin(request, env))
-        : guardrailResponse;
+      return url.pathname.startsWith('/api/picosvc/') ? withCors(guardrailResponse, allowedOrigin(request, env)) : guardrailResponse;
     }
     const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
     if (sandboxMeterResponse) return sandboxMeterResponse;
@@ -80,6 +76,7 @@ export default {
       configRuntimeRoute,
       jsonAdvancedRuntimeRoute,
       licenseAdvancedRuntimeRoute,
+      formsAdvancedRuntimeRoute,
       dataRuntimeRoute,
       functionsAdvancedRuntimeRoute,
       functionRuntimeRoute,
@@ -103,7 +100,6 @@ export default {
     }
     return legacyEntry.fetch(request, env, ctx);
   },
-
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil((async () => {
       try {
@@ -116,7 +112,6 @@ export default {
       }
     })());
   },
-
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil((async () => {
       try { await handleIncomingMailAdvanced(message, env); }
