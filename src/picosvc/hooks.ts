@@ -1,6 +1,7 @@
 import { clerkIdentity } from '../auth.js';
 import type { Env } from '../types.js';
-import { incrementProductUsage, monthKey, productLimit } from './entitlements.js';
+import { monthKey, productLimit } from './entitlements.js';
+import { consumeUsage, resourceCapacity } from './service-utils.js';
 
 interface WebhookInboxRow {
   id: string;
@@ -133,6 +134,20 @@ async function ownedEvent(env: Env, owner: string, id: string): Promise<WebhookE
     .first<WebhookEventRow>();
 }
 
+async function pruneWebhookHistory(env: Env, owner: string): Promise<void> {
+  const { limit } = await productLimit(env, owner, 'hooks', 'history');
+  if (limit === null) return;
+  await env.DB.prepare(`
+    DELETE FROM webhook_events
+    WHERE owner=? AND id IN (
+      SELECT id FROM webhook_events
+      WHERE owner=?
+      ORDER BY received_at DESC
+      LIMIT -1 OFFSET ?
+    )
+  `).bind(owner, owner, limit).run();
+}
+
 function isPrivateIpv4(hostname: string): boolean {
   const parts = hostname.split('.');
   if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return false;
@@ -186,18 +201,14 @@ export async function hooksRuntimeRoute(request: Request, env: Env): Promise<Res
     return json({ error: 'Webhook body is limited to 512 KiB' }, 413);
   }
 
-  const { tier, limit } = await productLimit(env, inbox.owner, 'hooks', 'events');
-  const usage = await env.DB.prepare(`
-    SELECT quantity FROM product_usage_monthly
-    WHERE owner=? AND product='hooks' AND metric='events' AND month=?
-  `).bind(inbox.owner, monthKey()).first<{ quantity: number }>();
-  const used = Number(usage?.quantity || 0);
-  if (limit !== null && used >= limit) {
-    return json({ error: 'Webhook event quota reached', product: 'hooks', tier, limit }, 429);
-  }
-
   const buffer = await request.arrayBuffer();
   if (buffer.byteLength > MAX_BODY_BYTES) return json({ error: 'Webhook body is limited to 512 KiB' }, 413);
+
+  const usage = await consumeUsage(env, inbox.owner, 'hooks', 'events');
+  if (!usage.ok) {
+    return json({ error: 'Webhook event quota reached', product: 'hooks', tier: usage.tier, limit: usage.limit, used: usage.used }, 429);
+  }
+
   const bytes = new Uint8Array(buffer);
   const id = crypto.randomUUID();
   const receivedAt = new Date().toISOString();
@@ -223,9 +234,9 @@ export async function hooksRuntimeRoute(request: Request, env: Env): Promise<Res
     bytes.byteLength,
     receivedAt,
   ).run();
-  await incrementProductUsage(env, inbox.owner, 'hooks', 'events', 1);
+  await pruneWebhookHistory(env, inbox.owner);
 
-  return json({ received: true, eventId: id }, 202);
+  return json({ received: true, eventId: id, tier: usage.tier }, 202);
 }
 
 export async function hooksManagementRoutes(request: Request, env: Env): Promise<Response | null> {
@@ -249,19 +260,26 @@ export async function hooksManagementRoutes(request: Request, env: Env): Promise
       ORDER BY i.created_at DESC
     `).bind(owner).all<WebhookInboxRow & { event_count: number; latest_event_at: string | null }>();
     const { tier, limit } = await productLimit(env, owner, 'hooks', 'events');
+    const { limit: historyLimit } = await productLimit(env, owner, 'hooks', 'history');
+    const inboxCapacity = await resourceCapacity(env, owner, 'hooks', 'inboxes', 'webhook_inboxes');
     const usage = await env.DB.prepare(`
       SELECT quantity FROM product_usage_monthly
       WHERE owner=? AND product='hooks' AND metric='events' AND month=?
     `).bind(owner, monthKey()).first<{ quantity: number }>();
     return json({
       tier,
+      inboxLimit: inboxCapacity.limit,
+      inboxesUsed: inboxCapacity.used,
       monthlyEventLimit: limit,
       monthlyEventsUsed: Number(usage?.quantity || 0),
+      retainedHistoryLimit: historyLimit,
       inboxes: (rows.results || []).map((row) => serializeInbox(row, origin, Number(row.event_count || 0), row.latest_event_at)),
     });
   }
 
   if (url.pathname === '/api/picosvc/hooks/inboxes' && request.method === 'POST') {
+    const capacity = await resourceCapacity(env, owner, 'hooks', 'inboxes', 'webhook_inboxes');
+    if (!capacity.ok) return json({ error: 'Webhook inbox limit reached', ...capacity }, 402);
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 120) : '';
     if (!name) return json({ error: 'name is required' }, 400);
@@ -273,7 +291,7 @@ export async function hooksManagementRoutes(request: Request, env: Env): Promise
       VALUES (?, ?, ?, ?, 1, ?, ?)
     `).bind(id, owner, publicId, name, now, now).run();
     const row = await ownedInbox(env, owner, id);
-    return json(row ? serializeInbox(row, origin) : null, 201);
+    return json(row ? { ...serializeInbox(row, origin), tier: capacity.tier } : null, 201);
   }
 
   const eventReplayMatch = url.pathname.match(/^\/api\/picosvc\/hooks\/events\/([0-9a-f-]{36})\/replay$/i);
