@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
 import { LanguageSwitcher, useI18n } from '../i18n';
+import { PICOSVC_PRICING, tierLabel, type BillingTierId } from '../pricing-data';
 
 type Inbox = {
   id: string;
@@ -30,14 +31,13 @@ type HookEvent = {
 };
 
 type InboxList = {
-  tier: 'free' | 'tiny' | 'pro';
+  tier: BillingTierId;
   monthlyEventLimit: number | null;
   monthlyEventsUsed: number;
   inboxes: Inbox[];
 };
 
 type EventList = { inbox: Inbox; events: HookEvent[]; nextBefore: string | null };
-
 type ReplayResult = { ok: boolean; status: number; statusText: string; location: string | null; target: string };
 
 const API_URL = (process.env.NEXT_PUBLIC_FACTORY_API_URL || '').replace(/\/$/, '');
@@ -45,19 +45,19 @@ const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
 
 const COPY = {
   en: {
-    title1: 'Catch webhooks.', title2: 'Inspect. Replay.', lede: 'Create a public webhook inbox, inspect incoming requests, and replay an event to another public HTTP(S) endpoint. PicoSvc Hooks keeps its own monthly event quota.',
+    title1: 'Catch webhooks.', title2: 'Inspect. Replay.', lede: `Create a public webhook inbox, inspect incoming requests, and replay events. Free includes 500 events/month, Pico is $${PICOSVC_PRICING.standalone.pico}/month for 10,000, and PicoPlus is $${PICOSVC_PRICING.standalone.picoPlus}/month for 100,000. Larger usage is available by contact.`,
     signInTitle: 'Sign in to create a webhook inbox', signInBody: 'Your PicoSvc login is shared across products, while Hooks keeps its own plan and usage quota.', signIn: 'Sign in to PicoSvc',
     plan: 'HOOKS PLAN', usage: 'events this month', newInbox: 'New inbox', name: 'Name', create: 'Create inbox', creating: 'Creating…', inboxes: 'Webhook inboxes', noInboxes: 'No webhook inboxes yet.', copyUrl: 'Copy URL', open: 'Open events', pause: 'Pause', resume: 'Resume',
     events: 'Events', noEvents: 'No events received yet.', selectInbox: 'Select an inbox to inspect its events.', received: 'Received', bytes: 'bytes', detail: 'Event detail', headers: 'Headers', query: 'Query', body: 'Body preview', replay: 'Replay event', replayUrl: 'Destination URL', replayButton: 'Replay', replaying: 'Replaying…', replayResult: 'Replay result', deleteEvent: 'Delete event', loadMore: 'Load more',
   },
   ja: {
-    title1: 'Webhookを受信。', title2: '確認して、Replay。', lede: '公開Webhook Inboxを作成し、受信したリクエストを確認して、別の公開HTTP(S) endpointへイベントをReplayできます。PicoSvc Hooksは製品独立の月間イベント上限を持ちます。',
+    title1: 'Webhookを受信。', title2: '確認して、Replay。', lede: `公開Webhook Inboxを作成し、受信requestを確認してReplayできます。Freeは月500 events、Picoは月$${PICOSVC_PRICING.standalone.pico}で10,000 events、PicoPlusは月$${PICOSVC_PRICING.standalone.picoPlus}で100,000 events。それ以上はお問い合わせください。`,
     signInTitle: 'Webhook Inboxを作るにはログイン', signInBody: 'PicoSvcのログインは共通ですが、Hooksのプランと利用量は他製品とは独立です。', signIn: 'PicoSvcにログイン',
     plan: 'HOOKSプラン', usage: '今月のevents', newInbox: '新しいInbox', name: '名前', create: 'Inboxを作成', creating: '作成中…', inboxes: 'Webhook Inboxes', noInboxes: 'Webhook Inboxはまだありません。', copyUrl: 'URLをコピー', open: 'Eventsを見る', pause: '停止', resume: '再開',
     events: 'Events', noEvents: 'まだイベントを受信していません。', selectInbox: 'Inboxを選ぶと受信イベントを確認できます。', received: '受信', bytes: 'bytes', detail: 'Event詳細', headers: 'Headers', query: 'Query', body: 'Body preview', replay: 'EventをReplay', replayUrl: '送信先URL', replayButton: 'Replay', replaying: '送信中…', replayResult: 'Replay結果', deleteEvent: 'Eventを削除', loadMore: 'さらに読み込む',
   },
   'zh-CN': {
-    title1: '接收 Webhook。', title2: '查看并 Replay。', lede: '创建公开 Webhook Inbox，查看收到的请求，并将事件 Replay 到另一个公开 HTTP(S) endpoint。PicoSvc Hooks 使用独立的月度事件配额。',
+    title1: '接收 Webhook。', title2: '查看并 Replay。', lede: `创建公开 Webhook Inbox，查看收到的请求并 Replay。Free 每月 500 events，Pico 每月 $${PICOSVC_PRICING.standalone.pico} 包含 10,000，PicoPlus 每月 $${PICOSVC_PRICING.standalone.picoPlus} 包含 100,000；更高用量请联系我们。`,
     signInTitle: '登录后创建 Webhook Inbox', signInBody: 'PicoSvc 登录账号在产品间共用，但 Hooks 的套餐和使用量独立计算。', signIn: '登录 PicoSvc',
     plan: 'HOOKS 套餐', usage: '本月 events', newInbox: '新 Inbox', name: '名称', create: '创建 Inbox', creating: '创建中…', inboxes: 'Webhook Inboxes', noInboxes: '还没有 Webhook Inbox。', copyUrl: '复制 URL', open: '查看 Events', pause: '暂停', resume: '恢复',
     events: 'Events', noEvents: '尚未收到事件。', selectInbox: '选择一个 Inbox 查看收到的事件。', received: '收到', bytes: 'bytes', detail: 'Event 详情', headers: 'Headers', query: 'Query', body: 'Body preview', replay: 'Replay Event', replayUrl: '目标 URL', replayButton: 'Replay', replaying: '发送中…', replayResult: 'Replay 结果', deleteEvent: '删除 Event', loadMore: '加载更多',
@@ -198,14 +198,14 @@ export default function HooksPage() {
     <main>
       <nav className="nav shell">
         <a className="brand" href={localizedHref('/')}><span className="brandMark">P</span><span>PicoSvc</span></a>
-        <div className="navRight"><a href={localizedHref('/')}>{c.products}</a><a href={localizedHref('/mock')}>{c.mock}</a><a href={localizedHref('/contact')}>{c.contact}</a><LanguageSwitcher />{signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>{c.signIn}</button>}</div>
+        <div className="navRight"><a href={localizedHref('/')}>{c.products}</a><a href={localizedHref('/pricing')}>Pricing</a><a href={localizedHref('/mock')}>{c.mock}</a><a href={localizedHref('/contact')}>{c.contact}</a><LanguageSwitcher />{signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>{c.signIn}</button>}</div>
       </nav>
 
       <section className="hero shell">
         <div className="eyebrow"><span className="dot" /> PicoSvc Hooks</div><h1>{t.title1}<br />{t.title2}</h1><p className="lede">{t.lede}</p>
         {!signedIn ? <div className="deployCard signinState"><div><strong>{t.signInTitle}</strong><p>{t.signInBody}</p></div><button className="primary" disabled={!clerk} onClick={() => clerk?.openSignIn()}>{t.signIn}</button></div> : (
           <div className="deployCard">
-            <div className="sectionHead"><div><span className="kicker">{data.tier.toUpperCase()} {t.plan}</span><h2>{t.newInbox}</h2></div><span>{data.monthlyEventsUsed} / {data.monthlyEventLimit ?? '∞'} {t.usage}</span></div>
+            <div className="sectionHead"><div><span className="kicker">{tierLabel(data.tier)} {t.plan}</span><h2>{t.newInbox}</h2></div><span>{data.monthlyEventsUsed} / {data.monthlyEventLimit ?? '∞'} {t.usage}</span></div>
             <div className="repoRow"><div className="repoInput"><span>↗</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder={t.name} /></div><button className="primary" disabled={busy || !name.trim()} onClick={createInbox}>{busy ? t.creating : t.create}</button></div>
             {message && <div className="error">{message}</div>}
           </div>

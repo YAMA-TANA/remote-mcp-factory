@@ -3,15 +3,22 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
 import { LanguageSwitcher, useI18n } from '../i18n';
+import { PICOSVC_PRICING, tierLabel, type BillingTierId } from '../pricing-data';
 
 type MockEndpoint = { id: string; name: string; method: string; path: string; statusCode: number; contentType: string; headers: Record<string, string>; body: string; enabled: boolean; endpoint: string; createdAt: string; updatedAt: string };
-type EndpointList = { tier: 'free' | 'tiny' | 'pro'; limit: number | null; endpoints: MockEndpoint[] };
+type EndpointList = { tier: BillingTierId; limit: number | null; endpoints: MockEndpoint[] };
 
 const API_URL = (process.env.NEXT_PUBLIC_FACTORY_API_URL || '').replace(/\/$/, '');
 const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
 
+const PLAN_COPY = {
+  en: `Create a stable public endpoint with the HTTP method, status and response body you need. Free includes 1 endpoint, Pico is $${PICOSVC_PRICING.standalone.pico}/month for 10 endpoints, and PicoPlus is $${PICOSVC_PRICING.standalone.picoPlus}/month for 100. Larger usage is available by contact.`,
+  ja: `必要なHTTPメソッド、ステータス、レスポンス本文を持つ安定した公開エンドポイントを作成できます。Freeは1 endpoint、Picoは月$${PICOSVC_PRICING.standalone.pico}で10 endpoints、PicoPlusは月$${PICOSVC_PRICING.standalone.picoPlus}で100 endpoints。それ以上はお問い合わせください。`,
+  'zh-CN': `创建稳定的公开 Mock API endpoint。Free 包含 1 个 endpoint，Pico 每月 $${PICOSVC_PRICING.standalone.pico} 包含 10 个，PicoPlus 每月 $${PICOSVC_PRICING.standalone.picoPlus} 包含 100 个；更高用量请联系我们。`,
+} as const;
+
 export default function MockPage() {
-  const { messages } = useI18n(); const t = messages.mock; const c = messages.common;
+  const { locale, messages, localizedHref } = useI18n(); const t = messages.mock; const c = messages.common;
   const [clerk, setClerk] = useState<Clerk | null>(null); const [signedIn, setSignedIn] = useState(false);
   const [data, setData] = useState<EndpointList>({ tier: 'free', limit: 1, endpoints: [] });
   const [name, setName] = useState('Hello API'); const [method, setMethod] = useState('GET'); const [path, setPath] = useState('hello'); const [statusCode, setStatusCode] = useState('200'); const [body, setBody] = useState('{\n  "hello": "world"\n}');
@@ -28,11 +35,11 @@ export default function MockPage() {
 
   return (
     <main>
-      <nav className="nav shell"><a className="brand" href="/"><span className="brandMark">P</span><span>PicoSvc</span></a><div className="navRight"><a href="/">{c.products}</a><a href="/contact">{c.contact}</a><a href="/terms">{c.terms}</a><a href="/privacy">{c.privacy}</a><LanguageSwitcher />{signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>{c.signIn}</button>}</div></nav>
+      <nav className="nav shell"><a className="brand" href={localizedHref('/')}><span className="brandMark">P</span><span>PicoSvc</span></a><div className="navRight"><a href={localizedHref('/')}>{c.products}</a><a href={localizedHref('/pricing')}>Pricing</a><a href={localizedHref('/contact')}>{c.contact}</a><a href={localizedHref('/terms')}>{c.terms}</a><a href={localizedHref('/privacy')}>{c.privacy}</a><LanguageSwitcher />{signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>{c.signIn}</button>}</div></nav>
       <section className="hero shell">
-        <div className="eyebrow"><span className="dot" /> PicoSvc Mock</div><h1>{t.title1}<br />{t.title2}</h1><p className="lede">{t.lede}</p>
+        <div className="eyebrow"><span className="dot" /> PicoSvc Mock</div><h1>{t.title1}<br />{t.title2}</h1><p className="lede">{PLAN_COPY[locale]}</p>
         {!signedIn ? <div className="deployCard signinState"><div><strong>{t.signInTitle}</strong><p>{t.signInBody}</p></div><button className="primary" disabled={!clerk} onClick={() => clerk?.openSignIn()}>{t.signInPico}</button></div> : (
-          <div className="deployCard"><div className="sectionHead"><div><span className="kicker">{data.tier.toUpperCase()} {t.plan}</span><h2>{t.newEndpoint}</h2></div><span>{data.endpoints.length} / {data.limit ?? '∞'}</span></div>
+          <div className="deployCard"><div className="sectionHead"><div><span className="kicker">{tierLabel(data.tier)} {t.plan}</span><h2>{t.newEndpoint}</h2></div><span>{data.endpoints.length} / {data.limit ?? '∞'}</span></div>
             <div className="options"><label>{t.name} <input value={name} onChange={(event) => setName(event.target.value)} /></label><label>{t.method} <select value={method} onChange={(event) => setMethod(event.target.value)}><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label><label>{t.path} <input value={path} onChange={(event) => setPath(event.target.value)} placeholder="hello" /></label><label>{t.status} <input value={statusCode} onChange={(event) => setStatusCode(event.target.value)} inputMode="numeric" /></label></div>
             <label>{t.responseBody}</label><textarea value={body} onChange={(event) => setBody(event.target.value)} rows={8} style={{ width: '100%', marginTop: 8, padding: 14, borderRadius: 10, fontFamily: 'monospace' }} /><div style={{ marginTop: 14 }}><button className="primary" disabled={busy || !name.trim()} onClick={createEndpoint}>{busy ? t.saving : t.createEndpoint}</button></div>{message && <div className="error">{message}</div>}
           </div>

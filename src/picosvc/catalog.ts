@@ -20,7 +20,8 @@ export type PicoSvcTier = 'free' | 'tiny' | 'pro';
 export type ProductStatus = 'active' | 'planned';
 
 export interface TierDefinition {
-  priceUsdMonthly: number | null;
+  displayName: 'Free' | 'Pico' | 'PicoPlus';
+  priceUsdMonthly: number;
   limits: Record<string, number> | null;
 }
 
@@ -33,33 +34,75 @@ export interface PicoSvcProduct {
   billingScope: 'product';
   bundleEligible: boolean;
   tiers: Record<PicoSvcTier, TierDefinition>;
+  customPlan: { displayName: 'Custom'; pricing: 'contact'; contactPath: '/contact' };
 }
 
 export interface PicoSvcBundleDefinition {
   slug: string;
   name: string;
   status: 'active' | 'planned';
-  priceUsdMonthly: number | null;
+  priceUsdMonthly: number;
   grants: Partial<Record<PicoSvcProductSlug, PicoSvcTier>>;
 }
 
-const plannedTiers = (): Record<PicoSvcTier, TierDefinition> => ({
-  free: { priceUsdMonthly: 0, limits: null },
-  tiny: { priceUsdMonthly: null, limits: null },
-  pro: { priceUsdMonthly: null, limits: null },
-});
+const ALL_PRODUCT_SLUGS: PicoSvcProductSlug[] = [
+  'mcp', 'mock', 'hooks', 'rss', 'mail', 'shot', 'fetch', 'qr',
+  'cron', 'functions', 'json', 'files', 'license', 'flags', 'monitor', 'forms',
+];
+
+function tiers(
+  freeLimits: Record<string, number> | null,
+  picoLimits: Record<string, number> | null,
+  picoPlusLimits: Record<string, number> | null,
+): Record<PicoSvcTier, TierDefinition> {
+  return {
+    free: { displayName: 'Free', priceUsdMonthly: 0, limits: freeLimits },
+    tiny: { displayName: 'Pico', priceUsdMonthly: 1, limits: picoLimits },
+    pro: { displayName: 'PicoPlus', priceUsdMonthly: 5, limits: picoPlusLimits },
+  };
+}
+
+const plannedTiers = (): Record<PicoSvcTier, TierDefinition> => tiers(null, null, null);
 
 const product = (
-  definition: Omit<PicoSvcProduct, 'billingScope' | 'bundleEligible'>,
-): PicoSvcProduct => ({ ...definition, billingScope: 'product', bundleEligible: true });
+  definition: Omit<PicoSvcProduct, 'billingScope' | 'bundleEligible' | 'customPlan'>,
+): PicoSvcProduct => ({
+  ...definition,
+  billingScope: 'product',
+  bundleEligible: true,
+  customPlan: { displayName: 'Custom', pricing: 'contact', contactPath: '/contact' },
+});
+
+function grantAll(tier: PicoSvcTier): Partial<Record<PicoSvcProductSlug, PicoSvcTier>> {
+  return Object.fromEntries(ALL_PRODUCT_SLUGS.map((slug) => [slug, tier])) as Partial<Record<PicoSvcProductSlug, PicoSvcTier>>;
+}
 
 export const PICOSVC_BILLING_MODEL = {
   mode: 'per-product' as const,
-  description: 'Each PicoSvc product has its own subscription and quota. Bundles may grant multiple product entitlements.',
+  currency: 'USD' as const,
+  billingPeriod: 'month' as const,
+  description: 'Every PicoSvc service uses the same paid pricing: Pico is $1/month, PicoPlus is $5/month, and larger/custom usage is handled by contact. Bundles grant the same tier across the suite.',
+  tierLabels: { free: 'Free', tiny: 'Pico', pro: 'PicoPlus' } as const,
+  customPlan: { name: 'Custom', pricing: 'contact' as const, contactPath: '/contact' },
   bundlesSupported: true,
 };
 
-export const PICOSVC_BUNDLES: PicoSvcBundleDefinition[] = [];
+export const PICOSVC_BUNDLES: PicoSvcBundleDefinition[] = [
+  {
+    slug: 'bundle-pico',
+    name: 'Bundle Pico',
+    status: 'active',
+    priceUsdMonthly: 5,
+    grants: grantAll('tiny'),
+  },
+  {
+    slug: 'bundle-pro',
+    name: 'Bundle Pro',
+    status: 'active',
+    priceUsdMonthly: 22,
+    grants: grantAll('pro'),
+  },
+];
 
 export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
   product({
@@ -68,11 +111,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'MCP hosting / stdio-to-Remote conversion',
     status: 'active',
     endpointHost: 'mcp.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { mcps: 1 } },
-      tiny: { priceUsdMonthly: 1, limits: { mcps: 5 } },
-      pro: { priceUsdMonthly: 3, limits: { mcps: 25 } },
-    },
+    tiers: tiers({ mcps: 1 }, { mcps: 5 }, { mcps: 25 }),
   }),
   product({
     slug: 'mock',
@@ -80,11 +119,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'Mock API',
     status: 'active',
     endpointHost: 'mock.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { endpoints: 1 } },
-      tiny: { priceUsdMonthly: 1, limits: { endpoints: 10 } },
-      pro: { priceUsdMonthly: 3, limits: { endpoints: 100 } },
-    },
+    tiers: tiers({ endpoints: 1 }, { endpoints: 10 }, { endpoints: 100 }),
   }),
   product({
     slug: 'hooks',
@@ -92,11 +127,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'Webhook inbox / replay',
     status: 'active',
     endpointHost: 'hooks.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { events: 500 } },
-      tiny: { priceUsdMonthly: null, limits: { events: 10_000 } },
-      pro: { priceUsdMonthly: null, limits: { events: 100_000 } },
-    },
+    tiers: tiers({ events: 500 }, { events: 10_000 }, { events: 100_000 }),
   }),
   product({
     slug: 'rss',
@@ -104,11 +135,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'Web to RSS',
     status: 'planned',
     endpointHost: 'rss.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { feeds: 3 } },
-      tiny: { priceUsdMonthly: null, limits: { feeds: 20 } },
-      pro: { priceUsdMonthly: null, limits: { feeds: 100 } },
-    },
+    tiers: tiers({ feeds: 3 }, { feeds: 20 }, { feeds: 100 }),
   }),
   product({
     slug: 'mail',
@@ -116,11 +143,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'Email to Webhook',
     status: 'planned',
     endpointHost: 'in.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { mails: 100 } },
-      tiny: { priceUsdMonthly: null, limits: { mails: 2_000 } },
-      pro: { priceUsdMonthly: null, limits: { mails: 20_000 } },
-    },
+    tiers: tiers({ mails: 100 }, { mails: 2_000 }, { mails: 20_000 }),
   }),
   product({
     slug: 'shot',
@@ -128,11 +151,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'Screenshot / PDF',
     status: 'planned',
     endpointHost: 'api.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { shots: 20 } },
-      tiny: { priceUsdMonthly: null, limits: { shots: 300 } },
-      pro: { priceUsdMonthly: null, limits: { shots: 1_500 } },
-    },
+    tiers: tiers({ shots: 20 }, { shots: 300 }, { shots: 1_500 }),
   }),
   product({ slug: 'fetch', name: 'PicoSvc Fetch', role: 'URL to Markdown / metadata', status: 'planned', endpointHost: 'api.picosvc.com', tiers: plannedTiers() }),
   product({
@@ -141,11 +160,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     role: 'Dynamic QR / redirect',
     status: 'planned',
     endpointHost: 'qr.picosvc.com',
-    tiers: {
-      free: { priceUsdMonthly: 0, limits: { qrs: 5 } },
-      tiny: { priceUsdMonthly: null, limits: { qrs: 100 } },
-      pro: { priceUsdMonthly: null, limits: { qrs: 1_000 } },
-    },
+    tiers: tiers({ qrs: 5 }, { qrs: 100 }, { qrs: 1_000 }),
   }),
   product({ slug: 'cron', name: 'PicoSvc Cron', role: 'Cron execution / monitoring', status: 'planned', endpointHost: 'api.picosvc.com', tiers: plannedTiers() }),
   product({ slug: 'functions', name: 'PicoSvc Functions', role: 'Tiny serverless functions', status: 'planned', endpointHost: 'fn.picosvc.com', tiers: plannedTiers() }),

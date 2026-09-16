@@ -43,6 +43,13 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    // The Worker origin used to expose the pre-PicoSvc Hobby/Pro/Team landing page.
+    // Redirect human-facing entry points to the canonical multilingual PicoSvc site so
+    // stale legacy pricing can never be presented to users.
+    if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
+      return Response.redirect('https://picosvc.com/', 302);
+    }
+
     const hooksResponse = await hooksRuntimeRoute(request, env);
     if (hooksResponse) return hooksResponse;
 
