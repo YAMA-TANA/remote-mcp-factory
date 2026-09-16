@@ -110,7 +110,15 @@ assert.match(sandboxMeter, /consumeUsage\(env, row\.owner, 'mcp', 'sandboxActive
 assert.match(sandboxMeter, /requestAuthorizedForServer/, 'Protected MCPs must authenticate before active-minute usage can be charged');
 
 const functions = readFileSync(new URL('../src/picosvc/functions-service.ts', import.meta.url), 'utf8');
-assert.match(functions, /limits:\s*\{\s*cpuMs:\s*500,\s*subRequests:\s*32\s*\}/, 'Functions must have a hard Dynamic Worker CPU/subrequest ceiling');
+assert.match(functions, /MAX_FUNCTION_CPU_MS = 10/, 'Functions must cap Dynamic Worker CPU at 10 ms per invocation');
+assert.match(functions, /MAX_FUNCTION_WALL_MS = 5_000/, 'Functions must cap wall-clock execution at 5 seconds');
+assert.match(functions, /limits:\s*\{\s*cpuMs:\s*MAX_FUNCTION_CPU_MS,\s*subRequests:\s*32\s*\}/, 'Functions must apply CPU/subrequest limits to Dynamic Workers');
+assert.match(functions, /new AbortController\(\)/, 'Functions must abort long-running requests');
+assert.match(functions, /status[^\n]*504|\}, 504\)/, 'Functions must return a timeout status when wall-clock execution is exceeded');
+
+const edgeRuntime = readFileSync(new URL('../src/edge-runtime.ts', import.meta.url), 'utf8');
+assert.match(edgeRuntime, /EDGE_CPU_MS_PER_REQUEST = 50/, 'Edge MCPs must have a pricing-safe CPU ceiling');
+assert.match(edgeRuntime, /EDGE_SUBREQUESTS_PER_REQUEST = 64/, 'Edge MCPs must have a bounded subrequest ceiling');
 
 const mcpRuntime = readFileSync(new URL('../src/runtime.ts', import.meta.url), 'utf8');
 assert.match(mcpRuntime, /productLimit\(env, row\.owner, 'mcp', 'sandboxMcps'\)/, 'MCP Sandbox fallback must be plan-gated');
