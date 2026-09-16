@@ -48,9 +48,15 @@ function withCors(response: Response, origin: string | null): Response {
   headers.set('access-control-allow-origin', origin);
   headers.set('access-control-allow-methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
   headers.set('access-control-allow-headers', 'authorization,content-type,if-match,if-none-match');
-  headers.set('access-control-expose-headers', 'etag');
+  // The Screenshot workspace reads image dimensions and tier from response headers.
+  headers.set('access-control-expose-headers', 'etag,x-request-id,x-picosvc-image-size,x-picosvc-tier,content-disposition');
   headers.set('access-control-max-age', '86400');
   headers.append('vary', 'Origin');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+function withRequestId(response: Response, requestId: string): Response {
+  const headers = new Headers(response.headers);
+  headers.set('x-request-id', requestId);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
@@ -62,49 +68,55 @@ export default {
     }
     const picoApi = url.pathname.startsWith('/api/picosvc/');
     const origin = picoApi ? allowedOrigin(request, env) : null;
-    // Preflight must be resolved before service handlers or authentication guards.
-    if (picoApi && request.method === 'OPTIONS') {
-      if (!origin) return new Response(null, { status: 403 });
-      return withCors(new Response(null, { status: 204 }), origin);
-    }
-    const filesResponse = await filesAccessRuntimeRoute(request, env);
-    if (filesResponse) return picoApi ? withCors(filesResponse, origin) : filesResponse;
-    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env) || await jsonScopedWriteGuard(request, env);
-    if (guardrailResponse) {
-      return picoApi ? withCors(guardrailResponse, origin) : guardrailResponse;
-    }
-    const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
-    if (sandboxMeterResponse) return picoApi ? withCors(sandboxMeterResponse, origin) : sandboxMeterResponse;
-    for (const handler of [
-      hooksAdvancedRuntimeRoute,
-      hooksRuntimeRoute,
-      mockAdvancedRuntimeRoute,
-      mockRuntimeRoute,
-      utilityAdvancedRuntimeRoute,
-      qrRuntimeRoute,
-      configRuntimeRoute,
-      jsonAdvancedRuntimeRoute,
-      licenseAdvancedRuntimeRoute,
-      formsAdvancedRuntimeRoute,
-      dataRuntimeRoute,
-      functionsAdvancedRuntimeRoute,
-      functionRuntimeRoute,
-      rssRuntimeRoute,
-    ]) {
-      const response = await handler(request, env);
-      if (response) {
-        await picoSvcPostResponseGuardrails(request, env, response);
-        return picoApi ? withCors(response, origin) : response;
+    const requestId = picoApi ? crypto.randomUUID() : '';
+    const send = (response: Response): Response => picoApi ? withCors(withRequestId(response, requestId), origin) : response;
+    try {
+      // Preflight must be resolved before service handlers or authentication guards.
+      if (picoApi && request.method === 'OPTIONS') {
+        return send(new Response(null, { status: origin ? 204 : 403 }));
       }
+      const filesResponse = await filesAccessRuntimeRoute(request, env);
+      if (filesResponse) return send(filesResponse);
+      const guardrailResponse = await picoSvcRuntimeGuardrails(request, env) || await jsonScopedWriteGuard(request, env);
+      if (guardrailResponse) return send(guardrailResponse);
+      const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
+      if (sandboxMeterResponse) return send(sandboxMeterResponse);
+      for (const handler of [
+        hooksAdvancedRuntimeRoute,
+        hooksRuntimeRoute,
+        mockAdvancedRuntimeRoute,
+        mockRuntimeRoute,
+        utilityAdvancedRuntimeRoute,
+        qrRuntimeRoute,
+        configRuntimeRoute,
+        jsonAdvancedRuntimeRoute,
+        licenseAdvancedRuntimeRoute,
+        formsAdvancedRuntimeRoute,
+        dataRuntimeRoute,
+        functionsAdvancedRuntimeRoute,
+        functionRuntimeRoute,
+        rssRuntimeRoute,
+      ]) {
+        const response = await handler(request, env);
+        if (response) {
+          await picoSvcPostResponseGuardrails(request, env, response);
+          return send(response);
+        }
+      }
+      if (picoApi) {
+        const response = await picoSvcRoutes(request, env);
+        if (response) return send(response);
+        return send(Response.json({ error: { code: 'not_found', message: 'PicoSvc route not found' }, requestId }, { status: 404 }));
+      }
+      const observedMcp = await mcpObservedRuntimeRoute(request, env, () => legacyEntry.fetch(request, env, ctx));
+      if (observedMcp) return observedMcp;
+      return legacyEntry.fetch(request, env, ctx);
+    } catch (error) {
+      if (!picoApi) throw error;
+      // Do not expose exception details, credentials or provider internals in public responses.
+      console.error('PicoSvc API request failed', requestId, url.pathname);
+      return send(Response.json({ error: { code: 'internal_error', message: 'The request could not be completed. Contact support with the request ID.' }, requestId }, { status: 500, headers: { 'cache-control': 'no-store' } }));
     }
-    if (picoApi) {
-      const response = await picoSvcRoutes(request, env);
-      if (response) return withCors(response, origin);
-      return withCors(Response.json({ error: 'PicoSvc route not found' }, { status: 404 }), origin);
-    }
-    const observedMcp = await mcpObservedRuntimeRoute(request, env, () => legacyEntry.fetch(request, env, ctx));
-    if (observedMcp) return observedMcp;
-    return legacyEntry.fetch(request, env, ctx);
   },
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil((async () => {
