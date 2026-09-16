@@ -27,9 +27,9 @@ for (const product of PICOSVC_PRODUCTS) {
 
 const expectedLimits = {
   mcp: [
-    { mcps: 1, requests: 5_000, builds: 20 },
-    { mcps: 5, requests: 250_000, builds: 200 },
-    { mcps: 25, requests: 1_000_000, builds: 1_000 },
+    { mcps: 1, sandboxMcps: 0, requests: 5_000, builds: 20 },
+    { mcps: 5, sandboxMcps: 0, requests: 250_000, builds: 200 },
+    { mcps: 25, sandboxMcps: 2, requests: 1_000_000, builds: 1_000 },
   ],
   mock: [
     { endpoints: 1, requests: 1_500 },
@@ -113,6 +113,11 @@ for (const product of PICOSVC_PRODUCTS) {
   const displayName = product.name.replace(/^PicoSvc\s+/, '');
   assert.ok(PICOSVC_QUOTAS.some((row) => row.service === displayName), `${product.slug}: missing public quota row`);
 }
+
+const mcpPublicQuota = PICOSVC_QUOTAS.find((row) => row.service === 'MCP');
+assert.match(mcpPublicQuota?.free || '', /Edge MCP/, 'Free MCP must be advertised as Edge-only');
+assert.match(mcpPublicQuota?.pico || '', /Edge MCP/, 'Pico MCP must be advertised as Edge-only');
+assert.match(mcpPublicQuota?.picoPlus || '', /2 Sandbox slots/, 'PicoPlus must publish its Sandbox slot limit');
 
 const bundlePico = PICOSVC_BUNDLES.find((bundle) => bundle.slug === 'bundle-pico');
 const bundlePro = PICOSVC_BUNDLES.find((bundle) => bundle.slug === 'bundle-pro');
