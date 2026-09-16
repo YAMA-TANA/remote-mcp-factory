@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
+import ServiceIcon from './ServiceIcon';
 import './site-footer.css';
 
 const COPY = {
@@ -27,7 +28,7 @@ export default function SiteFooter({ legacyOnly = false }: { legacyOnly?: boolea
     <footer className="picoFooter" aria-label="PicoSvc footer">
       <div className="shell">
         <div className="picoFooterGrid">
-          <div className="picoFooterIdentity"><a className="brand" href={localizedHref('/')}><span className="brandMark" aria-hidden="true">P</span><span>PicoSvc</span></a><p>{t.tagline}</p></div>
+          <div className="picoFooterIdentity"><a className="brand" href={localizedHref('/')}><span className="brandMark" aria-hidden="true"><ServiceIcon name="brand" size={34} /></span><span>PicoSvc</span></a><p>{t.tagline}</p></div>
           <nav className="picoFooterColumn" aria-label={t.products}><strong>{t.products}</strong><a href={localizedHref('/mcp')}>MCP</a><a href={localizedHref('/mock')}>Mock API</a><a href={localizedHref('/hooks')}>Webhook Inbox</a><a href={localizedHref('/rss')}>Web → RSS</a><a href={localizedHref('/')}>{c.products} →</a></nav>
           <nav className="picoFooterColumn" aria-label={t.support}><strong>{t.support}</strong><a href={localizedHref('/pricing')}>{t.pricing}</a><a href={localizedHref('/contact')}>{c.contact} / {c.support}</a><a href={localizedHref('/terms')}>{c.terms}</a><a href={localizedHref('/privacy')}>{c.privacy}</a><a href={localizedHref('/tokushoho')}>{c.commercial}</a></nav>
         </div>
