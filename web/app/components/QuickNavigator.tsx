@@ -5,11 +5,13 @@ import { useI18n } from '../i18n';
 import { SERVICE_INFO, type GenericServiceSlug } from '../service-data';
 import './quick-navigator.css';
 
-const PRODUCT_SLUGS: GenericServiceSlug[] = [
-  'mcp', 'hooks', 'rss', 'mail', 'shot', 'fetch', 'qr', 'cron',
+type NavSlug = GenericServiceSlug | 'mock';
+const PRODUCT_SLUGS: NavSlug[] = [
+  'mock', 'mcp', 'hooks', 'rss', 'mail', 'shot', 'fetch', 'qr', 'cron',
   'functions', 'json', 'files', 'license', 'flags', 'monitor', 'forms',
 ];
-const SEARCH_WORDS: Record<GenericServiceSlug, string> = {
+const SEARCH_WORDS: Record<NavSlug, string> = {
+  mock: 'mock api http response endpoint testing simulate',
   mcp: 'model context protocol host remote deploy github',
   hooks: 'webhook inbox receive replay',
   rss: 'feed news website updates web to rss',
@@ -27,10 +29,13 @@ const SEARCH_WORDS: Record<GenericServiceSlug, string> = {
   forms: 'form submissions backend',
 };
 const TEXT = {
-  en: { open: 'Find a service', shortcut: 'Ctrl K', label: 'Quick navigation', hint: 'Search all services and pages', placeholder: 'Search products, APIs, or pages…', services: 'Products', pages: 'Pages', noResults: 'No matching pages or products.', close: 'Close', home: 'All products', pricing: 'Pricing', support: 'Contact & support', account: 'Account' },
-  ja: { open: 'サービスを探す', shortcut: 'Ctrl K', label: 'クイックナビゲーション', hint: 'サービス・ページを検索', placeholder: '製品名・API・ページを検索…', services: 'サービス', pages: 'ページ', noResults: '該当するサービス・ページはありません。', close: '閉じる', home: '全サービス', pricing: '料金', support: 'お問い合わせ', account: 'アカウント' },
-  'zh-CN': { open: '查找服务', shortcut: 'Ctrl K', label: '快速导航', hint: '搜索服务与页面', placeholder: '搜索产品、API 或页面…', services: '产品', pages: '页面', noResults: '没有匹配的产品或页面。', close: '关闭', home: '全部产品', pricing: '价格', support: '联系我们', account: '账户' },
+  en: { open: 'Find a service', shortcut: 'Ctrl K', label: 'Quick navigation', hint: 'Search all services and pages', placeholder: 'Search products, APIs, or pages…', services: 'Products', pages: 'Pages', noResults: 'No matching pages or products.', close: 'Close', home: 'All products', pricing: 'Pricing', support: 'Contact & support' },
+  ja: { open: 'サービスを探す', shortcut: 'Ctrl K', label: 'クイックナビゲーション', hint: 'サービス・ページを検索', placeholder: '製品名・API・ページを検索…', services: 'サービス', pages: 'ページ', noResults: '該当するサービス・ページはありません。', close: '閉じる', home: '全サービス', pricing: '料金', support: 'お問い合わせ' },
+  'zh-CN': { open: '查找服务', shortcut: 'Ctrl K', label: '快速导航', hint: '搜索服务与页面', placeholder: '搜索产品、API 或页面…', services: '产品', pages: '页面', noResults: '没有匹配的产品或页面。', close: '关闭', home: '全部产品', pricing: '价格', support: '联系我们' },
 } as const;
+function productInfo(slug: NavSlug): { name: string; role: string } {
+  return slug === 'mock' ? { name: 'Mock API', role: 'Configurable mock HTTP endpoints' } : SERVICE_INFO[slug];
+}
 
 export default function QuickNavigator() {
   const { locale, localizedHref } = useI18n();
@@ -41,7 +46,7 @@ export default function QuickNavigator() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const normalized = query.trim().toLocaleLowerCase();
   const products = useMemo(() => PRODUCT_SLUGS.filter(slug => {
-    const info = SERVICE_INFO[slug];
+    const info = productInfo(slug);
     return !normalized || `${slug} ${info.name} ${info.role} ${SEARCH_WORDS[slug]}`.toLocaleLowerCase().includes(normalized);
   }), [normalized]);
   const pages = [
@@ -55,7 +60,12 @@ export default function QuickNavigator() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault(); setOpen(previous => !previous); return;
       }
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(previous => {
+          if (previous) triggerRef.current?.focus();
+          return false;
+        });
+      }
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -80,11 +90,11 @@ export default function QuickNavigator() {
         <div className="picoQuickHead"><label htmlFor="pico-quick-input">{t.hint}</label><button type="button" className="picoQuickClose" onClick={close} aria-label={t.close}>✕</button></div>
         <input id="pico-quick-input" ref={inputRef} type="search" autoComplete="off" value={query} onChange={event => setQuery(event.target.value)} placeholder={t.placeholder} aria-label={t.hint} />
         <div className="picoQuickResults" aria-live="polite">
-          {products.length > 0 && <div className="picoQuickGroup"><h3>{t.services}</h3>{products.map(slug => <a key={slug} href={localizedHref(`/${slug}`)} onClick={() => setOpen(false)}><span className="picoQuickInitial" aria-hidden="true">{SERVICE_INFO[slug].name.slice(0, 1)}</span><span className="picoQuickDescription"><strong>{SERVICE_INFO[slug].name}</strong><small>{SERVICE_INFO[slug].role}</small></span><span aria-hidden="true">↗</span></a>)}</div>}
+          {products.length > 0 && <div className="picoQuickGroup"><h3>{t.services}</h3>{products.map(slug => <a key={slug} href={localizedHref(`/${slug}`)} onClick={() => setOpen(false)}><span className="picoQuickInitial" aria-hidden="true">{productInfo(slug).name.slice(0, 1)}</span><span className="picoQuickDescription"><strong>{productInfo(slug).name}</strong><small>{productInfo(slug).role}</small></span><span aria-hidden="true">↗</span></a>)}</div>}
           {pages.length > 0 && <div className="picoQuickGroup"><h3>{t.pages}</h3>{pages.map(page => <a key={page.path} href={localizedHref(page.path)} onClick={() => setOpen(false)}><span className="picoQuickInitial" aria-hidden="true">↗</span><span className="picoQuickDescription"><strong>{page.name}</strong></span><span aria-hidden="true">↗</span></a>)}</div>}
           {!products.length && !pages.length && <p className="picoQuickEmpty">{t.noResults}</p>}
         </div>
-        <div className="picoQuickBottom"><span>↑ ↓ · Tab</span><span>Esc · {t.close}</span></div>
+        <div className="picoQuickBottom"><span>Tab · ↵</span><span>Esc · {t.close}</span></div>
       </section>
     </div>}
   </>;
