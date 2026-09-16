@@ -3,10 +3,12 @@ export const GENERIC_SERVICE_SLUGS = [
   'license', 'flags', 'monitor', 'forms',
 ] as const;
 
-export type GenericServiceSlug = typeof GENERIC_SERVICE_SLUGS[number];
+// Hooks has its own dedicated route and must not be duplicated in the generic static export.
+export type GenericServiceSlug = typeof GENERIC_SERVICE_SLUGS[number] | 'hooks';
 
 export const SERVICE_INFO: Record<GenericServiceSlug, { name: string; role: string }> = {
   mcp: { name: 'MCP', role: 'Edge-first MCP hosting / Remote conversion' },
+  hooks: { name: 'Hooks', role: 'Webhook inbox / replay' },
   rss: { name: 'RSS', role: 'Web page change → RSS' },
   mail: { name: 'Mail', role: 'Inbound email → webhook relay' },
   shot: { name: 'Shot', role: 'Browser screenshot / PDF capture' },
@@ -22,6 +24,6 @@ export const SERVICE_INFO: Record<GenericServiceSlug, { name: string; role: stri
   forms: { name: 'Forms', role: 'Simple form submission backend' },
 };
 
-export function isGenericServiceSlug(value: string): value is GenericServiceSlug {
+export function isGenericServiceSlug(value: string): value is typeof GENERIC_SERVICE_SLUGS[number] {
   return (GENERIC_SERVICE_SLUGS as readonly string[]).includes(value);
 }
