@@ -1,5 +1,11 @@
 import legacyEntry, { Sandbox } from './entry.js';
 import { rssRuntimeRoute, runScheduledServices } from './picosvc/automation-services.js';
+import {
+  picoSvcEmailGuardrails,
+  picoSvcPostResponseGuardrails,
+  picoSvcRuntimeGuardrails,
+  picoSvcScheduledGuardrails,
+} from './picosvc/cost-guardrails.js';
 import { dataRuntimeRoute } from './picosvc/data-services.js';
 import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
@@ -52,6 +58,9 @@ export default {
       return Response.redirect('https://picosvc.com/', 302);
     }
 
+    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env);
+    if (guardrailResponse) return guardrailResponse;
+
     for (const handler of [
       hooksRuntimeRoute,
       mockRuntimeRoute,
@@ -61,7 +70,10 @@ export default {
       rssRuntimeRoute,
     ]) {
       const response = await handler(request, env);
-      if (response) return response;
+      if (response) {
+        await picoSvcPostResponseGuardrails(request, env, response);
+        return response;
+      }
     }
 
     if (url.pathname.startsWith('/api/picosvc/')) {
@@ -80,10 +92,22 @@ export default {
   },
 
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runScheduledServices(env, new Date(controller.scheduledTime)));
+    ctx.waitUntil((async () => {
+      try {
+        await runScheduledServices(env, new Date(controller.scheduledTime));
+      } finally {
+        await picoSvcScheduledGuardrails(env);
+      }
+    })());
   },
 
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(handleIncomingEmail(message, env));
+    ctx.waitUntil((async () => {
+      try {
+        await handleIncomingEmail(message, env);
+      } finally {
+        await picoSvcEmailGuardrails(message, env);
+      }
+    })());
   },
 };
