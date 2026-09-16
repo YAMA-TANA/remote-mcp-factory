@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { LanguageSwitcher, useI18n } from './i18n';
 import { PICOSVC_PRICING } from './pricing-data';
+import { matchesServiceSearch, normalizeServiceSearch } from './service-search';
 import ServiceIcon from './components/ServiceIcon';
+import './home-discovery.css';
 
 type Category = 'all' | 'build' | 'connect' | 'automate' | 'data' | 'delivery';
 
@@ -33,7 +35,7 @@ const COPY = {
     lede: 'Build, connect, automate and ship with focused developer services. Manage everything from one PicoSvc account, with individual plans or optional bundles.',
     explore: 'Explore the services', pricingLink: 'View pricing', account: 'One account', productCount: '16 focused services', plans: 'Start with a free allowance where available',
     directory: 'PRODUCT DIRECTORY', choose: 'Find the tool for your next project.', directoryNote: 'Search by name or use a category to narrow down the suite.',
-    search: 'Search services, e.g. webhook or JSON', clear: 'Clear search', matching: 'services found', noResults: 'No matching services. Try another keyword or category.',
+    search: 'Search services, e.g. webhook or JSON', clear: 'Clear search', matching: 'services found', noResults: 'No matching services. Try another keyword or category.', reset: 'Show all services',
     open: 'Open workspace →', available: 'Free allowance varies by service',
     pricing: 'A plan for the way you build.', pricingNote: 'Each product has its own quota. Choose just one, or combine services with a bundle.',
     standalone: 'Individual services', standaloneBody: 'Upgrade only the service you use, without buying the entire suite.',
@@ -47,7 +49,7 @@ const COPY = {
     lede: '開発・連携・自動化・配信を、必要なサービスだけで。アカウントはPicoSvcひとつ。単品プランとBundleを用途に応じて選べます。',
     explore: 'サービスを探す', pricingLink: '料金を見る', account: '共通アカウント', productCount: '16の開発者向けサービス', plans: '無料枠のある製品から試せる',
     directory: 'サービス一覧', choose: '作りたいものから、探せる。', directoryNote: '名前で検索するか、カテゴリで絞り込んでください。',
-    search: 'サービスを検索（例：Webhook、JSON）', clear: '検索を消去', matching: '件のサービス', noResults: '該当するサービスがありません。検索語かカテゴリを変更してください。',
+    search: 'サービスを検索（例：Webhook、JSON）', clear: '検索を消去', matching: '件のサービス', noResults: '該当するサービスがありません。検索語かカテゴリを変更してください。', reset: 'すべてのサービスを表示',
     open: '管理画面を開く →', available: '無料枠はサービスごとに異なります',
     pricing: '使い方に合わせた料金。', pricingNote: '利用上限は製品ごとに独立。単品でも、複数まとめても利用できます。',
     standalone: '単品プラン', standaloneBody: '必要なサービスだけをアップグレード。使わないサービスの料金は不要です。',
@@ -61,7 +63,7 @@ const COPY = {
     lede: '开发、连接、自动化和交付，只选择需要的服务。使用一个 PicoSvc 账号，可单独订阅或选购 Bundle。',
     explore: '浏览服务', pricingLink: '查看价格', account: '统一账号', productCount: '16 项开发者服务', plans: '有免费额度的产品可先试用',
     directory: '服务目录', choose: '找到下一项目需要的工具。', directoryNote: '搜索服务名称，或按类别筛选。',
-    search: '搜索服务，如 Webhook 或 JSON', clear: '清空搜索', matching: '项服务', noResults: '没有匹配的服务。请更换关键词或类别。',
+    search: '搜索服务，如 Webhook 或 JSON', clear: '清空搜索', matching: '项服务', noResults: '没有匹配的服务。请更换关键词或类别。', reset: '显示所有服务',
     open: '打开工作台 →', available: '免费额度因服务而异',
     pricing: '按需选择方案。', pricingNote: '每个产品的配额独立。可以单独订阅，也可以购买 Bundle。',
     standalone: '单项服务', standaloneBody: '只升级需要的服务，无需购买整套产品。',
@@ -78,11 +80,12 @@ export default function HomeV2() {
   const c = messages.common;
   const [category, setCategory] = useState<Category>('all');
   const [query, setQuery] = useState('');
-  const normalized = query.trim().toLocaleLowerCase();
-  const visible = PRODUCTS.filter(([slug, name, group, , en, ja, zh]) =>
-    (category === 'all' || category === group) &&
-    (!normalized || [slug, name, en, ja, zh, t.categories[group]].some(value => value.toLocaleLowerCase().includes(normalized))),
+  const normalized = normalizeServiceSearch(query);
+  const searchMatches = PRODUCTS.filter(([slug, name, group, , en, ja, zh]) =>
+    matchesServiceSearch(slug, normalized, name, en, ja, zh, t.categories[group]),
   );
+  const visible = searchMatches.filter(([, , group]) => category === 'all' || category === group);
+  function resetDiscovery() { setQuery(''); setCategory('all'); }
 
   return (
     <main className="homePage">
@@ -103,14 +106,17 @@ export default function HomeV2() {
         <div className="sectionHead"><div><span className="kicker">{t.directory}</span><h2 id="home-products-title">{t.choose}</h2><p>{t.directoryNote}</p></div></div>
         <div className="homeDiscover">
           <div className="homeSearchWrap"><label htmlFor="home-product-search" className="srOnly">{t.search}</label><input id="home-product-search" className="homeSearch" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={t.search} />{query && <button className="homeSearchClear" type="button" onClick={() => setQuery('')} aria-label={t.clear}>×</button>}</div>
-          <div className="homeFilters" role="group" aria-label={t.directory}>{CATEGORY_IDS.map(id => <button type="button" key={id} className="homeFilter" aria-pressed={category === id} onClick={() => setCategory(id)}>{t.categories[id]}</button>)}</div>
+          <div className="homeFilters" role="group" aria-label={t.directory}>{CATEGORY_IDS.map(id => {
+            const count = id === 'all' ? searchMatches.length : searchMatches.filter(([, , group]) => group === id).length;
+            return <button type="button" key={id} className="homeFilter" aria-pressed={category === id} onClick={() => setCategory(id)}>{t.categories[id]} <span className="homeFilterCount">{count}</span></button>;
+          })}</div>
           <p className="homeResults" role="status" aria-live="polite">{visible.length} {t.matching}</p>
         </div>
-        {visible.length === 0 ? <div className="homeEmpty">{t.noResults}</div> :
+        {visible.length === 0 ? <div className="homeEmpty" role="status"><p>{t.noResults}</p><button type="button" className="secondary homeReset" onClick={resetDiscovery}>{t.reset} →</button></div> :
           <div className="homeProducts">{visible.map(([slug, name, group, , en, ja, zh]) => <article className="deployment homeProduct" key={slug}>
             <div className="homeProductTop"><span className="homeProductIcon" aria-hidden="true"><ServiceIcon name={slug} size={54} /></span><span className="homeProductCategory">{t.categories[group]}</span></div>
-            <h3>PicoSvc {name}</h3><p>{locale === 'ja' ? ja : locale === 'zh-CN' ? zh : en}</p>
-            <div className="homeProductFooter"><span>{t.available}</span><a href={localizedHref(`/${slug}`)} aria-label={`${name} — ${t.open}`}>{t.open}</a></div>
+            <h3><a className="homeProductTitleLink" href={localizedHref(`/${slug}`)} aria-label={`${name} — ${t.open}`}>PicoSvc {name}</a></h3><p>{locale === 'ja' ? ja : locale === 'zh-CN' ? zh : en}</p>
+            <div className="homeProductFooter"><span>{t.available}</span><span className="homeProductAction" aria-hidden="true">{t.open}</span></div>
           </article>)}</div>}
       </section>
 
