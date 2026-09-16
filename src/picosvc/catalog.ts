@@ -94,9 +94,9 @@ export const PICOSVC_BUNDLES: PicoSvcBundleDefinition[] = [
 // marginal Cloudflare cost of the implementation. See docs/PRICING_BENCHMARKS.md.
 export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
   product({ slug: 'mcp', name: 'PicoSvc MCP', role: 'MCP hosting / stdio-to-Remote conversion', status: 'active', endpointHost: 'mcp.picosvc.com', tiers: tiers(
-    { mcps: 1, requests: 5_000, builds: 20 },
-    { mcps: 5, requests: 250_000, builds: 200 },
-    { mcps: 25, requests: 1_000_000, builds: 1_000 },
+    { mcps: 1, sandboxMcps: 0, requests: 5_000, builds: 20 },
+    { mcps: 5, sandboxMcps: 0, requests: 250_000, builds: 200 },
+    { mcps: 25, sandboxMcps: 2, requests: 1_000_000, builds: 1_000 },
   ) }),
   product({ slug: 'mock', name: 'PicoSvc Mock', role: 'Mock API', status: 'active', endpointHost: 'mock.picosvc.com', tiers: tiers(
     { endpoints: 1, requests: 1_500 },
