@@ -1,11 +1,12 @@
 export const GENERIC_SERVICE_SLUGS = [
-  'rss', 'mail', 'shot', 'fetch', 'qr', 'cron', 'functions', 'json', 'files',
+  'mcp', 'rss', 'mail', 'shot', 'fetch', 'qr', 'cron', 'functions', 'json', 'files',
   'license', 'flags', 'monitor', 'forms',
 ] as const;
 
 export type GenericServiceSlug = typeof GENERIC_SERVICE_SLUGS[number];
 
 export const SERVICE_INFO: Record<GenericServiceSlug, { name: string; role: string }> = {
+  mcp: { name: 'MCP', role: 'MCP hosting / Remote conversion' },
   rss: { name: 'RSS', role: 'Web → RSS feeds' },
   mail: { name: 'Mail', role: 'Email → Webhook' },
   shot: { name: 'Shot', role: 'Screenshot / PDF' },
