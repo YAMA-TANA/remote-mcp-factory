@@ -25,6 +25,7 @@ jobs:
       - run: node --experimental-strip-types scripts/test-picosvc-services.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-utility-advanced.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-shot-quality.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-onboarding.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-json-advanced.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-license-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-files-access.mjs
