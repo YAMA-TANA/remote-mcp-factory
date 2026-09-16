@@ -7,8 +7,13 @@ import {
   PICOSVC_PRODUCTS,
   type PicoSvcProductSlug,
 } from './catalog.js';
+import { automationManagementRoutes } from './automation-services.js';
+import { dataManagementRoutes } from './data-services.js';
+import { functionManagementRoutes } from './functions-service.js';
 import { hooksManagementRoutes } from './hooks.js';
+import { mailManagementRoutes } from './mail-service.js';
 import { mockManagementRoutes } from './mock.js';
+import { utilityManagementRoutes } from './utility-services.js';
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -21,11 +26,18 @@ function monthKey(now = new Date()): string {
 export async function picoSvcRoutes(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
 
-  const hooksResponse = await hooksManagementRoutes(request, env);
-  if (hooksResponse) return hooksResponse;
-
-  const mockResponse = await mockManagementRoutes(request, env);
-  if (mockResponse) return mockResponse;
+  for (const handler of [
+    hooksManagementRoutes,
+    mockManagementRoutes,
+    utilityManagementRoutes,
+    dataManagementRoutes,
+    functionManagementRoutes,
+    automationManagementRoutes,
+    mailManagementRoutes,
+  ]) {
+    const response = await handler(request, env);
+    if (response) return response;
+  }
 
   if (request.method === 'GET' && url.pathname === '/api/picosvc/catalog') {
     return json({
