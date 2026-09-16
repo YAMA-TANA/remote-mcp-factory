@@ -1,6 +1,7 @@
 import legacyEntry, { Sandbox } from './entry.js';
 import { rssRuntimeRoute, runScheduledServices } from './picosvc/automation-services.js';
 import { configRuntimeRoute } from './picosvc/config-service.js';
+import { runAdvancedCronJobs } from './picosvc/cron-advanced.js';
 import {
   picoSvcEmailGuardrails,
   picoSvcPostResponseGuardrails,
@@ -57,7 +58,6 @@ export default {
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
       return Response.redirect('https://picosvc.com/', 302);
     }
-    // File access must be verified before a download is charged or the legacy public handler runs.
     const filesResponse = await filesAccessRuntimeRoute(request, env);
     if (filesResponse) return filesResponse;
     const guardrailResponse = await picoSvcRuntimeGuardrails(request, env)
@@ -106,6 +106,7 @@ export default {
     ctx.waitUntil((async () => {
       try {
         await runScheduledServices(env, new Date(controller.scheduledTime));
+        await runAdvancedCronJobs(env, new Date(controller.scheduledTime));
         await runMailRetries(env);
       } finally {
         await pruneMailR2Owners(env);
