@@ -1,0 +1,59 @@
+/* Customer-facing responsive overrides. Keep workspaces visible without a full-height marketing header. */
+.customerWorkspaceShell {
+  min-height: 0;
+  color: #e7f5ed;
+  background: #0c1411;
+  overflow-wrap: anywhere;
+}
+.customerWorkspaceShell * { box-sizing: border-box; }
+.customerWorkspaceShell .customerNav { border-bottom-color: rgba(152, 212, 170, .24); }
+.customerNavLinks a, .customerDashboardCardLinks a, .customerDocsGrid article > a,
+.customerActions > a, .customerBottom > a, .customerInline {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 4px;
+  line-height: 1.35;
+}
+.customerNavLinks a { border-radius: 8px; }
+.customerNavLinks a:hover, .customerNavLinks a:focus-visible { background: rgba(171, 243, 188, .1); }
+.customerDashboardCardLinks a {
+  border-radius: 10px;
+  border: 1px solid rgba(166, 226, 179, .27);
+  padding: 9px 12px;
+}
+.customerDashboardCardLinks a:first-child { background: #254b2e; color: #e8ffec; }
+.customerDocsGrid article > a { justify-content: flex-start; }
+.customerHero > div { min-width: 0; flex: 1; }
+.customerHero h1 { overflow-wrap: anywhere; }
+.customerUrlBox a { display: inline-flex; align-items: center; min-height: 40px; }
+.customerPage .customerPrimary, .customerDocs .customerPrimary { min-height: 46px; }
+.customerCode { max-width: 100%; overscroll-behavior-x: contain; }
+@media (max-width: 580px) {
+  .customerWorkspaceShell .customerNav { flex-direction: column; align-items: stretch; padding: 10px 16px 12px; gap: 5px; }
+  .customerWorkspaceShell .customerBrand { align-self: flex-start; }
+  .customerWorkspaceShell .customerNavLinks, .customerPage .customerNavLinks,
+  .customerDocs .customerNavLinks, .customerDashboard .customerNavLinks { width: 100%; gap: 4px 8px; }
+  .customerNavLinks a { padding: 10px 8px; min-width: 0; }
+  .customerHero { padding: 18px 16px; border-radius: 17px; }
+  .customerHero > img { width: 44px; height: 44px; }
+  .customerHero h1 { margin: 4px 0 7px; font-size: clamp(1.6rem, 8vw, 2.1rem); }
+  .customerHero p { line-height: 1.55; }
+  .customerEyebrow { letter-spacing: .07em; font-size: .68rem; }
+  .customerHero .customerActions { margin-top: 14px; gap: 3px; }
+  .customerHero .customerPrimary { padding: 10px 15px; }
+  .customerDashboardCardLinks { gap: 8px; }
+  .customerDashboardCardLinks a { flex: 1 1 auto; }
+  .customerUrlBox > div { padding: 12px; }
+  .customerSection h2 { line-height: 1.35; }
+  .customerCode { padding: 14px 12px; font-size: .8rem; }
+}
+@media (max-width: 350px) {
+  .customerHero { flex-direction: column; }
+  .customerHero > img { width: 48px; height: 48px; }
+  .customerNavLinks a { font-size: .79rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customerPage *, .customerDocs *, .customerDashboard *, .customerWorkspaceShell * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
