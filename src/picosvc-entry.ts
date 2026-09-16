@@ -16,6 +16,7 @@ import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
+import { utilityAdvancedRuntimeRoute } from './picosvc/utility-advanced.js';
 import { qrRuntimeRoute } from './picosvc/utility-services.js';
 import type { Env } from './types.js';
 
@@ -77,6 +78,7 @@ export default {
       hooksRuntimeRoute,
       mockAdvancedRuntimeRoute,
       mockRuntimeRoute,
+      utilityAdvancedRuntimeRoute,
       qrRuntimeRoute,
       configRuntimeRoute,
       dataRuntimeRoute,
