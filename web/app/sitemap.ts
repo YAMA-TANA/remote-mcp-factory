@@ -1,42 +1,32 @@
 import type { MetadataRoute } from 'next';
 import { LOCALES, localeToSlug, type Locale } from './i18n-data';
+import { CUSTOMER_SLUGS } from './customer-content';
 import { GENERIC_SERVICE_SLUGS } from './service-data';
 import { localizedUrl, SITE_URL, type PageKind } from './seo';
 
 export const dynamic = 'force-static';
-
 const PAGES: PageKind[] = ['home', 'mock', 'hooks', 'pricing', 'contact', 'terms', 'privacy', 'tokushoho'];
-
-function serviceUrl(locale: Locale, service: string) {
-  return `${SITE_URL}/${localeToSlug(locale)}/${service}/`;
-}
-
+function serviceUrl(locale: Locale, service: string) { return `${SITE_URL}/${localeToSlug(locale)}/${service}/`; }
+function docsUrl(locale: Locale, service?: string) { return `${SITE_URL}/${localeToSlug(locale)}/docs/${service ? `${service}/` : ''}`; }
 export default function sitemap(): MetadataRoute.Sitemap {
-  const standard = PAGES.flatMap((kind) => LOCALES.map((locale: Locale) => ({
+  const standard = PAGES.flatMap(kind => LOCALES.map((locale: Locale) => ({
     url: localizedUrl(locale, kind),
     changeFrequency: kind === 'home' || kind === 'mock' || kind === 'hooks' || kind === 'pricing' ? 'weekly' as const : 'monthly' as const,
     priority: kind === 'home' ? 1 : kind === 'mock' || kind === 'hooks' || kind === 'pricing' ? 0.9 : 0.5,
-    alternates: {
-      languages: {
-        en: localizedUrl('en', kind),
-        ja: localizedUrl('ja', kind),
-        'zh-CN': localizedUrl('zh-CN', kind),
-      },
-    },
+    alternates: { languages: { en: localizedUrl('en', kind), ja: localizedUrl('ja', kind), 'zh-CN': localizedUrl('zh-CN', kind) } },
   })));
-
-  const services = GENERIC_SERVICE_SLUGS.flatMap((service) => LOCALES.map((locale: Locale) => ({
-    url: serviceUrl(locale, service),
-    changeFrequency: 'weekly' as const,
-    priority: 0.85,
-    alternates: {
-      languages: {
-        en: serviceUrl('en', service),
-        ja: serviceUrl('ja', service),
-        'zh-CN': serviceUrl('zh-CN', service),
-      },
-    },
+  const services = GENERIC_SERVICE_SLUGS.flatMap(service => LOCALES.map((locale: Locale) => ({
+    url: serviceUrl(locale, service), changeFrequency: 'weekly' as const, priority: 0.85,
+    alternates: { languages: { en: serviceUrl('en', service), ja: serviceUrl('ja', service), 'zh-CN': serviceUrl('zh-CN', service) } },
   })));
-
-  return [...standard, ...services];
+  const customerDocs = CUSTOMER_SLUGS.flatMap(service => LOCALES.map((locale: Locale) => ({
+    url: docsUrl(locale, service), changeFrequency: 'monthly' as const, priority: 0.68,
+    alternates: { languages: { en: docsUrl('en', service), ja: docsUrl('ja', service), 'zh-CN': docsUrl('zh-CN', service) } },
+  })));
+  const docsIndexes = LOCALES.map((locale: Locale) => ({
+    url: docsUrl(locale), changeFrequency: 'weekly' as const, priority: 0.75,
+    alternates: { languages: { en: docsUrl('en'), ja: docsUrl('ja'), 'zh-CN': docsUrl('zh-CN') } },
+  }));
+  // Account dashboards and authenticated workspaces are deliberately excluded.
+  return [...standard, ...services, ...docsIndexes, ...customerDocs];
 }
