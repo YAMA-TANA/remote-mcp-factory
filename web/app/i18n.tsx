@@ -35,6 +35,10 @@ function normalizePath(path: string): string {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
+function isLegacyLocalizedPage(pathname: string): boolean {
+  return /^\/(?:mock|contact|terms|privacy|tokushoho)?\/?$/.test(pathname);
+}
+
 export function LocaleProvider({
   children,
   initialLocale,
@@ -54,6 +58,14 @@ export function LocaleProvider({
     document.documentElement.lang = locale;
     window.localStorage.setItem('picosvc_locale', locale);
   }, [locale]);
+
+  useEffect(() => {
+    if (routed || initialLocale) return;
+    const pathname = window.location.pathname;
+    if (/^\/(en|ja|zh-cn)(\/|$)/.test(pathname) || !isLegacyLocalizedPage(pathname)) return;
+    const suffix = pathname === '/' ? '/' : pathname;
+    window.location.replace(`/${localeToSlug(locale)}${suffix}${window.location.search}${window.location.hash}`);
+  }, [locale, routed, initialLocale]);
 
   function localizedHref(path: string): string {
     const normalized = normalizePath(path);
