@@ -3,6 +3,7 @@ import { cleanName, consumeUsage, json, requireIdentity, resourceCapacity } from
 import { randomPublicId } from './security.js';
 
 const MAX_CODE_BYTES = 64 * 1024;
+const MAX_FUNCTION_WALL_MS = 5_000;
 
 function publicFunctionUrl(origin: string, publicId: string): string {
   return `${origin}/fn/${publicId}`;
@@ -88,11 +89,18 @@ export async function functionRuntimeRoute(request: Request, env: Env): Promise<
   target.pathname = `/${match[2] || ''}`;
   const headers = new Headers(request.headers);
   headers.delete('host'); headers.delete('cf-connecting-ip'); headers.delete('cf-ray');
-  const init: RequestInit = { method: request.method, headers, redirect: 'manual' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MAX_FUNCTION_WALL_MS);
+  const init: RequestInit = { method: request.method, headers, redirect: 'manual', signal: controller.signal };
   if (request.method !== 'GET' && request.method !== 'HEAD') init.body = request.body;
   try {
     return await stub.getEntrypoint().fetch(new Request(target.toString(), init));
   } catch (error) {
+    if (controller.signal.aborted) {
+      return json({ error: 'Function execution timed out', limitMs: MAX_FUNCTION_WALL_MS }, 504);
+    }
     return json({ error: 'Function execution failed', detail: error instanceof Error ? error.message : String(error) }, 502);
+  } finally {
+    clearTimeout(timer);
   }
 }
