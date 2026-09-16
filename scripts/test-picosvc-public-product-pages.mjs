@@ -36,6 +36,8 @@ for (const [locale, expected] of Object.entries(localeText)) {
     assert.ok(publicHtml.includes(competitor),`${locale}/${slug}: comparison source missing`);
     assert.ok(publicHtml.includes('noopener noreferrer'),`${locale}/${slug}: external links need noreferrer`);
     for (const phrase of expected) assert.ok(publicHtml.includes(phrase),`${locale}/${slug}: missing ${phrase}`);
+    assert.ok(appHtml.includes('customerWorkspaceShell'),`${locale}/${slug}: compact standalone workspace header missing`);
+    assert.ok(!appHtml.includes('<header class="customerPage"'),`${locale}/${slug}: app inherited full-height marketing page shell`);
     assert.ok(appHtml.includes(`/${locale}/${slug}/`),`${locale}/${slug}: app should link back to explainer`);
     assert.ok(appHtml.includes(`/${locale}/dashboard/`),`${locale}/${slug}: app should link to dashboard`);
     assert.ok(!appHtml.includes('customerUrlBox'),`${locale}/${slug}: app embeds full landing`);
@@ -55,4 +57,4 @@ for (const [locale, expected] of Object.entries(localeText)) {
   }
 }
 assert.equal(Object.keys(products).length,16);
-console.log('PicoSvc public/service docs OK: 48 independent explainers + 48 app pages + 48 how-tos, 3 doc indexes and 3 dashboards.');
+console.log('PicoSvc public/service docs OK: 48 independent explainers + 48 compact app pages + 48 how-tos, 3 doc indexes and 3 dashboards.');
