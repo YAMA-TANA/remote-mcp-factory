@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../service-dashboard';
+import '../../service-advanced.css';
 import { LOCALE_SLUGS, localeToSlug, slugToLocale } from '../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../service-data';
 import { SITE_URL } from '../../seo';
