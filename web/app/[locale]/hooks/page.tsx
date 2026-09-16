@@ -1,5 +1,5 @@
 import HooksPage from '../../hooks/page';
-import ProductLanding from '../../product-landing';
+import ProductLanding, { ProductIntro } from '../../product-landing';
 import { LOCALE_SLUGS, slugToLocale } from '../../i18n-data';
 import { localeMetadata, parseLocaleParam } from '../../seo';
 import { notFound } from 'next/navigation';
@@ -18,5 +18,5 @@ export default async function HooksProductPage({ params }: { params: Promise<{ l
   const { locale: localeSlug } = await params;
   const locale = slugToLocale(localeSlug);
   if (!locale) notFound();
-  return <><ProductLanding service="hooks" locale={locale} /><div id="workspace"><HooksPage /></div></>;
+  return <><ProductIntro service="hooks" locale={locale} /><div id="workspace"><HooksPage /></div><ProductLanding service="hooks" locale={locale} /></>;
 }
