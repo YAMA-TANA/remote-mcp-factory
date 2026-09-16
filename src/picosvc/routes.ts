@@ -28,6 +28,7 @@ import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
 import { monitorAdvancedManagementRoutes } from './monitor-advanced.js';
 import { picoSvcHealthRoute } from './platform-health.js';
+import { reliableOnboardingRoutes } from './reliable-onboarding.js';
 import { shotQualityManagementRoutes } from './shot-quality.js';
 import { utilityAdvancedManagementRoutes } from './utility-advanced.js';
 import { utilityManagementRoutes } from './utility-services.js';
@@ -47,6 +48,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     mcpObservabilityManagementRoutes,
     filesAccessManagementRoutes,
     formsAdvancedManagementRoutes,
+    reliableOnboardingRoutes,
     monitorAdvancedManagementRoutes,
     mailManualRetryGuard,
     mailAdvancedManagementRoutes,
