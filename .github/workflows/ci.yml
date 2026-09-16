@@ -21,3 +21,4 @@ jobs:
       - run: npm run typecheck
       - run: node --experimental-strip-types scripts/test-github-app-crypto.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-pricing.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-services.mjs
