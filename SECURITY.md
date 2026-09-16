@@ -1,35 +1,37 @@
-# Security model
+# PicoSvc security model / セキュリティ
 
-Remote MCP Factory intentionally executes third-party code. Treat every submitted repository as hostile.
+PicoSvc accepts user-controlled URLs, webhooks, files and (for MCP/Functions) code. Treat submitted repositories, code, input and remote responses as **untrusted**. This page distinguishes **source-level controls** from **production launch requirements**. No claim here means that every control has been tested successfully against the live Cloudflare environment.
 
-## Current boundaries
+For user-facing credential handling, read the [quickstart](docs/PICOSVC_QUICKSTART.md) and [API guide](docs/PICOSVC_API_GUIDE.md); for infrastructure and acceptance checks, read the [deployment runbook](docs/PICOSVC_DEPLOYMENT.md) and [launch handoff](docs/PICOSVC_LAUNCH_HANDOFF.md).
 
-- Each deployment gets its own Cloudflare Sandbox identity/process/filesystem.
-- The Worker control plane never `eval`s repository code.
-- Management APIs require a verified Clerk identity.
-- Deployment ownership is tied to the Clerk user or active Clerk Organization.
-- Protected MCP tokens are stored only as SHA-256 hashes.
-- MCP requests are rate-limited per server and per client identity.
-- Monthly quotas cap request/build consumption by owner.
-- GitHub URL and branch/subdirectory inputs are validated before shell use.
+## Controls implemented in the repository
 
-## Before public launch
+- The management plane uses verified Clerk identity; the active Clerk Organization (when set) otherwise the user is the resource owner. Other authentication mechanisms (GitHub OAuth callback, signed GitHub webhook, per-resource bearer tokens and Screenshot-scoped API keys) are **not interchangeable**.
+- Protected MCP tokens and other applicable service keys are stored as hashes; token values are displayed on creation/rotation and must be saved safely. MCP deployment environment secrets are AES-GCM encrypted at rest and management APIs return names, not plaintext values. Existing encrypted values depend on `DEPLOYMENT_SECRETS_KEY`.
+- Untrusted MCP source is built/run through isolated Cloudflare Sandbox execution; the Worker control plane must not execute arbitrary submitted repository code. Edge-compatible MCPs can use a Dynamic Worker runtime. Real MCP `initialize` and `tools/list` checks are part of the deployment implementation.
+- Product quotas and MCP rate limits limit resource use. Public access does **not** waive those limits or imply that a URL is private.
+- Shared outbound URL validation rejects many internal/private targets and revalidates redirects. Individual handlers also enforce request or output limits; for example, Fetch caps output at 2 MiB and supports a deadline. These are layered protections, **not proof of complete SSRF/DNS-rebinding resistance**.
+- `ALLOW_DEV_AUTH` is intended only for local development and must remain `false` in production.
 
-The following are launch blockers for an open signup service:
+Refer to [`src/picosvc/security.ts`](src/picosvc/security.ts), [`src/picosvc/fetch-reliable.ts`](src/picosvc/fetch-reliable.ts), [`src/picosvc/routes.ts`](src/picosvc/routes.ts), and the corresponding individual service handlers for behavior. A documented control may depend on a D1 migration, secret, binding or external provider configuration to work in production.
 
-1. Add egress controls or a documented outbound-network policy for Sandboxes.
-2. Add hard build time, process, disk, and memory limits.
-3. Add abuse controls for crypto-mining, scanners, spam, malware, and denial-of-wallet workloads.
-4. Add encrypted secret storage before allowing user-provided MCP environment variables.
-5. Add R2 snapshots with integrity/version metadata instead of trusting mutable rebuild state.
-6. Pin source commits for reproducible deployments and show the deployed SHA.
-7. Validate the MCP with `initialize` + `tools/list` before marking it ready.
-8. Add deletion/cleanup flows for Sandbox data and deployment records.
-9. Add audit logs for deploy, rebuild, token rotation, visibility change, and deletion.
-10. Keep `ALLOW_DEV_AUTH=false` in production.
+## Before opening public signup or claiming production readiness
 
-## Public vs Protected
+Verify and record evidence for the following; some may already have partial implementation but are **not marked complete merely by source inspection**:
 
-`public` means the MCP endpoint itself requires no bearer credential. It does not bypass platform quotas, server-level rate limits, or owner billing limits.
+1. Egress restrictions / outbound-network policy for both Sandboxes and Browser Run. Test controlled private-address, redirect and DNS-rebinding cases; do not probe third-party private services.
+2. Enforced build/run time, disk, memory, concurrency and provider spend limits. Configure alerts to reduce denial-of-wallet risk.
+3. Abuse protections for spam, mining, scanning, malware, excessive requests and provider-account exhaustion.
+4. Encryption-key handling and a tested rotation/recovery plan **before rotating** `DEPLOYMENT_SECRETS_KEY`; verify secrets never enter logs or frontend bundles.
+5. Reproducible/pinned builds, artifact integrity and R2 snapshot retention as needed; do not assume rebuilds of mutable branches reproduce identical code.
+6. End-to-end MCP Edge/Sandbox health and token rotation, source/branch pinning, deletion and orphaned resource cleanup.
+7. Auditable deploy/rebuild/secret change/token rotation/visibility/deletion events with sensitive values redacted.
+8. Per-product live tests for Email Routing, Screenshot, Fetch, Files access, Cron, billing/entitlements, Forms protection and other external dependencies.
+9. D1 backup/restore and migration compatibility; verify the **actual target DB** prior to applying migrations.
+10. Privacy, terms, acceptable-use, refund, support, incident-response and status procedures appropriate to the service.
 
-`token` means callers must provide the generated deployment token. Rotation invalidates the previous token immediately.
+The [launch handoff](docs/PICOSVC_LAUNCH_HANDOFF.md) is the operational acceptance checklist. CI passing and a healthy `/api/picosvc/health` alone do not satisfy it.
+
+## Reporting and handling credentials
+
+Do not include real tokens, private keys, request `Authorization` headers, mailbox contents or customer files in issue reports or screenshots. When filing a bug, provide a redacted request, sanitized response, HTTP status and `x-request-id` when present. Revoke/rotate credentials that have been exposed. Screenshot API keys are specific to Screenshot; do not put them in `NEXT_PUBLIC_` environment variables or reuse them for other products.
