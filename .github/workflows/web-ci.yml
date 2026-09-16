@@ -36,4 +36,20 @@ jobs:
         env:
           NEXT_PUBLIC_FACTORY_API_URL: https://factory.example.workers.dev
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
-      - run: test -f out/index.html
+      - name: Verify static export
+        run: |
+          test -f out/index.html
+          test -f out/en/index.html
+          test -f out/ja/index.html
+          test -f out/zh-cn/index.html
+          test -f out/en/mock/index.html
+          test -f out/ja/contact/index.html
+          test -f out/zh-cn/privacy/index.html
+          test -f out/sitemap.xml
+          test -f out/robots.txt
+          grep -q 'https://picosvc.com/ja/' out/ja/index.html
+          grep -qi 'hreflang="en"' out/ja/index.html
+          grep -qi 'hreflang="ja"' out/ja/index.html
+          grep -qi 'hreflang="zh-CN"' out/ja/index.html
+          grep -qi 'hreflang="x-default"' out/ja/index.html
+          grep -q 'https://picosvc.com/sitemap.xml' out/robots.txt
