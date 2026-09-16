@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title,
     description: descriptions[locale],
+    icons: { icon: `/icons/${service}.svg`, shortcut: `/icons/${service}.svg` },
     robots: { index: true, follow: true },
     alternates: {
       canonical,
