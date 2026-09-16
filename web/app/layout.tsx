@@ -16,7 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <LocaleProvider>
           {children}
-          <SiteFooter />
+          <SiteFooter legacyOnly />
         </LocaleProvider>
       </body>
     </html>
