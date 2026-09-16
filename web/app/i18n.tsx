@@ -36,7 +36,7 @@ function normalizePath(path: string): string {
 }
 
 function isLegacyLocalizedPage(pathname: string): boolean {
-  return /^\/(?:mock|contact|terms|privacy|tokushoho)?\/?$/.test(pathname);
+  return /^\/(?:mock|hooks|pricing|contact|terms|privacy|tokushoho)?\/?$/.test(pathname);
 }
 
 export function LocaleProvider({
