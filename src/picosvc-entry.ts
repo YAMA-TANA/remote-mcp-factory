@@ -1,7 +1,12 @@
 import legacyEntry, { Sandbox } from './entry.js';
+import { rssRuntimeRoute, runScheduledServices } from './picosvc/automation-services.js';
+import { dataRuntimeRoute } from './picosvc/data-services.js';
+import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
+import { handleIncomingEmail } from './picosvc/mail-service.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
+import { qrRuntimeRoute } from './picosvc/utility-services.js';
 import type { Env } from './types.js';
 
 export { Sandbox };
@@ -43,18 +48,21 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // The Worker origin used to expose the pre-PicoSvc Hobby/Pro/Team landing page.
-    // Redirect human-facing entry points to the canonical multilingual PicoSvc site so
-    // stale legacy pricing can never be presented to users.
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
       return Response.redirect('https://picosvc.com/', 302);
     }
 
-    const hooksResponse = await hooksRuntimeRoute(request, env);
-    if (hooksResponse) return hooksResponse;
-
-    const mockResponse = await mockRuntimeRoute(request, env);
-    if (mockResponse) return mockResponse;
+    for (const handler of [
+      hooksRuntimeRoute,
+      mockRuntimeRoute,
+      qrRuntimeRoute,
+      dataRuntimeRoute,
+      functionRuntimeRoute,
+      rssRuntimeRoute,
+    ]) {
+      const response = await handler(request, env);
+      if (response) return response;
+    }
 
     if (url.pathname.startsWith('/api/picosvc/')) {
       const origin = allowedOrigin(request, env);
@@ -69,5 +77,13 @@ export default {
     }
 
     return legacyEntry.fetch(request, env, ctx);
+  },
+
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runScheduledServices(env, new Date(controller.scheduledTime)));
+  },
+
+  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(handleIncomingEmail(message, env));
   },
 };

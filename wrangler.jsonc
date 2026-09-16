@@ -11,6 +11,14 @@
       "binding": "LOADER"
     }
   ],
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
   "containers": [
     {
       "class_name": "Sandbox",
@@ -63,6 +71,8 @@
   "vars": {
     "ALLOW_DEV_AUTH": "false",
     "SANDBOX_TRANSPORT": "rpc",
+    "CLERK_PICO_PLAN_SLUG": "pico",
+    "CLERK_PICOPLUS_PLAN_SLUG": "picoplus",
     "CLERK_PRO_PLAN_SLUG": "pro",
     "CLERK_TEAM_PLAN_SLUG": "team",
     "WEB_ORIGINS": "https://remote-mcp-factory.pages.dev,https://picosvc.com,https://app.picosvc.com"

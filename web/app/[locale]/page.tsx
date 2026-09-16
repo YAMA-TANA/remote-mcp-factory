@@ -1,4 +1,4 @@
-import Home from '../page';
+import HomeV2 from '../home-v2';
 import { localeMetadata, parseLocaleParam } from '../seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -6,4 +6,4 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return localeMetadata(parseLocaleParam(locale), 'home');
 }
 
-export default Home;
+export default HomeV2;

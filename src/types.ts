@@ -10,6 +10,10 @@ export interface RateLimiter {
   limit(options: { key: string }): Promise<{ success: boolean }>;
 }
 
+export interface BrowserRunBinding {
+  quickAction(action: string, options: Record<string, unknown>): Promise<Response>;
+}
+
 export interface DynamicWorkerLimits {
   cpuMs?: number;
   subRequests?: number;
@@ -53,6 +57,7 @@ export interface Env {
   DB: D1Database;
   ARTIFACTS?: R2Bucket;
   LOADER?: WorkerLoader;
+  BROWSER?: BrowserRunBinding;
   MCP_SERVER_RATE_LIMITER: RateLimiter;
   MCP_CLIENT_RATE_LIMITER: RateLimiter;
   CLERK_SECRET_KEY?: string;
