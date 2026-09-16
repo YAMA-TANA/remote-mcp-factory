@@ -32,7 +32,7 @@ type Product = { slug: string; name: string; status: 'active' | 'planned' };
 
 const PRODUCTS: Product[] = [
   { slug: 'mcp', name: 'MCP', status: 'active' }, { slug: 'mock', name: 'Mock', status: 'active' },
-  { slug: 'hooks', name: 'Hooks', status: 'planned' }, { slug: 'rss', name: 'RSS', status: 'planned' },
+  { slug: 'hooks', name: 'Hooks', status: 'active' }, { slug: 'rss', name: 'RSS', status: 'planned' },
   { slug: 'mail', name: 'Mail', status: 'planned' }, { slug: 'shot', name: 'Shot', status: 'planned' },
   { slug: 'fetch', name: 'Fetch', status: 'planned' }, { slug: 'qr', name: 'QR', status: 'planned' },
   { slug: 'cron', name: 'Cron', status: 'planned' }, { slug: 'functions', name: 'Functions', status: 'planned' },
@@ -60,7 +60,7 @@ function runtimeBadge(item: Deployment) {
 }
 
 export default function Home() {
-  const { messages } = useI18n();
+  const { messages, localizedHref } = useI18n();
   const t = messages.home;
   const c = messages.common;
   const [clerk, setClerk] = useState<Clerk | null>(null);
@@ -140,7 +140,7 @@ export default function Home() {
       <nav className="nav shell">
         <div className="brand"><span className="brandMark">P</span><span>PicoSvc</span></div>
         <div className="navRight">
-          <a href="#products">{c.products}</a><a href="/mock">{c.mock}</a><a href="/contact">{c.contact}</a>
+          <a href="#products">{c.products}</a><a href={localizedHref('/mock')}>{c.mock}</a><a href={localizedHref('/hooks')}>Hooks</a><a href={localizedHref('/contact')}>{c.contact}</a>
           <a href="https://github.com/YAMA-TANA/remote-mcp-factory" target="_blank" rel="noreferrer">{c.github}</a>
           <LanguageSwitcher />
           {signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>{c.signIn}</button>}
@@ -159,11 +159,12 @@ export default function Home() {
         <div className="deploymentGrid">
           {PRODUCTS.map((product) => {
             const copy = messages.products[product.slug];
+            const dashboard = product.slug === 'mock' ? localizedHref('/mock') : product.slug === 'hooks' ? localizedHref('/hooks') : null;
             return (
               <article className="deployment" key={product.slug}>
                 <div className="deploymentTop"><div><strong>PicoSvc {product.name}</strong><p>{copy.role}</p></div><span className={`status ${product.status === 'active' ? 'ready' : ''}`}>{product.status === 'active' ? t.available : t.planned}</span></div>
                 <div className="runtime"><span className={product.status === 'active' ? 'edgePill' : 'fallbackPill'}>{product.status === 'active' ? t.available : t.planned}</span><span>{copy.pricing}</span><span>{t.standalone}</span><span>{t.bundleEligible}</span></div>
-                <div className="deploymentBottom"><code>{product.slug}</code>{product.slug === 'mock' ? <a href="/mock">{t.openDashboard}</a> : <span>{t.sharedLoginBilling}</span>}</div>
+                <div className="deploymentBottom"><code>{product.slug}</code>{dashboard ? <a href={dashboard}>{t.openDashboard}</a> : <span>{t.sharedLoginBilling}</span>}</div>
               </article>
             );
           })}

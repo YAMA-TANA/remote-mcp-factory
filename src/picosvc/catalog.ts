@@ -59,9 +59,6 @@ export const PICOSVC_BILLING_MODEL = {
   bundlesSupported: true,
 };
 
-// Bundle checkout/pricing is intentionally not invented here. When a concrete bundle
-// is launched, add it to this catalog and have the billing adapter write the matching
-// bundle_entitlements rows.
 export const PICOSVC_BUNDLES: PicoSvcBundleDefinition[] = [];
 
 export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
@@ -93,7 +90,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     slug: 'hooks',
     name: 'PicoSvc Hooks',
     role: 'Webhook inbox / replay',
-    status: 'planned',
+    status: 'active',
     endpointHost: 'hooks.picosvc.com',
     tiers: {
       free: { priceUsdMonthly: 0, limits: { events: 500 } },
@@ -137,14 +134,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
       pro: { priceUsdMonthly: null, limits: { shots: 1_500 } },
     },
   }),
-  product({
-    slug: 'fetch',
-    name: 'PicoSvc Fetch',
-    role: 'URL to Markdown / metadata',
-    status: 'planned',
-    endpointHost: 'api.picosvc.com',
-    tiers: plannedTiers(),
-  }),
+  product({ slug: 'fetch', name: 'PicoSvc Fetch', role: 'URL to Markdown / metadata', status: 'planned', endpointHost: 'api.picosvc.com', tiers: plannedTiers() }),
   product({
     slug: 'qr',
     name: 'PicoSvc QR',

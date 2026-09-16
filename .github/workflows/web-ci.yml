@@ -43,13 +43,20 @@ jobs:
           test -f out/ja/index.html
           test -f out/zh-cn/index.html
           test -f out/en/mock/index.html
+          test -f out/en/hooks/index.html
+          test -f out/ja/hooks/index.html
+          test -f out/zh-cn/hooks/index.html
           test -f out/ja/contact/index.html
           test -f out/zh-cn/privacy/index.html
           test -f out/sitemap.xml
           test -f out/robots.txt
           grep -q 'https://picosvc.com/ja/' out/ja/index.html
-          grep -qi 'hreflang="en"' out/ja/index.html
-          grep -qi 'hreflang="ja"' out/ja/index.html
-          grep -qi 'hreflang="zh-CN"' out/ja/index.html
-          grep -qi 'hreflang="x-default"' out/ja/index.html
+          grep -q 'https://picosvc.com/ja/hooks/' out/ja/hooks/index.html
+          grep -qi 'hreflang="en"' out/ja/hooks/index.html
+          grep -qi 'hreflang="ja"' out/ja/hooks/index.html
+          grep -qi 'hreflang="zh-CN"' out/ja/hooks/index.html
+          grep -qi 'hreflang="x-default"' out/ja/hooks/index.html
+          grep -q 'https://picosvc.com/en/hooks/' out/sitemap.xml
+          grep -q 'https://picosvc.com/ja/hooks/' out/sitemap.xml
+          grep -q 'https://picosvc.com/zh-cn/hooks/' out/sitemap.xml
           grep -q 'https://picosvc.com/sitemap.xml' out/robots.txt
