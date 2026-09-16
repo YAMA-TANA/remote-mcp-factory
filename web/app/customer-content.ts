@@ -1,0 +1,218 @@
+import type { Locale } from './i18n-data';
+import type { GenericServiceSlug } from './service-data';
+
+export type ProductSlug = GenericServiceSlug | 'mock';
+export type LocalCopy = Record<Locale, string>;
+const t = (ja: string, en: string, zh: string): LocalCopy => ({ ja, en, 'zh-CN': zh });
+export type CustomerGuide = {
+  summary: LocalCopy;
+  who: LocalCopy;
+  input: LocalCopy;
+  output: LocalCopy;
+  prerequisite: LocalCopy;
+  example: LocalCopy;
+  limitation: LocalCopy;
+  steps: readonly [LocalCopy, LocalCopy, LocalCopy];
+  api: string;
+  competitor: { name: string; url: string; axis: LocalCopy; pico: LocalCopy; other: LocalCopy };
+};
+
+/** Customer prerequisites only. Provider provisioning, deployment and DNS belong in operator docs.
+ * Compare specific documented capabilities, not relative performance, price or vendor rankings.
+ * A code capability is not proof that a production installation is configured and working. */
+export const CUSTOMER_GUIDES: Record<ProductSlug, CustomerGuide> = {
+  mcp: {
+    summary: t('GitHubのMCPサーバーをリモート接続用のURLとして公開・管理します。','Deploy a GitHub MCP server as a remotely accessible endpoint.','将 GitHub 中的 MCP 服务器部署为远程端点。'),
+    who: t('自作MCPをAIクライアントから使いたい開発者。','Developers connecting their own MCP server to an AI client.','希望从 AI 客户端连接自建 MCP 的开发者。'),
+    input: t('GitHubリポジトリURL、ブランチ、公開／トークン保護の選択。','Repository URL, branch, and public or token-based access.','仓库 URL、分支及公开或令牌保护方式。'),
+    output: t('デプロイ結果、接続先URL、ビルド・実行状況。','Deployment result, connection URL, and build/runtime status.','部署结果、连接 URL 与构建／运行状态。'),
+    prerequisite: t('MCPサーバーのコードを置いたGitHubリポジトリ。非公開ならリポジトリへのアクセス許可。','A GitHub repository with MCP server code; access permission for private repositories.','包含 MCP 服务器代码的 GitHub 仓库；私有仓库需授权。'),
+    example: t('自分の検索MCPをGitHubから登録し、発行されたURLをAIクライアントに設定して接続確認する。','Register your search MCP from GitHub, then put its URL in your AI client and test the connection.','从 GitHub 部署搜索 MCP，将连接 URL 添加到 AI 客户端并测试。'),
+    limitation: t('対応していない依存関係・起動方式のサーバーはデプロイできません。接続テストが必要です。','Some dependencies or launch methods are unsupported; verify actual client connectivity.','部分依赖或启动方式不受支持；需测试真实连接。'),
+    steps: [t('リポジトリURLとアクセス方式を指定。','Enter a repository URL and access mode.','填写仓库 URL 和访问方式。'),t('ビルド結果と起動状態を確認。','Check build and startup status.','检查构建与启动状态。'),t('発行されたURLをMCPクライアントに登録。','Add the issued URL to an MCP client.','将 URL 添加到 MCP 客户端。')],
+    api: 'POST /api/servers',
+    competitor: { name:'Smithery',url:'https://smithery.ai/docs/build',axis:t('MCPの公開・配布方法','MCP publishing and distribution','MCP 发布与分发'),pico:t('GitHubのコードから接続先を作成し、管理画面で稼働状況を確認。','Deploy from GitHub source and check status in the workspace.','从 GitHub 源码部署，并在工作台检查状态。'),other:t('MCPの配布・発見・接続を扱う開発者向け資料を提供。','Documents MCP distribution, discovery, and connection workflows.','提供 MCP 分发、发现与连接的文档。') },
+  },
+  mock: {
+    summary:t('テスト専用URLを作り、決めたHTTPステータスと本文を返します。','Create test URLs returning a chosen HTTP status and response body.','创建返回指定 HTTP 状态码和正文的测试 URL。'),
+    who:t('本物のバックエンド完成前に画面を作る人。','Frontend developers waiting for a backend.','等待后端完成的前端开发者。'),
+    input:t('HTTPメソッド、パス、ステータス、Content-Type、応答本文。','HTTP method, path, status, Content-Type, and response body.','HTTP 方法、路径、状态码、Content-Type 和响应正文。'),
+    output:t('その設定どおりに応答する公開エンドポイントURL。','A public URL responding with the configured values.','按配置返回响应的公开 URL。'),
+    prerequisite:t('テストしたいAPIの応答例（JSONなど）を決めるだけです。','Decide on an example API response, such as JSON.','准备示例 API 响应，例如 JSON。'),
+    example:t('商品一覧APIが未完成でも、GET /products に固定JSONを設定して画面を作る。','Use fixed JSON at GET /products to build the UI before the products API exists.','真实商品 API 尚未完成时，用 GET /products 的固定 JSON 开发页面。'),
+    limitation:t('ユーザーごとに変化する本格的なDBや複雑な状態遷移を自動再現するものではありません。','It does not automatically emulate a database or complex stateful workflows.','不会自动模拟数据库或复杂的有状态流程。'),
+    steps:[t('返却パスとレスポンスを入力。','Set a path and response.','填写路径和响应。'),t('作成されたURLをブラウザーやcurlでテスト。','Test the generated URL in a browser or curl.','在浏览器或 curl 中测试 URL。'),t('開発アプリのAPI URLを置き換える。','Use it as the API URL in your development app.','将开发应用的 API 地址指向该 URL。')],
+    api:'POST /api/picosvc/mock/endpoints',
+    competitor:{name:'Mockoon Cloud',url:'https://mockoon.com/docs/latest/api-endpoints/http-routes/',axis:t('レスポンスの柔軟性','Response customization','响应定制'),pico:t('固定レスポンス、HTTPメソッド・ステータス・本文の編集、停止。','Fixed responses with editable method, status, body, and pause.','支持固定响应及方法、状态码、正文编辑和暂停。'),other:t('複数の応答・条件ルールなどを設定できるHTTPルートを文書化。','Documents HTTP routes with multiple responses and rules.','文档介绍支持多种响应及规则的 HTTP 路由。')},
+  },
+  hooks:{
+    summary:t('外部サービスから届くWebhookを一時受信し、内容確認・再送できます。','Receive, inspect, and replay webhooks from external services.','接收、检查并重放外部服务的 Webhook。'),
+    who:t('決済・Git連携などのWebhookをデバッグする開発者。','Developers debugging payment or Git webhooks.','调试支付或 Git Webhook 的开发者。'),
+    input:t('Inbox名。発行されたURLをWebhook送信元に登録します。','Inbox name; register the resulting URL with your webhook sender.','输入收件箱名称，并将生成的 URL 配置给发送方。'),
+    output:t('受信URL、イベント履歴、ヘッダー・本文、再送結果。','Receiving URL, event history, headers, body, and replay result.','接收 URL、事件历史、请求头、正文和重放结果。'),
+    prerequisite:t('Webhookを送信できるサービス。受信用サーバーは不要です。','A service that can send webhooks; no receiving server needed.','一个能发送 Webhook 的服务；无需自建接收服务器。'),
+    example:t('決済テストの通知先をInbox URLに設定し、届いたJSONを確認して修正後に再送する。','Point a test payment webhook to the inbox, inspect its JSON, then replay after fixing your handler.','将测试支付 Webhook 发到收件箱，检查 JSON 并在修复后重放。'),
+    limitation:t('決済の署名検証や本番Webhook処理の代行はしません。','It does not perform sender-signature verification or replace your production handler.','不会代替发送方签名验证或生产处理器。'),
+    steps:[t('Inboxを作って受信URLをコピー。','Create an inbox and copy its URL.','创建收件箱并复制 URL。'),t('送信元へURLを設定し、テストイベントを送信。','Register it with the sender and trigger a test event.','配置发送方并触发测试事件。'),t('受信履歴・本文を確認し、必要なら再送。','Inspect the event and replay it if needed.','查看记录与正文，必要时重放。')],
+    api:'POST /api/picosvc/hooks/inboxes',
+    competitor:{name:'Webhook.site',url:'https://docs.webhook.site/api/requests.html',axis:t('受信イベントの取り扱い','Captured-request workflow','捕获请求的工作流'),pico:t('Inbox単位で受信・履歴表示・指定先への再送。','Inbox-based capture, history, and replay to a URL.','按收件箱接收、查看历史并向目标重放。'),other:t('リクエストの一覧・詳細取得などのAPIを文書化。','Documents APIs to list and inspect captured requests.','文档介绍列出和查看已捕获请求的 API。')},
+  },
+  rss:{
+    summary:t('RSSがないニュース一覧ページから、RSS購読用URLを作ります。','Turn a public article listing into an RSS subscription URL.','将公开文章列表转成 RSS 订阅 URL。'),
+    who:t('更新情報をRSSリーダーで読みたい人。','People following site updates in an RSS reader.','想在 RSS 阅读器中跟踪更新的用户。'),
+    input:t('記事一覧の公開URL。必要に応じて記事・タイトル・リンク等のCSSセレクター。','A public article-list URL and optional CSS selectors for items, titles, and links.','公开文章列表 URL，可选文章、标题和链接 CSS 选择器。'),
+    output:t('RSSフィードURLと抽出プレビュー。','RSS feed URL and an extraction preview.','RSS 订阅 URL 和提取预览。'),
+    prerequisite:t('記事へのリンクが並んだ公開ページのURL。','A public listing page with article links.','包含文章链接的公开列表页面。'),
+    example:t('研究室のお知らせ一覧を登録し、生成したfeedUrlをRSSリーダーで購読する。','Register a lab news listing and subscribe to its feedUrl in an RSS reader.','登记研究室通知页面，在 RSS 阅读器订阅生成的 feedUrl。'),
+    limitation:t('ログインページやサイト側で取得を拒否するページ、複雑なJS描画には対応できない場合があります。','Login-only, blocking, or heavily JavaScript-rendered sites may not extract.','需要登录、阻止抓取或高度依赖 JS 的站点可能失败。'),
+    steps:[t('記事一覧のURLを入力。','Enter a listing URL.','输入列表 URL。'),t('抽出プレビューを確認し、必要ならセレクターを調整。','Preview extraction and adjust selectors if needed.','预览提取结果，必要时调整选择器。'),t('生成されたRSS URLをリーダーに登録。','Subscribe to the generated RSS URL.','在阅读器中订阅 RSS URL。')],
+    api:'POST /api/picosvc/rss/feeds',
+    competitor:{name:'PolitePol',url:'https://politepol.com/about',axis:t('記事の選択方法','Article selection','文章选择方式'),pico:t('URLとCSSセレクターを設定して記事を抽出。','Extract articles using a URL and CSS selectors.','使用 URL 和 CSS 选择器提取文章。'),other:t('視覚的な操作やXPathによる抽出を案内。','Documents visual selection and XPath-based extraction.','文档介绍可视化选择和 XPath 提取。')},
+  },
+  mail:{
+    summary:t('PicoSvcが発行したメールアドレス宛ての受信メールをWebhookへ送ります。','Forward incoming mail at a PicoSvc-issued address to a webhook.','将发送到 PicoSvc 提供地址的邮件转发至 Webhook。'),
+    who:t('問い合わせメールを自作アプリのイベントとして処理する開発者。','Developers processing inbound mail as app events.','将收到的邮件作为应用事件处理的开发者。'),
+    input:t('ルート名と受信通知を届けるWebhook URL。','Route name and a destination webhook URL.','路由名称及接收通知的 Webhook URL。'),
+    output:t('ランダムID@picosvc.com の受信アドレス、配信履歴、WebhookへのJSON。','An id@picosvc.com receiving address, delivery history, and JSON sent to your webhook.','id@picosvc.com 收件地址、投递记录和发送至 Webhook 的 JSON。'),
+    prerequisite:t('Webhookの送信先URLだけ。自分のドメイン・MXレコードは不要です。受信先がなければPicoSvc Hooksで作成できます。','Only a destination webhook URL; you do not need a domain or MX record. PicoSvc Hooks can provide a destination.','只需 Webhook 接收 URL，无需自己的域名或 MX 记录；可使用 PicoSvc Hooks。'),
+    example:t('HooksでInboxを作り、そのURLでMailルートを作成。発行されたメールアドレスにテストメールを送り、HooksでJSONを確認する。','Create a Hooks inbox, use its URL for a Mail route, send a test email to the issued address, then inspect the JSON in Hooks.','先创建 Hooks 收件箱，再创建 Mail 路由，向生成的邮箱发测试邮件，并在 Hooks 查看 JSON。'),
+    limitation:t('メールボックスや送信APIではありません。受信ドメインの運営者側設定と実配送テストが完了するまで、実際の受信は保証できません。','Not an inbox UI or sending API. Receiving remains unverified until operator setup and an end-to-end delivery test pass.','不是邮箱或发信 API；运营方完成接收配置与端到端测试前，不能保证真实收信。'),
+    steps:[t('Hooksで受信先を作るか既存Webhook URLを用意。','Create a Hooks destination or use an existing webhook.','创建 Hooks 接收端或使用现有 Webhook。'),t('Mailルートを作り、発行アドレスをコピー。','Create a Mail route and copy its address.','创建 Mail 路由并复制地址。'),t('テストメールを送信し、イベントと配信状態を確認。','Send a test email and check event and delivery status.','发送测试邮件并检查事件与投递状态。')],
+    api:'POST /api/picosvc/mail/routes',
+    competitor:{name:'Resend Receiving',url:'https://resend.com/docs/dashboard/receiving/introduction',axis:t('受信アドレスとメール処理','Receiving address and mail processing','收件地址与邮件处理'),pico:t('PicoSvc発行の宛先ごとにWebhookへ転送し、履歴を管理。','Issue a distinct address per route and relay to a webhook with history.','每条路由生成独立地址并转发至 Webhook，保留历史。'),other:t('提供ドメインまたは独自ドメインで受信し、メール内容・添付を扱うAPIを文書化。','Documents inbound mail on provided or custom domains, with content and attachment APIs.','文档介绍在提供或自定义域名收信及内容、附件 API。')},
+  },
+  shot:{
+    summary:t('公開WebページをPNG画像またはPDFに変換します。','Capture a public webpage as a PNG image or PDF.','将公开网页转成 PNG 图片或 PDF。'),
+    who:t('レビュー画像や定期レポートを自動生成する開発者。','Developers automating review screenshots and reports.','自动生成审核截图与报告的开发者。'),
+    input:t('ページURL、PNG/PDF形式、幅・高さ、待機条件。','Page URL, PNG/PDF format, dimensions, and wait settings.','页面 URL、PNG/PDF 格式、尺寸和等待条件。'),
+    output:t('ダウンロード可能なPNG/PDFバイナリ。','Downloadable PNG/PDF binary output.','可下载的 PNG/PDF 文件。'),
+    prerequisite:t('認証不要で表示できる撮影対象ページのURL。','A public URL that does not require sign-in.','无需登录即可打开的目标网页 URL。'),
+    example:t('公開済みWebサイトを幅1280pxで撮影し、PNGをデザインレビューに添付する。','Capture a public site at 1280px and attach the PNG to a design review.','以 1280px 宽度截图公开网站，并附在设计评审中。'),
+    limitation:t('ログイン必須ページやBot対策ページでは撮影できないことがあります。','Sign-in-only or bot-protected pages may not render.','需要登录或反爬保护的页面可能无法渲染。'),
+    steps:[t('撮影するURLを入力。','Enter a capture URL.','输入截图 URL。'),t('PNG/PDFと表示サイズを選んで撮影。','Choose PNG/PDF and dimensions, then capture.','选择 PNG/PDF 和尺寸并截图。'),t('ファイルを保存。定期利用は専用APIキーを発行。','Save the file; issue a scoped API key for automation.','保存文件；自动化时创建专用 API 密钥。')],
+    api:'POST /api/picosvc/shot',
+    competitor:{name:'Browserless',url:'https://docs.browserless.io/rest-apis/screenshot-api',axis:t('画像形式とブラウザー制御','Formats and browser controls','图片格式与浏览器控制'),pico:t('PNG/PDF、表示サイズ、待機セレクター等を指定。','PNG/PDF, dimensions, and wait selectors.','支持 PNG/PDF、尺寸和等待选择器。'),other:t('PNG/JPEG/WebPの撮影APIとブラウザー設定を文書化。','Documents PNG/JPEG/WebP screenshots and browser options.','文档介绍 PNG/JPEG/WebP 截图和浏览器设置。')},
+  },
+  fetch:{
+    summary:t('1つの公開ページからMarkdownまたはタイトル等の情報を抽出します。','Extract Markdown or metadata from one public webpage.','从单个公开网页提取 Markdown 或元数据。'),
+    who:t('記事要約やリンクプレビューを作る開発者。','Developers building article summaries or link previews.','制作文章摘要或链接预览的开发者。'),
+    input:t('公開URLと出力形式（markdown / metadata）。','Public URL and output format (markdown / metadata).','公开 URL 及输出格式（markdown / metadata）。'),
+    output:t('Markdown本文、またはタイトル・説明文などを含むJSON。','JSON containing Markdown or metadata such as title and description.','含 Markdown 正文或标题、描述等元数据的 JSON。'),
+    prerequisite:t('取得したい単一ページの公開URL。','The public URL of one page.','要提取的单个公开网页 URL。'),
+    example:t('イベント記事のURLをmetadata形式で取得して、アプリのカードにタイトルと説明文を表示する。','Fetch an event article as metadata and display its title and description in your app.','提取活动文章元数据，在应用卡片中显示标题与描述。'),
+    limitation:t('サイト全体のクローリング・検索・ログイン済みページの取得はできません。','No site-wide crawling, search, or authenticated-page extraction.','不支持全站爬取、搜索或已登录页面。'),
+    steps:[t('URLと出力形式を選択。','Choose a URL and output format.','选择 URL 与输出格式。'),t('抽出結果とエラーを確認。','Inspect output and possible errors.','检查结果或错误。'),t('JSON内のMarkdown・metadataをアプリで利用。','Use the Markdown or metadata fields in your app.','在应用中使用 JSON 内的 Markdown 或元数据。')],
+    api:'POST /api/picosvc/fetch',
+    competitor:{name:'Firecrawl',url:'https://docs.firecrawl.dev/api-reference/endpoint/scrape',axis:t('取得範囲と形式','Extraction scope and formats','提取范围与格式'),pico:t('1 URLをMarkdown・metadataの2形式で取得。','Extract one URL as Markdown or metadata.','将单个 URL 提取成 Markdown 或元数据。'),other:t('単一URLの抽出に加え、構造化JSON等の出力形式を文書化。','Documents single-page scraping with structured JSON extraction and other formats.','文档介绍单页抓取及结构化 JSON 等格式。')},
+  },
+  qr:{
+    summary:t('印刷後も飛び先を変更できるQRコードと短いリンクを作成します。','Create a QR code and short link whose destination can be changed later.','创建可随时修改目标地址的二维码与短链接。'),
+    who:t('チラシやイベント案内にQRを使う人。','People placing QR codes on flyers or event signage.','在传单或活动宣传中使用二维码的用户。'),
+    input:t('表示名と遷移先URL。','Name and destination URL.','名称与目标 URL。'),
+    output:t('QRのSVG URL、転送URL、スキャン利用量。','QR SVG URL, redirect URL, and scan usage.','二维码 SVG URL、跳转 URL 和扫描用量。'),
+    prerequisite:t('QRを読み取った人に開いてほしい公開URL。','The public URL that scanners should open.','扫码后要打开的公开 URL。'),
+    example:t('イベント告知QRを印刷したあと、終了時に同じQRの遷移先をアーカイブへ変更する。','Print an event QR, then change its destination to an archive without reprinting.','活动结束后将已印制二维码的目标改为归档页，无需重印。'),
+    limitation:t('地域・端末による振り分けや高度な分析は対象外です。','No advanced geo/device routing or marketing analytics.','不提供高级地域／设备路由或营销分析。'),
+    steps:[t('遷移先URLを登録。','Set a destination URL.','设置目标 URL。'),t('SVGを取得して印刷・掲載。','Download the SVG for print or web.','下载 SVG 用于印刷或网页。'),t('必要になったらリンク先を編集。','Edit the destination later if needed.','需要时修改目标。')],
+    api:'POST /api/picosvc/qr/links',
+    competitor:{name:'Bitly QR Codes',url:'https://bitly.com/pages/products/qr-codes',axis:t('QR利用と分析','QR management and analytics','二维码管理与分析'),pico:t('遷移先を変更できるQR・短縮リンクの基本機能。','Basic editable-destination QR and redirect links.','支持修改目标地址的基础二维码与跳转链接。'),other:t('QR作成、短縮リンク、分析・マーケティング機能を案内。','Documents QR creation, short links, and analytics features.','文档介绍二维码、短链接与分析功能。')},
+  },
+  cron:{
+    summary:t('指定した時刻にURLへHTTPリクエストを自動送信します。','Automatically send HTTP requests to a URL on a schedule.','按计划自动向 URL 发送 HTTP 请求。'),
+    who:t('自分のAPIを定期実行したい開発者。','Developers scheduling calls to their own API.','需要定时调用自家 API 的开发者。'),
+    input:t('送信先URL、UTC Cron式、HTTPメソッド、任意のヘッダー・本文。','Target URL, UTC cron expression, HTTP method, optional headers and body.','目标 URL、UTC Cron 表达式、HTTP 方法及可选请求头与正文。'),
+    output:t('定期リクエストと実行履歴・失敗情報。','Scheduled HTTP calls plus run history and errors.','定时 HTTP 请求及执行记录、错误信息。'),
+    prerequisite:t('リクエストを受け取れる公開URL。Cron式はUTC基準です。','A publicly reachable receiving URL; cron times are UTC.','可公开访问的目标 URL；Cron 时间使用 UTC。'),
+    example:t('毎日UTC 00:00に自社APIの /daily-report にPOSTして、実行履歴で失敗を確認する。','POST to your /daily-report endpoint daily at 00:00 UTC and check the run history.','每日 UTC 00:00 向 /daily-report 发送 POST 并检查执行历史。'),
+    limitation:t('送信先のAPIそのものは作りません。タスク実行の時刻精度・配送成功を保証するものではありません。','Does not build the destination API or guarantee exact-time delivery.','不会创建目标 API，也不保证精确时间或交付成功。'),
+    steps:[t('送信先とUTC Cron式を設定。','Set target URL and UTC cron expression.','填写目标 URL 和 UTC Cron 表达式。'),t('HTTPメソッド・本文を確認して作成。','Check method/body and create the job.','检查方法与正文后创建任务。'),t('実行履歴を見て失敗を調査。','Inspect run history for errors.','通过执行记录检查错误。')],
+    api:'POST /api/picosvc/cron/jobs',
+    competitor:{name:'Upstash QStash',url:'https://upstash.com/docs/qstash/features/schedules',axis:t('スケジュール配送','Scheduled delivery','定时交付'),pico:t('Cron式とHTTP送信、実行履歴を一画面で管理。','Manage cron schedules, HTTP calls and history in one workspace.','在一个工作台管理 Cron、HTTP 请求和记录。'),other:t('スケジュール、メッセージ配送、リトライを文書化。','Documents schedules, message delivery, and retries.','文档介绍定时任务、消息投递及重试。')},
+  },
+  functions:{
+    summary:t('小さなJavaScriptのHTTP処理を公開URLで実行します。','Publish a small JavaScript HTTP handler at a URL.','通过公开 URL 运行轻量 JavaScript HTTP 处理器。'),
+    who:t('単純な変換・判定APIを素早く公開したい開発者。','Developers publishing simple transform or decision APIs.','需要快速发布简单转换 API 的开发者。'),
+    input:t('名前とfetch(request)がResponseを返すJavaScriptコード。','Name and JavaScript code with a fetch(request) handler returning a Response.','名称及包含返回 Response 的 fetch(request) 处理器的 JavaScript。'),
+    output:t('呼び出し可能なHTTP関数URLと実行結果。','Callable function URL and HTTP response.','可调用的函数 URL 与 HTTP 响应。'),
+    prerequisite:t('HTTPリクエストを処理する小さなJavaScriptコード。','A small JavaScript HTTP handler.','一段小型 JavaScript HTTP 处理代码。'),
+    example:t('GETで受け取った文字列を大文字にしてJSONを返す関数を公開する。','Publish a function that uppercases a query string and returns JSON.','发布将查询字符串转为大写并返回 JSON 的函数。'),
+    limitation:t('あらゆるnpmパッケージ・長時間処理・自由な外部環境に対応する汎用サーバーではありません。','Not a general-purpose server supporting arbitrary packages or long-running workloads.','不是支持任意依赖或长时间任务的通用服务器。'),
+    steps:[t('JavaScriptコードを入力。','Enter JavaScript code.','输入 JavaScript 代码。'),t('公開URLへテストリクエスト。','Send a test request to the URL.','向公开 URL 发测试请求。'),t('アプリや自動化から呼び出す。','Call it from your application or automation.','从应用或自动化流程调用。')],
+    api:'POST /api/picosvc/functions/apps',
+    competitor:{name:'Vercel Functions',url:'https://vercel.com/docs/functions',axis:t('関数の開発・配布','Function development and delivery','函数开发与部署'),pico:t('短いJavaScriptを登録してHTTP関数を公開。','Register small JavaScript handlers as HTTP functions.','登记轻量 JavaScript 并公开 HTTP 函数。'),other:t('アプリフレームワークと連携するサーバー側関数・スケーリングを文書化。','Documents server-side functions integrated with application frameworks and scaling.','文档介绍与应用框架集成的服务端函数和扩缩容。')},
+  },
+  json:{
+    summary:t('小さなJSONデータをキーごとに保存・取得します。','Store and retrieve small JSON values by key.','按键存储与获取小型 JSON 数据。'),
+    who:t('手軽な設定・状態保存が必要な小規模アプリ開発者。','Small-app developers needing simple configuration storage.','需要简单配置存储的小型应用开发者。'),
+    input:t('ストア名、ドキュメントキー、JSONデータ。','Store name, document key, and JSON data.','存储名称、文档键与 JSON 数据。'),
+    output:t('保護された読み書きURLと保存済みJSON。','Token-protected read/write endpoint and stored JSON.','受令牌保护的读写接口及保存的 JSON。'),
+    prerequisite:t('何をJSONとして保存するか決めるだけ。発行トークンは一度だけ表示されるので保管が必要です。','Decide what JSON to save; securely store the one-time token.','确定要保存的 JSON，并安全保存一次性显示的令牌。'),
+    example:t('アプリの表示設定 {"theme":"dark"} を preferences キーに保存し、次の起動時にGETする。','Save {"theme":"dark"} under preferences and GET it at the next app launch.','以 preferences 键保存 {"theme":"dark"}，下次启动时读取。'),
+    limitation:t('SQL検索・大規模な関係データ・自動バックアップを備えたDBではありません。','Not a relational database with SQL querying or automated backups.','不是支持 SQL 查询或自动备份的关系型数据库。'),
+    steps:[t('ストアを作ってトークンを安全に保存。','Create a store and save its token securely.','创建存储并安全保存令牌。'),t('キーとJSON値をPUT。','PUT a key and JSON value.','通过 PUT 保存键和值。'),t('Bearerトークン付きGETで取得。','GET it using the bearer token.','使用 Bearer 令牌 GET 获取。')],
+    api:'POST /api/picosvc/json/stores',
+    competitor:{name:'JSONBin.io',url:'https://jsonbin.io/api-reference',axis:t('データの整理・検索','JSON organization and queries','JSON 组织与查询'),pico:t('トークン保護のキー別JSON読み書き。','Token-protected key-based JSON reads and writes.','使用令牌保护的按键 JSON 读写。'),other:t('JSONのCRUDとCollection等のAPIを文書化。','Documents JSON CRUD and collection APIs.','文档介绍 JSON CRUD 与集合 API。')},
+  },
+  files:{
+    summary:t('ファイルを保管するスペースを作り、URLで配信します。','Create a file space, upload assets, and serve them by URL.','创建文件空间，上传资源并通过 URL 分发。'),
+    who:t('小さな画像や配布ファイルの置き場所が欲しい開発者。','Developers hosting small images or downloadable assets.','需要托管小型图片或下载资源的开发者。'),
+    input:t('スペース名、ファイル、保存先パス。','Space name, file, and target path.','空间名称、文件与存储路径。'),
+    output:t('ファイルの公開URL・使用容量。','File URL and storage usage.','文件 URL 和存储用量。'),
+    prerequisite:t('アップロードするファイル。別途ストレージサービスへの登録は不要です。公開範囲は確認してください。','Files to upload. No separate storage signup; check access settings before sharing.','准备上传文件，无需另行注册存储服务；分享前确认访问权限。'),
+    example:t('サービスの説明画像 logo.png をアップロードし、返されたURLをWebサイトの画像表示に使う。','Upload logo.png and use the returned URL as your website image source.','上传 logo.png，并用返回的 URL 在网站显示图片。'),
+    limitation:t('1ファイル10MiBまで。大容量転送や高度な画像変換には対応していません。','Files are capped at 10 MiB each; no large-file transfer or advanced image transforms.','每个文件最多 10 MiB；不支持大文件或高级图片处理。'),
+    steps:[t('スペースを作成。','Create a file space.','创建文件空间。'),t('ファイルを選んでアップロード。','Choose and upload a file.','选择并上传文件。'),t('発行URLで表示し、公開設定を確認。','Use the returned URL after reviewing access settings.','确认访问权限后使用文件 URL。')],
+    api:'POST /api/picosvc/files/spaces',
+    competitor:{name:'Supabase Storage',url:'https://supabase.com/docs/guides/storage',axis:t('アクセス制御と画像処理','Access controls and image handling','访问控制与图片处理'),pico:t('小規模ファイルのアップロードとURL配信。','Small-file uploads and URL delivery.','小文件上传与 URL 分发。'),other:t('公開・非公開バケット、細かいアクセス制御、画像変換を文書化。','Documents public/private buckets, granular access policies, and image transformations.','文档介绍公开／私有存储桶、细粒度权限和图片转换。')},
+  },
+  license:{
+    summary:t('ソフトウェアのライセンスキーを発行・失効・検証します。','Issue, revoke, and validate software license keys.','发行、撤销并验证软件许可证密钥。'),
+    who:t('有料アプリの購入者にライセンスを配る開発者。','Developers issuing keys to purchasers of a paid app.','向付费应用买家提供许可证的开发者。'),
+    input:t('プロジェクト名、キーのラベル・有効期限等。','Project name and key labels/expiration.','项目名称、密钥标签及有效期等。'),
+    output:t('キーと検証URL、valid:true/falseの結果。','Keys, a validation URL, and valid:true/false responses.','密钥、验证 URL 及 valid:true/false 结果。'),
+    prerequisite:t('ライセンスで制御したいアプリ。決済連携は別途用意します。','The app whose access you want to license; payment integration is separate.','需要许可证控制的应用；支付集成需另行处理。'),
+    example:t('デスクトップアプリの購入者にキーを渡し、起動時に検証APIへPOSTして失効・期限切れを判定する。','Give a desktop app buyer a key and POST it to validation at startup to check revocation/expiry.','向桌面应用买家发放密钥，启动时 POST 验证撤销与过期状态。'),
+    limitation:t('決済処理・端末固定・完全オフライン認証は提供しません。','Does not process payments, enforce machine binding, or provide full offline licensing.','不提供支付处理、设备绑定或完整离线许可。'),
+    steps:[t('ライセンス用プロジェクトを作る。','Create a license project.','创建许可证项目。'),t('キーを発行し、安全に購入者へ渡す。','Issue keys and deliver them securely.','创建密钥并安全交付。'),t('アプリから検証APIへPOST。','POST to the validation endpoint from the app.','由应用向验证 API 发送 POST。')],
+    api:'POST /api/picosvc/license/projects',
+    competitor:{name:'Keygen',url:'https://keygen.sh/docs/validating-licenses/',axis:t('ライセンスの識別','License identification','许可证识别'),pico:t('キーの失効・有効期限を検証するシンプルなAPI。','Simple key validation with revocation and expiry.','提供撤销和有效期验证的简单 API。'),other:t('端末フィンガープリントなどを含む検証手順を文書化。','Documents validation workflows including optional machine fingerprints.','文档介绍含可选设备指纹的许可证验证。')},
+  },
+  flags:{
+    summary:t('アプリがHTTPで取得する機能フラグと設定値を公開します。','Publish feature flags and configuration values for apps to fetch over HTTP.','发布供应用通过 HTTP 获取的功能开关与配置。'),
+    who:t('リリース済みアプリの表示や挙動を切り替える開発者。','Developers toggling behavior in deployed apps.','切换已发布应用功能的开发者。'),
+    input:t('プロジェクト名、キー、JSON値、有効／無効。','Project name, key, JSON value, and enabled state.','项目名称、键、JSON 值及启用状态。'),
+    output:t('有効な設定値をまとめて返す公開JSON URL。','A public JSON endpoint returning enabled values.','返回已启用配置值的公开 JSON URL。'),
+    prerequisite:t('アプリが読む設定キーと値。パスワードなどの秘密情報は入れません。','The keys/values your app will read; never include secrets.','准备应用需要读取的键和值，不要包含密码等秘密信息。'),
+    example:t('maintenance=true を公開し、アプリ起動時のGETでメンテナンス告知表示を切り替える。','Publish maintenance=true and let the app GET it to toggle a maintenance banner.','发布 maintenance=true，应用 GET 后切换维护提示。'),
+    limitation:t('ユーザー属性別ターゲティングや段階的リリース・A/B実験は提供しません。','No user targeting, percentage rollouts, or A/B experiments.','不提供用户定向、百分比分批发布或 A/B 实验。'),
+    steps:[t('設定用プロジェクトを作る。','Create a configuration project.','创建配置项目。'),t('設定キーと値を登録。','Set configuration keys and values.','登记配置键和值。'),t('アプリから公開URLを取得。','Fetch the public URL from your app.','从应用获取公开 URL。')],
+    api:'POST /api/picosvc/flags/projects',
+    competitor:{name:'LaunchDarkly',url:'https://launchdarkly.com/docs/api/feature-flags',axis:t('配信対象の制御','Targeting and rollout','定向与发布'),pico:t('プロジェクトごとに有効な設定値をまとめて返す。','Return enabled values per project.','按项目返回已启用的配置值。'),other:t('属性別ターゲティングや割合によるロールアウトを文書化。','Documents attribute-based targeting and percentage rollouts.','文档介绍按属性定向与百分比发布。')},
+  },
+  monitor:{
+    summary:t('公開ページを定期取得し、内容が変わったときの履歴を確認します。','Periodically check a public page and log content changes.','定期检查公开网页并记录内容变化。'),
+    who:t('募集情報・価格表・お知らせの変更を追いたい人。','People watching a listing, price page, or announcements.','跟踪招聘信息、价格或公告变化的用户。'),
+    input:t('公開ページURL、監視間隔、任意の通知Webhook。','Public page URL, check interval, and optional notification webhook.','公开网页 URL、检查间隔和可选通知 Webhook。'),
+    output:t('変更と取得エラーの履歴。Webhookを設定すれば変更通知。','Change/error history; optional webhook notifications.','变更／获取错误记录；可选 Webhook 通知。'),
+    prerequisite:t('公開ページURLだけ。通知先Webhookは後からでも設定できます。','Only a public page URL; notifications are optional.','仅需公开网页 URL；通知地址可选。'),
+    example:t('奨学金の募集ページを60分間隔で監視し、変更履歴を確認する。','Check a scholarship announcement page every 60 minutes and inspect change history.','每 60 分钟检查奖学金公告页面并查看变更记录。'),
+    limitation:t('稼働率SLAや多地域監視ではありません。無料プランの最短間隔は60分です。','Not an uptime SLA or multi-region checker; the Free minimum interval is 60 minutes.','不提供可用率 SLA 或多地区监控；免费版最短间隔为 60 分钟。'),
+    steps:[t('URLと間隔を入力。','Enter a URL and interval.','输入 URL 和间隔。'),t('監視プレビューを確認。','Preview the monitored content.','预览监测内容。'),t('変更・エラー履歴を確認。','Review changes and errors.','查看变更与错误记录。')],
+    api:'POST /api/picosvc/monitor',
+    competitor:{name:'UptimeRobot',url:'https://uptimerobot.com/website-monitoring/',axis:t('何を監視するか','What is monitored','监控对象'),pico:t('ページ本文の変化と取得エラーの履歴を追跡。','Track page-content changes and fetch errors.','跟踪网页内容变化与获取错误。'),other:t('HTTP稼働状況、アラート、ステータスページを案内。','Documents uptime checks, alerts, and status pages.','文档介绍可用性检查、警报与状态页面。')},
+  },
+  forms:{
+    summary:t('既存サイトのHTMLフォームから送られた回答を保存する「送信先URL」を発行します。フォーム画面を作るサービスではありません。','Create a submission URL that stores answers from an HTML form on your existing site; not a drag-and-drop form builder.','为现有网站的 HTML 表单创建接收并保存回答的 URL；不是可视化表单设计器。'),
+    who:t('静的サイトに問い合わせ・アンケートの受付処理を足したい人。','People adding contact or survey submissions to a static site.','想在静态网站加入联系或问卷提交功能的用户。'),
+    input:t('フォーム名を登録し、既存HTMLフォームのactionへ発行URLを設定。投稿内容はJSONかURLエンコード形式。','Create a form name and set the issued URL as your existing HTML form action. Submit JSON or URL-encoded fields.','创建表单名称，将生成 URL 设为现有 HTML 表单 action；提交 JSON 或 URL 编码字段。'),
+    output:t('送信先URL、保存された名前・メール・本文等の投稿一覧、任意のWebhook転送。','Submission URL, saved responses (name/email/message etc.), and optional webhook delivery.','提交 URL、保存的姓名／邮箱／正文等记录，以及可选 Webhook 转发。'),
+    prerequisite:t('入力欄を置くWebページ。投稿を受けるサーバーや別契約は不要です。HTMLフォームの作成自体は利用者側で行います。','A webpage with input fields. No submission server or separate account is needed; you build the HTML form itself.','准备包含输入框的网页；无需自建提交服务器或额外账号，但 HTML 表单本身需要自己制作。'),
+    example:t('店舗サイトの「名前・メール・問い合わせ内容」フォームのactionを発行URLに変更。送信後はPicoSvcの投稿一覧で確認し、必要ならCSVで保存する。','Point a shop contact form (name, email, message) to the issued URL; inspect submissions in PicoSvc and optionally export CSV.','将店铺网站的姓名／邮箱／留言表单 action 指向生成 URL，在 PicoSvc 查看提交并按需导出 CSV。'),
+    limitation:t('フォームの見た目や入力欄を自動生成しません。ファイル添付（multipart）は未対応。メール通知は標準では送信されません。','Does not generate form UI, accept multipart file uploads, or automatically email submission notifications.','不自动生成表单 UI、不支持 multipart 文件上传、也不自动发送邮件通知。'),
+    steps:[t('PicoSvcでフォーム名を作成して送信先URLをコピー。','Create a form in PicoSvc and copy its submission URL.','在 PicoSvc 创建表单并复制提交 URL。'),t('自分のHTMLフォームのactionとmethod=POSTに設定。','Set it as action with method=POST on your HTML form.','将 URL 设为 HTML 表单的 action，并设置 method=POST。'),t('テスト送信し、投稿一覧を確認。','Send a test submission and inspect the list.','提交测试数据并查看列表。')],
+    api:'POST /api/picosvc/forms',
+    competitor:{name:'Formspree',url:'https://help.formspree.io/articles/the-forms-api/form-submissions-api',axis:t('フォームの送信先と投稿管理','Form endpoint and submission handling','表单接收与提交管理'),pico:t('HTMLフォームの送信先URLを発行し、投稿一覧・CSV・任意Webhookに対応。','Issue an HTML form endpoint with submission history, CSV, and optional webhook.','提供 HTML 表单接收 URL、提交记录、CSV 与可选 Webhook。'),other:t('フォーム投稿のAPI取得などを文書化。','Documents APIs to retrieve form submissions.','文档介绍通过 API 获取表单提交数据。')},
+  },
+};
+
+export const CUSTOMER_SLUGS: readonly ProductSlug[] = ['mcp','mock','hooks','rss','mail','shot','fetch','qr','cron','functions','json','files','license','flags','monitor','forms'];
