@@ -9,6 +9,7 @@ import {
 } from './picosvc/cost-guardrails.js';
 import { dataRuntimeRoute } from './picosvc/data-services.js';
 import { functionRuntimeRoute } from './picosvc/functions-service.js';
+import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
 import { handleIncomingEmail } from './picosvc/mail-service.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
@@ -72,6 +73,7 @@ export default {
     if (sandboxMeterResponse) return sandboxMeterResponse;
 
     for (const handler of [
+      hooksAdvancedRuntimeRoute,
       hooksRuntimeRoute,
       mockAdvancedRuntimeRoute,
       mockRuntimeRoute,
