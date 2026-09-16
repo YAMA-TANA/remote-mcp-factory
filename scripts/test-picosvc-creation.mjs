@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { SERVICE_UI, initialServiceForm, serviceRequestBody } from '../web/app/service-ui-config.ts';
+import { mockRequestBody } from '../web/app/mock-form.ts';
 
 const slugs = Object.keys(SERVICE_UI);
 assert.equal(slugs.length, 15, 'All generic product creation flows must be covered (Mock has its own workspace)');
@@ -49,4 +50,19 @@ const mcp = { ...initialServiceForm('mcp'), repoUrl: 'https://github.com/example
 assert.equal(serviceRequestBody('mcp', mcp).repoUrl, mcp.repoUrl);
 assert.throws(() => serviceRequestBody('mcp', { ...mcp, repoUrl: 'https://github.com/example/repository/tree/main' }), /repository URL/);
 assert.throws(() => serviceRequestBody('mcp', { ...mcp, repoUrl: 'https://evil.example/example/repository' }), /repository URL/);
-console.log(`PicoSvc creation checks OK: ${slugs.length} product flows; advanced RSS, Cron, Monitor options and invalid-input guards.`);
+
+const mock = { name: 'Demo API', method: 'GET', path: 'v1/hello', statusCode: '200', contentType: 'application/json', body: '{"ok":true}', enabled: true };
+assert.deepEqual(mockRequestBody(mock), { name: 'Demo API', method: 'GET', path: 'v1/hello', statusCode: 200, contentType: 'application/json', body: '{"ok":true}', enabled: true });
+assert.equal(mockRequestBody({ ...mock, enabled: false }).enabled, false);
+assert.throws(() => mockRequestBody({ ...mock, name: ' ' }), /Endpoint name/);
+assert.throws(() => mockRequestBody({ ...mock, method: 'TRACE' }), /Unsupported HTTP method/);
+assert.throws(() => mockRequestBody({ ...mock, path: 'hi?private=true' }), /URL-safe/);
+assert.throws(() => mockRequestBody({ ...mock, statusCode: '199' }), /200 and 599/);
+assert.throws(() => mockRequestBody({ ...mock, statusCode: '600' }), /200 and 599/);
+assert.throws(() => mockRequestBody({ ...mock, statusCode: '200.5' }), /200 and 599/);
+assert.throws(() => mockRequestBody({ ...mock, contentType: 'text/plain\r\nX-Test: yes' }), /content type/);
+assert.throws(() => mockRequestBody({ ...mock, body: 'x'.repeat(256 * 1024 + 1) }), /256 KiB/);
+assert.throws(() => mockRequestBody({ ...mock, method: 'HEAD' }), /cannot include a body/);
+assert.throws(() => mockRequestBody({ ...mock, statusCode: '204' }), /cannot include a body/);
+assert.equal(mockRequestBody({ ...mock, statusCode: '204', body: '' }).statusCode, 204);
+console.log(`PicoSvc creation checks OK: ${slugs.length} generic flows + Mock, advanced RSS/Cron/Monitor options and validation.`);
