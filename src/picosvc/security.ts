@@ -18,23 +18,34 @@ function isPrivateIpv4(hostname: string): boolean {
   if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return false;
   const octets = parts.map(Number);
   if (octets.some((value) => value < 0 || value > 255)) return false;
-  const [a, b] = octets;
+  const [a, b, c] = octets;
   return a === 0
     || a === 10
     || a === 127
     || (a === 100 && b >= 64 && b <= 127)
     || (a === 169 && b === 254)
     || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && b === 0 && (c === 0 || c === 2))
     || (a === 192 && b === 168)
-    || (a === 198 && (b === 18 || b === 19))
+    || (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100)))
+    || (a === 203 && b === 0 && c === 113)
     || a >= 224;
 }
 
 function isPrivateIpv6(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
   if (!host.includes(':')) return false;
+  // URL canonicalization rewrites ::ffff:127.0.0.1 to ::ffff:7f00:1.
+  // Reject the entire mapped/translated and tunnelling ranges rather than
+  // decoding only dotted-decimal literals and missing private IPv4 targets.
   return host === '::'
     || host === '::1'
+    || host.startsWith('::ffff:')
+    || host.startsWith('64:ff9b:')  // NAT64 well-known IPv4 translation prefix
+    || host.startsWith('64:ff9b:1:')
+    || host.startsWith('2002:')      // 6to4 embeds an IPv4 endpoint
+    || host.startsWith('2001:0:')    // Teredo embeds an IPv4 endpoint
+    || host.startsWith('2001:db8:')  // documentation-only range
     || host.startsWith('fc')
     || host.startsWith('fd')
     || host.startsWith('fe8')
