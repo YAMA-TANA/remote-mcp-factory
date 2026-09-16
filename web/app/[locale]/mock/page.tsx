@@ -1,5 +1,5 @@
 import MockPage from '../../mock/page';
-import ProductLanding from '../../product-landing';
+import ProductLanding, { ProductIntro } from '../../product-landing';
 import { LOCALE_SLUGS, slugToLocale } from '../../i18n-data';
 import { localeMetadata, parseLocaleParam } from '../../seo';
 import { notFound } from 'next/navigation';
@@ -18,5 +18,5 @@ export default async function MockProductPage({ params }: { params: Promise<{ lo
   const { locale: localeSlug } = await params;
   const locale = slugToLocale(localeSlug);
   if (!locale) notFound();
-  return <><ProductLanding service="mock" locale={locale} /><div id="workspace"><MockPage /></div></>;
+  return <><ProductIntro service="mock" locale={locale} /><div id="workspace"><MockPage /></div><ProductLanding service="mock" locale={locale} /></>;
 }
