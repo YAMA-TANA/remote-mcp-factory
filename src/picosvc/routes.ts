@@ -14,6 +14,7 @@ import { dataManagementRoutes } from './data-services.js';
 import { functionManagementRoutes } from './functions-service.js';
 import { hooksAdvancedManagementRoutes } from './hooks-advanced.js';
 import { hooksManagementRoutes } from './hooks.js';
+import { jsonAdvancedManagementRoutes } from './json-advanced.js';
 import { mailManagementRoutes } from './mail-service.js';
 import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
@@ -41,6 +42,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     utilityAdvancedManagementRoutes,
     utilityManagementRoutes,
     configManagementRoutes,
+    jsonAdvancedManagementRoutes,
     dataManagementRoutes,
     functionManagementRoutes,
     cronManagementRoutes,
