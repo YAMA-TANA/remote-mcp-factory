@@ -6,7 +6,8 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const onboarding = read('src/picosvc/reliable-onboarding.ts');
 const routes = read('src/picosvc/routes.ts');
 const entry = read('src/picosvc-entry.ts');
-const monitorPage = read('web/app/[locale]/[service]/page.tsx');
+const monitorPublicPage = read('web/app/[locale]/[service]/page.tsx');
+const monitorAppPage = read('web/app/[locale]/[service]/app/page.tsx');
 const diagnostics = read('web/app/monitor-diagnostics.tsx');
 
 assert.ok(routes.indexOf('reliableOnboardingRoutes,') < routes.indexOf('monitorAdvancedManagementRoutes,'), 'Reliable creation must run before Monitor management');
@@ -22,7 +23,8 @@ assert.match(onboarding, /UPDATE monitors SET enabled=0/, 'Disable legacy Monito
 assert.match(onboarding, /monitor_setup_unavailable/, 'Missing monitoring migrations must produce a useful error');
 assert.match(diagnostics, /\/events`/, 'Monitor UI must request actual event history');
 assert.match(diagnostics, /\/options`/, 'Monitor UI must expose extraction configuration');
-assert.match(monitorPage, /<MonitorDiagnostics\s*\/>/, 'Monitor workspace must display diagnostics');
+assert.match(monitorAppPage, /<MonitorDiagnostics\s*\/>/, 'Monitor workspace must display diagnostics in the app route');
+assert.doesNotMatch(monitorPublicPage, /<MonitorDiagnostics\s*\/>/, 'Public overview must not embed Monitor diagnostics');
 assert.match(entry, /x-request-id,x-picosvc-image-size,x-picosvc-tier/, 'Expose actionable response metadata across CORS');
 assert.match(entry, /internal_error/, 'Unexpected errors must have a stable code');
 
