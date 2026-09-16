@@ -1,6 +1,6 @@
 # PicoSvc architecture
 
-PicoSvc is a suite of tiny developer infrastructure products sharing one account and one dashboard while keeping billing and quotas independent by product.
+PicoSvc is a suite of tiny developer infrastructure products sharing one account and one dashboard. Product usage and entitlements remain independent, while public paid pricing is standardized across the suite.
 
 The existing Remote MCP Factory becomes **PicoSvc MCP**. Its Dynamic Worker / Sandbox runtime remains unchanged while PicoSvc Core is layered in front of it.
 
@@ -25,7 +25,7 @@ The existing Remote MCP Factory becomes **PicoSvc MCP**. Its Dynamic Worker / Sa
 | PicoSvc Monitor | Web page change monitoring | `api.picosvc.com/v1/monitor` |
 | PicoSvc Forms | Form backend | `forms.picosvc.com` |
 
-Marketing pages stay on `picosvc.com` with locale-prefixed paths such as `picosvc.com/ja/mock` and `picosvc.com/en/hooks`. Subdomains are reserved for runtime endpoints where they make URLs clearer or isolate traffic.
+Marketing pages stay on `picosvc.com` with locale-prefixed paths such as `picosvc.com/ja/mock`, `picosvc.com/en/hooks`, and `picosvc.com/ja/pricing`. Subdomains are reserved for runtime endpoints where they make URLs clearer or isolate traffic.
 
 ## Repository model
 
@@ -76,11 +76,20 @@ Every product stores resources and usage against the same `ownerId`. This means 
 
 Browser applications obtain a Clerk session token and send it as a Bearer token to the API. Do not depend on cross-subdomain cookies for API authentication.
 
-## Billing model: independent products first
+## Billing model
 
-There is **no account-global PicoSvc paid tier**. Every service has its own subscription, price, quotas, and upgrade path.
+Standalone product entitlements remain independent, but every PicoSvc service uses the same public paid prices:
 
-For example, one owner may have:
+| Public plan | Internal tier | Monthly price |
+| --- | --- | ---: |
+| Free | `free` | $0 |
+| Pico | `tiny` | $1 per service |
+| PicoPlus | `pro` | $5 per service |
+| Custom | n/a | Contact PicoSvc |
+
+The legacy/internal IDs `tiny` and `pro` are retained for database compatibility. Public UI must show **Pico** and **PicoPlus** instead.
+
+Product-specific quotas still differ. One owner may have:
 
 ```text
 owner       product     tier     source
@@ -89,47 +98,46 @@ user_123    hooks       pro      standalone:hooks-pro
 user_123    qr          free     default
 ```
 
-Buying `mcp-tiny` upgrades MCP only. It does not unlock Mock, Hooks, RSS, or any other product.
+Here `mcp/tiny` means MCP Pico at $1/month and `hooks/pro` means Hooks PicoPlus at $5/month. Buying a standalone plan upgrades only that product.
 
-`product_entitlements` stores the standalone product entitlement and `product_usage_monthly` stores generic product/metric monthly counters. The product catalog can reuse tier labels such as Free/Tiny/Pro, but those labels do **not** imply common pricing. Each product owns its own prices and limits.
-
-Prices for products that have not been finalized should remain `null` in `src/picosvc/catalog.ts` instead of inheriting a suite-wide price.
+`product_entitlements` stores standalone product grants and `product_usage_monthly` stores generic product/metric monthly counters.
 
 ## Bundles
 
-PicoSvc can also sell discounted bundles without turning the whole suite into one plan. A bundle is simply a set of product grants, for example:
+Two concrete suite bundles are active:
 
 ```text
-bundle: starter-dev
-  mock  -> tiny
-  hooks -> tiny
-  rss   -> tiny
+Bundle Pico — $5/month
+  every PicoSvc product -> tiny (public name: Pico)
+
+Bundle Pro — $22/month
+  every PicoSvc product -> pro (public name: PicoPlus)
 ```
 
-A future checkout may price that combination below the sum of the three standalone subscriptions. The exact bundle composition and discount belong in the billing catalog and must not be inferred from product pricing.
+Migration `0008_picosvc_bundles.sql` provides `bundle_entitlements`. Multiple bundle grants can coexist with standalone subscriptions. Entitlement resolution uses the highest active tier for each product, so a standalone PicoPlus plan is not downgraded by Bundle Pico and vice versa.
 
-Migration `0008_picosvc_bundles.sql` adds `bundle_entitlements`. Multiple bundle grants can coexist with standalone product subscriptions. Entitlement resolution uses the highest active tier granted for a product, so a direct Pro subscription is not accidentally downgraded by a Tiny bundle and vice versa.
-
-The billing adapter should write:
+The billing adapter writes:
 
 - a standalone purchase to `product_entitlements`
 - each product grant from a bundle to `bundle_entitlements`
 
-This keeps cancellation and renewal logic explicit. Cancelling one standalone product does not cancel unrelated products, while cancelling a bundle removes only the grants originating from that bundle.
+Cancelling a standalone product does not cancel unrelated products. Cancelling a bundle removes only grants originating from that bundle.
+
+Usage above PicoPlus, custom quotas, or negotiated business terms are handled through the contact channel rather than a fourth self-serve paid tier.
 
 ## Current catalog behavior
 
 `src/picosvc/catalog.ts` exposes:
 
-- `PICOSVC_PRODUCTS` — per-product status, endpoints, plans, prices, and quotas
-- `PICOSVC_BILLING_MODEL` — declares billing as per-product with bundle support
-- `PICOSVC_BUNDLES` — concrete bundle offers; kept empty until an actual bundle and price are approved
+- `PICOSVC_PRODUCTS` — per-product status, endpoint, public plan labels, standardized prices, and product-specific quotas
+- `PICOSVC_BILLING_MODEL` — declares USD monthly pricing, public tier labels, Custom contact behavior, and bundle support
+- `PICOSVC_BUNDLES` — active Bundle Pico ($5/month) and Bundle Pro ($22/month) grants
 
-MCP, Mock, and Hooks are currently active products. Known active pricing is represented directly for MCP and Mock. Hooks is active with Free/Tiny/Pro event limits, while its undecided paid prices remain `null`. Other planned products may expose known quotas while leaving undecided paid prices as `null`.
+MCP, Mock, and Hooks are currently active products. Planned products already inherit the same Pico $1 / PicoPlus $5 price model so they launch consistently; product-specific limits may remain unspecified until implementation.
 
 ## API
 
-- `GET /api/picosvc/catalog` — public product catalog, per-product billing model, and active bundle definitions
+- `GET /api/picosvc/catalog` — public product catalog, standardized pricing model, and active bundle definitions
 - `GET /api/picosvc/products/:slug` — one product definition
 - `GET /api/picosvc/account` — authenticated standalone entitlements, bundle grants, and current-month product usage
 - `/api/picosvc/mock/endpoints` — authenticated PicoSvc Mock management
@@ -143,16 +151,17 @@ Hooks stores request bodies up to 512 KiB, redacts authentication/cookie headers
 
 Existing MCP routes remain unchanged.
 
-## Legal pages
+## Legal and marketing pages
 
 The web application publishes localized versions of:
 
+- `/pricing` — public standalone and bundle pricing
 - `/terms` — Terms of Service
 - `/privacy` — Privacy Policy
 - `/contact` — Contact & Support
 - `/tokushoho` — Specified Commercial Transactions Act disclosure
 
-The canonical pages live under `/en`, `/ja`, and `/zh-cn`; legacy non-prefixed routes remain compatibility entry points. The documents reflect the independent-product billing model and optional bundles. Before paid public launch, verify the operator/legal entity, private support or privacy-contact channel, tax/commercial-disclosure requirements, and governing-law language for the actual business entity.
+The canonical pages live under `/en`, `/ja`, and `/zh-cn`; legacy non-prefixed routes remain compatibility entry points. Legal pages describe the independent-product model and bundle behavior, while exact public prices are surfaced on the Pricing page and final checkout.
 
 ## Deployment direction
 
