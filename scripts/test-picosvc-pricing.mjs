@@ -37,19 +37,19 @@ const expectedLimits = {
     { endpoints: 100, requests: 250_000 },
   ],
   hooks: [
-    { inboxes: 1, events: 500, history: 100 },
-    { inboxes: 5, events: 10_000, history: 1_000 },
-    { inboxes: 25, events: 100_000, history: 10_000 },
+    { inboxes: 1, events: 500, replays: 50, history: 100, bodyBytes: 64 * 1024 },
+    { inboxes: 5, events: 10_000, replays: 1_000, history: 1_000, bodyBytes: 128 * 1024 },
+    { inboxes: 25, events: 100_000, replays: 10_000, history: 10_000, bodyBytes: 256 * 1024 },
   ],
   rss: [
-    { feeds: 3, checks: 150, refreshMinutes: 1_440, entriesPerFeed: 5 },
-    { feeds: 20, checks: 6_000, refreshMinutes: 180, entriesPerFeed: 15 },
-    { feeds: 100, checks: 160_000, refreshMinutes: 30, entriesPerFeed: 20 },
+    { feeds: 3, checks: 150, requests: 10_000, refreshMinutes: 1_440, entriesPerFeed: 5 },
+    { feeds: 20, checks: 6_000, requests: 100_000, refreshMinutes: 180, entriesPerFeed: 15 },
+    { feeds: 100, checks: 160_000, requests: 1_000_000, refreshMinutes: 30, entriesPerFeed: 20 },
   ],
   mail: [
-    { routes: 1, mails: 100 },
-    { routes: 5, mails: 2_000 },
-    { routes: 25, mails: 20_000 },
+    { routes: 1, mails: 100, history: 100 },
+    { routes: 5, mails: 2_000, history: 1_000 },
+    { routes: 25, mails: 20_000, history: 5_000 },
   ],
   shot: [{ shots: 50 }, { shots: 300 }, { shots: 2_000 }],
   fetch: [{ requests: 100 }, { requests: 1_000 }, { requests: 5_000 }],
@@ -59,9 +59,9 @@ const expectedLimits = {
     { qrs: 300, scans: 150_000 },
   ],
   cron: [
-    { jobs: 1, runs: 2_000 },
-    { jobs: 10, runs: 30_000 },
-    { jobs: 50, runs: 250_000 },
+    { jobs: 1, runs: 2_000, history: 100 },
+    { jobs: 10, runs: 30_000, history: 1_000 },
+    { jobs: 50, runs: 250_000, history: 10_000 },
   ],
   functions: [
     { functions: 1, invocations: 10_000 },
@@ -69,14 +69,14 @@ const expectedLimits = {
     { functions: 20, invocations: 1_000_000 },
   ],
   json: [
-    { stores: 1, requests: 10_000 },
-    { stores: 10, requests: 100_000 },
-    { stores: 50, requests: 1_000_000 },
+    { stores: 1, documents: 100, storageBytes: 10 * 1024 * 1024, requests: 10_000 },
+    { stores: 10, documents: 1_000, storageBytes: 50 * 1024 * 1024, requests: 100_000 },
+    { stores: 50, documents: 10_000, storageBytes: 500 * 1024 * 1024, requests: 1_000_000 },
   ],
   files: [
-    { spaces: 1, files: 20, storageBytes: 100 * 1024 * 1024 },
-    { spaces: 5, files: 1_000, storageBytes: 1024 * 1024 * 1024 },
-    { spaces: 25, files: 10_000, storageBytes: 10 * 1024 * 1024 * 1024 },
+    { spaces: 1, files: 20, storageBytes: 100 * 1024 * 1024, downloads: 10_000 },
+    { spaces: 5, files: 1_000, storageBytes: 1024 * 1024 * 1024, downloads: 100_000 },
+    { spaces: 25, files: 10_000, storageBytes: 10 * 1024 * 1024 * 1024, downloads: 1_000_000 },
   ],
   license: [
     { projects: 1, keys: 10, validations: 1_000 },
@@ -94,9 +94,9 @@ const expectedLimits = {
     { monitors: 100, checks: 100_000, minIntervalMinutes: 5 },
   ],
   forms: [
-    { forms: 3, submissions: 100 },
-    { forms: 20, submissions: 2_000 },
-    { forms: 100, submissions: 20_000 },
+    { forms: 3, submissions: 100, history: 100 },
+    { forms: 20, submissions: 2_000, history: 1_000 },
+    { forms: 100, submissions: 20_000, history: 5_000 },
   ],
 };
 
