@@ -30,7 +30,9 @@ db.prepare("INSERT INTO servers (id,owner,name,repo_url,branch,subdir,token_hash
 db.prepare('INSERT INTO mcp_request_daily (server_id,owner,day,requests,errors,duration_ms,updated_at) VALUES (?,?,?,?,?,?,?)')
   .run('mcp-test01','owner-a','2026-09-16',7,2,350,now);
 const metric = db.prepare('SELECT requests,errors,duration_ms FROM mcp_request_daily WHERE server_id=? AND owner=?').get('mcp-test01','owner-a');
-assert.deepEqual(metric, { requests: 7, errors: 2, duration_ms: 350 });
+assert.equal(metric.requests, 7);
+assert.equal(metric.errors, 2);
+assert.equal(metric.duration_ms, 350);
 assert.equal(db.prepare('SELECT COUNT(*) AS n FROM mcp_request_daily WHERE server_id=? AND owner=?').get('mcp-test01','owner-b').n, 0);
 db.close();
 console.log('PicoSvc MCP observability smoke OK');
