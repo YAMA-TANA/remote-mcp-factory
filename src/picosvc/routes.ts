@@ -19,6 +19,7 @@ import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
 import { utilityAdvancedManagementRoutes } from './utility-advanced.js';
 import { utilityManagementRoutes } from './utility-services.js';
+import { picoSvcUsageDashboard } from './usage-dashboard.js';
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -32,6 +33,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   const url = new URL(request.url);
 
   for (const handler of [
+    picoSvcUsageDashboard,
     hooksAdvancedManagementRoutes,
     hooksManagementRoutes,
     mockAdvancedManagementRoutes,
