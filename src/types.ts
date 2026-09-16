@@ -1,6 +1,7 @@
 import type { Sandbox } from '@cloudflare/sandbox';
 
 export type Visibility = 'public' | 'token';
+/** Legacy billing-cache IDs. Public names are Free/Pico/PicoPlus. */
 export type PlanId = 'hobby' | 'pro' | 'team';
 export type EdgeBuildStatus = 'ready' | 'failed' | 'incompatible';
 export type CompatibilityRuntime = 'edge' | 'edge-with-bridge' | 'edge-with-bridge-candidate' | 'heavy' | 'local-bound';
@@ -58,6 +59,9 @@ export interface Env {
   CLERK_PUBLISHABLE_KEY?: string;
   CLERK_JWT_KEY?: string;
   CLERK_AUTHORIZED_PARTIES?: string;
+  CLERK_PICO_PLAN_SLUG?: string;
+  CLERK_PICOPLUS_PLAN_SLUG?: string;
+  /** Legacy aliases accepted during migration to Pico/PicoPlus. */
   CLERK_PRO_PLAN_SLUG?: string;
   CLERK_TEAM_PLAN_SLUG?: string;
   CLERK_SIGN_IN_URL?: string;
