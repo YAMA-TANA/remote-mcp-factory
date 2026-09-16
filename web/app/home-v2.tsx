@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { LanguageSwitcher, useI18n } from './i18n';
 import { PICOSVC_PRICING } from './pricing-data';
+import ServiceIcon from './components/ServiceIcon';
 
 type Category = 'all' | 'build' | 'connect' | 'automate' | 'data' | 'delivery';
 
@@ -86,7 +87,7 @@ export default function HomeV2() {
   return (
     <main className="homePage">
       <nav className="nav shell" aria-label="PicoSvc">
-        <a className="brand" href={localizedHref('/')}><span className="brandMark" aria-hidden="true">P</span><span>PicoSvc</span></a>
+        <a className="brand" href={localizedHref('/')}><span className="brandMark" aria-hidden="true"><ServiceIcon name="brand" size={34} /></span><span>PicoSvc</span></a>
         <div className="navRight"><a href="#products">{c.products}</a><a href={localizedHref('/pricing')}>{t.pricingLink}</a><a href={localizedHref('/contact')}>{c.contact}</a><LanguageSwitcher /></div>
       </nav>
 
@@ -106,8 +107,8 @@ export default function HomeV2() {
           <p className="homeResults" role="status" aria-live="polite">{visible.length} {t.matching}</p>
         </div>
         {visible.length === 0 ? <div className="homeEmpty">{t.noResults}</div> :
-          <div className="homeProducts">{visible.map(([slug, name, group, mark, en, ja, zh]) => <article className="deployment homeProduct" key={slug}>
-            <div className="homeProductTop"><span className="homeProductIcon" aria-hidden="true">{mark}</span><span className="homeProductCategory">{t.categories[group]}</span></div>
+          <div className="homeProducts">{visible.map(([slug, name, group, , en, ja, zh]) => <article className="deployment homeProduct" key={slug}>
+            <div className="homeProductTop"><span className="homeProductIcon" aria-hidden="true"><ServiceIcon name={slug} size={54} /></span><span className="homeProductCategory">{t.categories[group]}</span></div>
             <h3>PicoSvc {name}</h3><p>{locale === 'ja' ? ja : locale === 'zh-CN' ? zh : en}</p>
             <div className="homeProductFooter"><span>{t.available}</span><a href={localizedHref(`/${slug}`)} aria-label={`${name} — ${t.open}`}>{t.open}</a></div>
           </article>)}</div>}
