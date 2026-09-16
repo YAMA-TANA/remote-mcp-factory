@@ -8,7 +8,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  return localeMetadata(parseLocaleParam(locale), 'mock');
+  return { ...localeMetadata(parseLocaleParam(locale), 'mock'), icons: { icon: '/icons/mock.svg', shortcut: '/icons/mock.svg' } };
 }
 
 export default MockPage;
