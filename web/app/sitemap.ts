@@ -1,13 +1,18 @@
 import type { MetadataRoute } from 'next';
-import { LOCALES, type Locale } from './i18n-data';
-import { localizedUrl, type PageKind } from './seo';
+import { LOCALES, localeToSlug, type Locale } from './i18n-data';
+import { GENERIC_SERVICE_SLUGS } from './service-data';
+import { localizedUrl, SITE_URL, type PageKind } from './seo';
 
 export const dynamic = 'force-static';
 
 const PAGES: PageKind[] = ['home', 'mock', 'hooks', 'pricing', 'contact', 'terms', 'privacy', 'tokushoho'];
 
+function serviceUrl(locale: Locale, service: string) {
+  return `${SITE_URL}/${localeToSlug(locale)}/${service}/`;
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  return PAGES.flatMap((kind) => LOCALES.map((locale: Locale) => ({
+  const standard = PAGES.flatMap((kind) => LOCALES.map((locale: Locale) => ({
     url: localizedUrl(locale, kind),
     changeFrequency: kind === 'home' || kind === 'mock' || kind === 'hooks' || kind === 'pricing' ? 'weekly' as const : 'monthly' as const,
     priority: kind === 'home' ? 1 : kind === 'mock' || kind === 'hooks' || kind === 'pricing' ? 0.9 : 0.5,
@@ -19,4 +24,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       },
     },
   })));
+
+  const services = GENERIC_SERVICE_SLUGS.flatMap((service) => LOCALES.map((locale: Locale) => ({
+    url: serviceUrl(locale, service),
+    changeFrequency: 'weekly' as const,
+    priority: 0.85,
+    alternates: {
+      languages: {
+        en: serviceUrl('en', service),
+        ja: serviceUrl('ja', service),
+        'zh-CN': serviceUrl('zh-CN', service),
+      },
+    },
+  })));
+
+  return [...standard, ...services];
 }
