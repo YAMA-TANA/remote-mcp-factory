@@ -26,6 +26,7 @@ import { mailManagementRoutes } from './mail-service.js';
 import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
 import { monitorAdvancedManagementRoutes } from './monitor-advanced.js';
+import { picoSvcHealthRoute } from './platform-health.js';
 import { utilityAdvancedManagementRoutes } from './utility-advanced.js';
 import { utilityManagementRoutes } from './utility-services.js';
 import { picoSvcUsageDashboard } from './usage-dashboard.js';
@@ -38,6 +39,7 @@ function monthKey(now = new Date()): string { return now.toISOString().slice(0, 
 export async function picoSvcRoutes(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
   for (const handler of [
+    picoSvcHealthRoute,
     picoSvcUsageDashboard,
     filesAccessManagementRoutes,
     formsAdvancedManagementRoutes,
