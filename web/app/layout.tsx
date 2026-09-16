@@ -3,6 +3,7 @@ import './globals.css';
 import './ui-refresh.css';
 import './ui-finishing.css';
 import './icon-system.css';
+import './home-discovery.css';
 import { LocaleProvider } from './i18n';
 import SiteFooter from './components/SiteFooter';
 
