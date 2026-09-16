@@ -1,4 +1,9 @@
 import UsagePage from '../../usage/page';
+import { LOCALE_SLUGS } from '../../i18n-data';
+
+export function generateStaticParams() {
+  return LOCALE_SLUGS.map((locale) => ({ locale }));
+}
 
 export const metadata = {
   title: 'PicoSvc usage & limits',
