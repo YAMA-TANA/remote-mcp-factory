@@ -2,6 +2,8 @@ import type { MetadataRoute } from 'next';
 import { LOCALES, type Locale } from './i18n-data';
 import { localizedUrl, type PageKind } from './seo';
 
+export const dynamic = 'force-static';
+
 const PAGES: PageKind[] = ['home', 'mock', 'contact', 'terms', 'privacy', 'tokushoho'];
 
 export default function sitemap(): MetadataRoute.Sitemap {
