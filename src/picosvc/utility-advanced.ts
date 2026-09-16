@@ -10,8 +10,8 @@ const MAX_WAIT_MS = 10_000;
 const MAX_SELECTOR = 300;
 const MAX_HEADERS = 24;
 const MAX_COOKIES = 20;
-const BLOCKED_HEADERS = new Set(['host','content-length','connection','transfer-encoding','cf-connecting-ip','cf-ray']);
-const QR_LEVELS = new Set(['L','M','Q','H']);
+const BLOCKED_HEADERS = new Set(['host', 'content-length', 'connection', 'transfer-encoding', 'cf-connecting-ip', 'cf-ray']);
+const QR_LEVELS = new Set(['L', 'M', 'Q', 'H']);
 
 function htmlEntityDecode(value: string): string {
   return value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
@@ -63,11 +63,8 @@ function safeCookies(value: unknown): Array<Record<string, unknown>> {
     if (!raw || typeof raw !== 'object') return [];
     const cookie = raw as Record<string, unknown>;
     if (typeof cookie.name !== 'string' || typeof cookie.value !== 'string') return [];
-    const result: Record<string, unknown> = {
-      name: cookie.name.slice(0, 200),
-      value: cookie.value.slice(0, 8_192),
-    };
-    for (const key of ['domain','path','url','sameSite'] as const) if (typeof cookie[key] === 'string') result[key] = String(cookie[key]).slice(0, 2_048);
+    const result: Record<string, unknown> = { name: cookie.name.slice(0, 200), value: cookie.value.slice(0, 8_192) };
+    for (const key of ['domain', 'path', 'url', 'sameSite'] as const) if (typeof cookie[key] === 'string') result[key] = String(cookie[key]).slice(0, 2_048);
     if (typeof cookie.httpOnly === 'boolean') result.httpOnly = cookie.httpOnly;
     if (typeof cookie.secure === 'boolean') result.secure = cookie.secure;
     return [result];
@@ -79,12 +76,10 @@ async function quickActionWithDeadline(env: Env, action: string, options: Record
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      env.BROWSER.quickAction(action as any, options as any),
+      env.BROWSER.quickAction(action, options),
       new Promise<Response>((_, reject) => { timer = setTimeout(() => reject(new Error('browser_timeout')), timeoutMs + 2_000); }),
     ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
+  } finally { if (timer) clearTimeout(timer); }
 }
 
 function fetchError(code: string, message: string, status: number): Response {
@@ -103,7 +98,6 @@ async function fetchRoute(request: Request, env: Env): Promise<Response> {
   const format = body?.format === 'metadata' ? 'metadata' : 'markdown';
   const readable = body?.readable === true;
   const timeoutMs = limitedNumber(body?.timeoutMs, 15_000, 1_000, MAX_BROWSER_TIMEOUT_MS);
-
   try {
     if (format === 'markdown') {
       const response = await quickActionWithDeadline(env, 'markdown', {
@@ -115,7 +109,6 @@ async function fetchRoute(request: Request, env: Env): Promise<Response> {
       if (new TextEncoder().encode(markdown).byteLength > MAX_FETCH_OUTPUT) return fetchError('output_too_large', 'Markdown output exceeds 2 MiB', 413);
       return json({ schema: 'picosvc.fetch.v1', url: target.toString(), format: 'markdown', readable, markdown, tier: usage.tier });
     }
-
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
@@ -144,7 +137,6 @@ async function shotRoute(request: Request, env: Env): Promise<Response> {
   if (!target) return json({ error: { code: 'invalid_url', message: 'url must be a public HTTP(S) URL on port 80 or 443' } }, 400);
   const usage = await consumeUsage(env, identity.ownerId, 'shot', 'shots');
   if (!usage.ok) return json({ error: { code: 'quota_reached', message: 'Shot quota reached' }, tier: usage.tier, limit: usage.limit, used: usage.used }, 429);
-
   const format = body?.format === 'pdf' ? 'pdf' : 'png';
   const timeoutMs = limitedNumber(body?.timeoutMs, 15_000, 1_000, MAX_BROWSER_TIMEOUT_MS);
   const waitMs = limitedNumber(body?.waitMs, 0, 0, MAX_WAIT_MS);
@@ -168,7 +160,6 @@ async function shotRoute(request: Request, env: Env): Promise<Response> {
     options.screenshotOptions = { fullPage: body?.fullPage !== false };
     if (selector) options.selector = selector;
   }
-
   try {
     const response = await quickActionWithDeadline(env, format === 'pdf' ? 'pdf' : 'screenshot', options, timeoutMs + waitMs);
     const headers = new Headers(response.headers);
@@ -183,19 +174,20 @@ async function shotRoute(request: Request, env: Env): Promise<Response> {
 
 function qrStyle(url: URL) {
   const levelRaw = (url.searchParams.get('level') || 'M').toUpperCase();
-  const errorCorrectionLevel = QR_LEVELS.has(levelRaw) ? levelRaw as 'L'|'M'|'Q'|'H' : 'M';
+  const errorCorrectionLevel = QR_LEVELS.has(levelRaw) ? levelRaw as 'L' | 'M' | 'Q' | 'H' : 'M';
   const margin = limitedNumber(url.searchParams.get('margin'), 1, 0, 10);
   const width = limitedNumber(url.searchParams.get('width'), 512, 128, 2048);
   const hex = (value: string | null, fallback: string) => value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
   return { errorCorrectionLevel, margin, width, color: { dark: hex(url.searchParams.get('dark'), '#000000'), light: hex(url.searchParams.get('light'), '#ffffff') } };
 }
 
-function decodeDataUrl(value: string): Uint8Array {
+function decodeDataUrl(value: string): ArrayBuffer {
   const encoded = value.split(',', 2)[1] || '';
   const binary = atob(encoded);
-  const bytes = new Uint8Array(binary.length);
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
+  return buffer;
 }
 
 function deviceCategory(userAgent: string): string {
@@ -282,6 +274,5 @@ export async function utilityAdvancedManagementRoutes(request: Request, env: Env
     const referrers = await env.DB.prepare('SELECT referrer,SUM(scans) AS scans FROM qr_scan_daily WHERE link_id=? AND owner=? AND day>=? GROUP BY referrer ORDER BY scans DESC LIMIT 50').bind(row.id, identity.ownerId, since).all();
     return json({ linkId: row.id, days, since, daily: daily.results || [], countries: countries.results || [], devices: devices.results || [], referrers: referrers.results || [] });
   }
-
   return null;
 }
