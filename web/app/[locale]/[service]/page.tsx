@@ -1,66 +1,27 @@
-import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import ServiceDashboard from '../../service-dashboard';
-import ShotWorkspace from '../../shot-workspace';
-import MonitorDiagnostics from '../../monitor-diagnostics';
-import ProductLanding, { ProductIntro } from '../../product-landing';
-import '../../service-advanced.css';
+import CustomerProductPage from '../../customer-product-page';
 import { LOCALE_SLUGS, localeToSlug, slugToLocale } from '../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../service-data';
+import { CUSTOMER_GUIDES } from '../../customer-content';
 import { SITE_URL } from '../../seo';
 
 export const dynamicParams = false;
-
 export function generateStaticParams() {
-  return LOCALE_SLUGS.flatMap((locale) =>
-    GENERIC_SERVICE_SLUGS.map((service) => ({ locale, service })),
-  );
+  return LOCALE_SLUGS.flatMap(locale => GENERIC_SERVICE_SLUGS.map(service => ({ locale, service })));
 }
-
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; service: string }> }): Promise<Metadata> {
-  const { locale: localeSlug, service } = await params;
-  const locale = slugToLocale(localeSlug);
+  const { locale: slug, service } = await params;
+  const locale = slugToLocale(slug);
   if (!locale || !isGenericServiceSlug(service)) return {};
-  const info = SERVICE_INFO[service];
-  const pathFor = (targetLocale: 'en' | 'ja' | 'zh-CN') => `${SITE_URL}/${localeToSlug(targetLocale)}/${service}/`;
-  const descriptions = {
-    en: `${info.role} with PicoSvc. Explore use cases, steps, plans, limits and alternative products without signing in. Free tier, Pico $1/month and PicoPlus $5/month.`,
-    ja: `PicoSvc ${info.name} — ${info.role}。ログイン不要で用途・導入手順・料金と利用枠・競合との機能範囲を紹介。Free、Pico 月$1、PicoPlus 月$5。`,
-    'zh-CN': `PicoSvc ${info.name} — ${info.role}。无需登录即可了解用途、步骤、套餐配额和同类服务。Free、Pico $1/月、PicoPlus $5/月。`,
-  } as const;
-  const title = `PicoSvc ${info.name}`;
-  const canonical = pathFor(locale);
-  return {
-    title,
-    description: descriptions[locale],
-    robots: { index: true, follow: true },
-    icons: { icon: `/icons/${service}.svg` },
-    alternates: {
-      canonical,
-      languages: {
-        en: pathFor('en'),
-        ja: pathFor('ja'),
-        'zh-CN': pathFor('zh-CN'),
-        'x-default': pathFor('en'),
-      },
-    },
-    openGraph: { title, description: descriptions[locale], url: canonical, siteName: 'PicoSvc', type: 'website' },
-  };
+  const name = SERVICE_INFO[service].name;
+  const description = CUSTOMER_GUIDES[service].summary[locale];
+  const href = (target: 'en' | 'ja' | 'zh-CN') => `${SITE_URL}/${localeToSlug(target)}/${service}/`;
+  return { title: `${name} | PicoSvc`, description, robots: { index: true, follow: true }, icons: { icon: `/icons/${service}.svg` }, alternates: { canonical: href(locale), languages: { en: href('en'), ja: href('ja'), 'zh-CN': href('zh-CN'), 'x-default': href('en') } }, openGraph: { title: `${name} | PicoSvc`, description, url: href(locale), siteName: 'PicoSvc', type: 'website' } };
 }
-
-export default async function GenericServicePage({ params }: { params: Promise<{ locale: string; service: string }> }) {
-  const { locale: localeSlug, service } = await params;
-  const locale = slugToLocale(localeSlug);
+export default async function PublicProductPage({ params }: { params: Promise<{ locale: string; service: string }> }) {
+  const { locale: slug, service } = await params;
+  const locale = slugToLocale(slug);
   if (!locale || !isGenericServiceSlug(service)) notFound();
-  const iconStyle = { '--product-icon': `url('/icons/${service}.svg')` } as CSSProperties;
-  return <div className="picoProductTheme" style={iconStyle}>
-    <ProductIntro service={service} locale={locale} />
-    <div id="workspace">
-      {service === 'shot' ? <ShotWorkspace />
-        : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></>
-        : <ServiceDashboard service={service} />}
-    </div>
-    <ProductLanding service={service} locale={locale} />
-  </div>;
+  return <CustomerProductPage service={service} locale={locale} />;
 }
