@@ -1,0 +1,49 @@
+/* The product overview and the workspace have separate URLs. Keep the app itself immediately accessible. */
+.picoProductTheme > .servicePage > .nav,
+.picoProductTheme > .shotPage > .nav {
+  min-height: 0;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.picoProductTheme > .servicePage > .nav .brand,
+.picoProductTheme > .shotPage > .nav .brand {
+  display: none;
+}
+.picoProductTheme > .servicePage > .nav .navRight,
+.picoProductTheme > .shotPage > .nav .navRight {
+  width: 100%;
+  justify-content: flex-end;
+}
+.picoProductTheme > .servicePage > .serviceHero {
+  padding-top: 12px;
+  padding-bottom: 8px;
+}
+.picoProductTheme > .servicePage > .serviceHero h1 {
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  line-height: 1.25;
+  margin: 4px 0 0;
+}
+.picoProductTheme > .servicePage > .serviceHero .lede,
+.picoProductTheme > .servicePage > .serviceHero .flow {
+  display: none;
+}
+.picoProductTheme > .shotPage > .shotHero {
+  padding-top: 12px;
+  padding-bottom: 10px;
+}
+.picoProductTheme > .shotPage > .shotHero h1 {
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+.picoProductTheme > .shotPage > .shotHero .lede { display: none; }
+@media (max-width: 580px) {
+  .picoProductTheme > .servicePage > .nav .navRight,
+  .picoProductTheme > .shotPage > .nav .navRight {
+    gap: 8px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .picoProductTheme > .servicePage > .serviceHero,
+  .picoProductTheme > .shotPage > .shotHero { padding-top: 8px; }
+}
