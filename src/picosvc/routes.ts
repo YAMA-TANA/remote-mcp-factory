@@ -11,6 +11,7 @@ import { automationManagementRoutes } from './automation-services.js';
 import { configManagementRoutes } from './config-service.js';
 import { cronManagementRoutes } from './cron-service.js';
 import { dataManagementRoutes } from './data-services.js';
+import { filesAccessManagementRoutes } from './files-access.js';
 import { functionManagementRoutes } from './functions-service.js';
 import { hooksAdvancedManagementRoutes } from './hooks-advanced.js';
 import { hooksManagementRoutes } from './hooks.js';
@@ -35,6 +36,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   const url = new URL(request.url);
   for (const handler of [
     picoSvcUsageDashboard,
+    filesAccessManagementRoutes,
     hooksAdvancedManagementRoutes,
     hooksManagementRoutes,
     mockAdvancedManagementRoutes,
