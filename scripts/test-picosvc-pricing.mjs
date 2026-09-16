@@ -28,8 +28,8 @@ for (const product of PICOSVC_PRODUCTS) {
 const expectedLimits = {
   mcp: [
     { mcps: 1, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 5_000, builds: 20 },
-    { mcps: 5, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 250_000, builds: 200 },
-    { mcps: 25, sandboxMcps: 2, sandboxActiveMinutes: 10_000, requests: 1_000_000, builds: 1_000 },
+    { mcps: 5, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 200_000, builds: 200 },
+    { mcps: 25, sandboxMcps: 2, sandboxActiveMinutes: 10_000, requests: 500_000, builds: 1_000 },
   ],
   mock: [
     { endpoints: 1, rules: 5, history: 100, requests: 1_500 },
@@ -116,9 +116,10 @@ for (const product of PICOSVC_PRODUCTS) {
 
 const mcpPublicQuota = PICOSVC_QUOTAS.find((row) => row.service === 'MCP');
 assert.match(mcpPublicQuota?.free || '', /Edge MCP/, 'Free MCP must be advertised as Edge-only');
-assert.match(mcpPublicQuota?.pico || '', /Edge MCP/, 'Pico MCP must be advertised as Edge-only');
+assert.match(mcpPublicQuota?.pico || '', /200k req/, 'Pico MCP must publish the margin-safe request cap');
 assert.match(mcpPublicQuota?.picoPlus || '', /2 Sandbox slots/, 'PicoPlus must publish its Sandbox slot limit');
 assert.match(mcpPublicQuota?.picoPlus || '', /10k active min/, 'PicoPlus must publish its Sandbox active-minute cap');
+assert.match(mcpPublicQuota?.picoPlus || '', /500k req/, 'PicoPlus MCP must publish the margin-safe request cap');
 assert.equal(PICOSVC_PRODUCTS.find((product) => product.slug === 'flags')?.name, 'PicoSvc Config', 'Remote Config must not be marketed as feature targeting');
 
 const bundlePico = PICOSVC_BUNDLES.find((bundle) => bundle.slug === 'bundle-pico');
