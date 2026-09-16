@@ -1,6 +1,6 @@
 import type { Env, ServerRow } from '../types.js';
 import { buildServer, stopRuntime } from '../runtime.js';
-import { json, requireIdentity } from './service-utils.js';
+import { consumeUsage, json, requireIdentity } from './service-utils.js';
 
 const MAX_EVENTS_PER_SERVER = 500;
 
@@ -82,15 +82,18 @@ export async function mcpObservabilityManagementRoutes(request: Request, env: En
   }
 
   if (action === 'redeploy' && request.method === 'POST') {
+    const quota = await consumeUsage(env, row.owner, 'mcp', 'builds');
+    if (!quota.ok) return json({ error: 'MCP build quota reached', tier: quota.tier, limit: quota.limit, used: quota.used }, 429);
     const now = new Date().toISOString();
     await env.DB.prepare("UPDATE servers SET status='queued',error=NULL,updated_at=? WHERE id=? AND owner=?").bind(now, row.id, row.owner).run();
     await stopRuntime(env, row).catch(() => undefined);
     const started = Date.now();
     try {
       await buildServer(env, { ...row, status: 'queued', error: null, updated_at: now } as ServerRow);
-      await appendEvent(env, row, 'build', 'ready', Date.now() - started, null, 'Manual redeploy completed');
-      const current = await env.DB.prepare('SELECT status,detected_runtime,error,updated_at FROM servers WHERE id=? AND owner=?').bind(row.id, row.owner).first();
-      return json({ serverId: row.id, redeployed: true, deployment: current });
+      const current = await env.DB.prepare('SELECT status,detected_runtime,error,updated_at FROM servers WHERE id=? AND owner=?').bind(row.id, row.owner).first<any>();
+      const ready = current?.status === 'ready';
+      await appendEvent(env, row, 'build', ready ? 'ready' : 'failed', Date.now() - started, null, ready ? 'Manual redeploy completed' : (current?.error || 'Manual redeploy did not reach ready state'));
+      return json({ serverId: row.id, redeployed: ready, deployment: current }, ready ? 200 : 502);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await appendEvent(env, row, 'build', 'failed', Date.now() - started, null, message);
