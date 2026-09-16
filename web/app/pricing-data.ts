@@ -22,7 +22,7 @@ export const PICOSVC_PRICING = {
 
 export const PICOSVC_QUOTAS = [
   { service: 'MCP', free: '1 Edge MCP · 5k req · 20 builds', pico: '5 Edge MCP · 250k req · 200 builds', picoPlus: '25 MCP · 2 Sandbox slots · 10k active min · 1M req · 1k builds' },
-  { service: 'Mock', free: '1 endpoint · 1.5k req', pico: '10 endpoints · 25k req', picoPlus: '100 endpoints · 250k req' },
+  { service: 'Mock', free: '1 endpoint · 5 rules · 100 history · 1.5k req', pico: '10 endpoints · 50 rules · 1k history · 25k req', picoPlus: '100 endpoints · 500 rules · 10k history · 250k req' },
   { service: 'Hooks', free: '1 inbox · 500 events · 100 history', pico: '5 inboxes · 10k events · 1k history', picoPlus: '25 inboxes · 100k events · 10k history' },
   { service: 'RSS', free: '3 feeds · 24h refresh', pico: '20 feeds · 3h refresh', picoPlus: '100 feeds · 30m refresh' },
   { service: 'Mail', free: '1 route · 100 mails', pico: '5 routes · 2k mails', picoPlus: '25 routes · 20k mails' },
