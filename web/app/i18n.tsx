@@ -63,9 +63,28 @@ export function LocaleProvider({
     if (routed || initialLocale) return;
     const pathname = window.location.pathname;
     if (/^\/(en|ja|zh-cn)(\/|$)/.test(pathname) || !isLegacyLocalizedPage(pathname)) return;
+    const targetLocale = detectLocale();
     const suffix = pathname === '/' ? '/' : pathname;
-    window.location.replace(`/${localeToSlug(locale)}${suffix}${window.location.search}${window.location.hash}`);
-  }, [locale, routed, initialLocale]);
+    window.location.replace(`/${localeToSlug(targetLocale)}${suffix}${window.location.search}${window.location.hash}`);
+  }, [routed, initialLocale]);
+
+  useEffect(() => {
+    if (!routed) return;
+    const handler = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target as Element | null;
+      const anchor = target?.closest('a');
+      if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+      const href = anchor.getAttribute('href');
+      if (!href || !href.startsWith('/') || /^\/(en|ja|zh-cn)(\/|$)/.test(href)) return;
+      event.preventDefault();
+      const normalized = normalizePath(href);
+      const prefix = `/${localeToSlug(locale)}`;
+      window.location.assign(normalized === '/' ? `${prefix}/` : `${prefix}${normalized}`);
+    };
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
+  }, [locale, routed]);
 
   function localizedHref(path: string): string {
     const normalized = normalizePath(path);
