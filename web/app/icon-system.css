@@ -1,0 +1,9 @@
+/* Crisp, resolution-independent PicoSvc icons. No raster assets or image-generation dependencies. */
+.brandMark:has(> svg){display:inline-grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border:0;background:none;box-shadow:none;overflow:visible}
+.brandMark>svg{display:block;width:36px;height:36px;max-width:none;flex-shrink:0}
+.homeProductIcon:has(> svg){display:inline-grid;place-items:center;width:56px;height:56px;flex:0 0 56px;border:0;background:none;border-radius:15px;overflow:visible}
+.homeProductIcon>svg{display:block;width:54px;height:54px;max-width:100%;filter:drop-shadow(0 5px 12px rgba(3,10,4,.25))}
+.homeProduct:hover .homeProductIcon>svg{filter:drop-shadow(0 6px 16px rgba(136,255,105,.15))}
+.picoQuickInitial:has(> svg){background:none;border:0;overflow:visible}
+.picoQuickInitial>svg{display:block;width:36px;height:36px;flex:0 0 36px}
+@media(prefers-reduced-motion:reduce){.homeProductIcon>svg{transition:none}}
