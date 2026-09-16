@@ -8,6 +8,7 @@ import {
   picoSvcScheduledGuardrails,
 } from './picosvc/cost-guardrails.js';
 import { dataRuntimeRoute } from './picosvc/data-services.js';
+import { filesAccessRuntimeRoute } from './picosvc/files-access.js';
 import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
@@ -56,6 +57,9 @@ export default {
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
       return Response.redirect('https://picosvc.com/', 302);
     }
+    // File access must be verified before a download is charged or the legacy public handler runs.
+    const filesResponse = await filesAccessRuntimeRoute(request, env);
+    if (filesResponse) return filesResponse;
     const guardrailResponse = await picoSvcRuntimeGuardrails(request, env)
       || await jsonScopedWriteGuard(request, env);
     if (guardrailResponse) {
