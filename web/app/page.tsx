@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
 import { LanguageSwitcher, useI18n } from './i18n';
+import { PICOSVC_PRICING } from './pricing-data';
 
 type Deployment = {
   id: string;
@@ -41,6 +42,33 @@ const PRODUCTS: Product[] = [
   { slug: 'monitor', name: 'Monitor', status: 'planned' }, { slug: 'forms', name: 'Forms', status: 'planned' },
 ];
 
+const PRICING_COPY = {
+  en: {
+    service: `Pico $${PICOSVC_PRICING.standalone.pico}/mo · PicoPlus $${PICOSVC_PRICING.standalone.picoPlus}/mo`,
+    kicker: 'SIMPLE PRICING', title: 'Same price model across every service.',
+    body: 'Use products individually or bundle the suite. Larger-than-PicoPlus usage is available by contact.',
+    bundlePico: 'Bundle Pico', bundlePicoBody: 'Pico tier across the suite.',
+    bundlePro: 'Bundle Pro', bundleProBody: 'PicoPlus tier across the suite.',
+    custom: 'Need more? Contact us.', details: 'Full pricing →',
+  },
+  ja: {
+    service: `Pico 月$${PICOSVC_PRICING.standalone.pico} · PicoPlus 月$${PICOSVC_PRICING.standalone.picoPlus}`,
+    kicker: '料金', title: '全サービス、同じ料金体系。',
+    body: '単品でもBundleでも利用できます。PicoPlusを超える利用量はお問い合わせください。',
+    bundlePico: 'Bundle Pico', bundlePicoBody: '全サービスのPico枠をまとめて利用。',
+    bundlePro: 'Bundle Pro', bundleProBody: '全サービスのPicoPlus枠をまとめて利用。',
+    custom: 'それ以上は要相談。', details: '料金詳細 →',
+  },
+  'zh-CN': {
+    service: `Pico 每月 $${PICOSVC_PRICING.standalone.pico} · PicoPlus 每月 $${PICOSVC_PRICING.standalone.picoPlus}`,
+    kicker: '价格', title: '所有服务采用同一套价格。',
+    body: '可单独订阅，也可购买 Bundle。超过 PicoPlus 的用量可联系我们定制。',
+    bundlePico: 'Bundle Pico', bundlePicoBody: '整套服务获得 Pico 档。',
+    bundlePro: 'Bundle Pro', bundleProBody: '整套服务获得 PicoPlus 档。',
+    custom: '更高用量请联系。', details: '查看完整价格 →',
+  },
+} as const;
+
 const API_URL = (process.env.NEXT_PUBLIC_FACTORY_API_URL || '').replace(/\/$/, '');
 const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
 
@@ -60,9 +88,10 @@ function runtimeBadge(item: Deployment) {
 }
 
 export default function Home() {
-  const { messages, localizedHref } = useI18n();
+  const { locale, messages, localizedHref } = useI18n();
   const t = messages.home;
   const c = messages.common;
+  const p = PRICING_COPY[locale];
   const [clerk, setClerk] = useState<Clerk | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [repo, setRepo] = useState('');
@@ -140,7 +169,7 @@ export default function Home() {
       <nav className="nav shell">
         <div className="brand"><span className="brandMark">P</span><span>PicoSvc</span></div>
         <div className="navRight">
-          <a href="#products">{c.products}</a><a href={localizedHref('/mock')}>{c.mock}</a><a href={localizedHref('/hooks')}>Hooks</a><a href={localizedHref('/contact')}>{c.contact}</a>
+          <a href="#products">{c.products}</a><a href={localizedHref('/pricing')}>Pricing</a><a href={localizedHref('/mock')}>{c.mock}</a><a href={localizedHref('/hooks')}>Hooks</a><a href={localizedHref('/contact')}>{c.contact}</a>
           <a href="https://github.com/YAMA-TANA/remote-mcp-factory" target="_blank" rel="noreferrer">{c.github}</a>
           <LanguageSwitcher />
           {signedIn ? <div ref={userButtonRef} className="userButton" /> : <button className="secondary" onClick={() => clerk?.openSignIn()}>{c.signIn}</button>}
@@ -151,7 +180,7 @@ export default function Home() {
         <div className="eyebrow"><span className="dot" /> {t.eyebrow}</div>
         <h1>{t.title1}<br />{t.title2}</h1>
         <p className="lede">{t.lede}</p>
-        <div className="flow"><span>{t.flowLogin}</span><i>→</i><span>{t.flowPlans}</span><i>→</i><span>{t.flowBundle}</span><i>→</i><span>{t.flowEdge}</span><em>{t.flowLive}</em></div>
+        <div className="flow"><span>{t.flowLogin}</span><i>→</i><span>Pico $1 / PicoPlus $5</span><i>→</i><span>Bundle $5 / $22</span><i>→</i><span>{t.flowEdge}</span><em>{t.flowLive}</em></div>
       </section>
 
       <section className="shell deploymentsSection" id="products">
@@ -163,11 +192,22 @@ export default function Home() {
             return (
               <article className="deployment" key={product.slug}>
                 <div className="deploymentTop"><div><strong>PicoSvc {product.name}</strong><p>{copy.role}</p></div><span className={`status ${product.status === 'active' ? 'ready' : ''}`}>{product.status === 'active' ? t.available : t.planned}</span></div>
-                <div className="runtime"><span className={product.status === 'active' ? 'edgePill' : 'fallbackPill'}>{product.status === 'active' ? t.available : t.planned}</span><span>{copy.pricing}</span><span>{t.standalone}</span><span>{t.bundleEligible}</span></div>
+                <div className="runtime"><span className={product.status === 'active' ? 'edgePill' : 'fallbackPill'}>{product.status === 'active' ? t.available : t.planned}</span><span>{p.service}</span><span>{t.standalone}</span><span>{t.bundleEligible}</span></div>
                 <div className="deploymentBottom"><code>{product.slug}</code>{dashboard ? <a href={dashboard}>{t.openDashboard}</a> : <span>{t.sharedLoginBilling}</span>}</div>
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="shell deploymentsSection" id="pricing">
+        <div className="sectionHead"><div><span className="kicker">{p.kicker}</span><h2>{p.title}</h2></div><a href={localizedHref('/pricing')}>{p.details}</a></div>
+        <p className="lede">{p.body}</p>
+        <div className="deploymentGrid">
+          <article className="deployment"><div className="deploymentTop"><div><strong>Pico</strong><p>{p.service}</p></div><span className="status ready">$1/mo</span></div></article>
+          <article className="deployment"><div className="deploymentTop"><div><strong>PicoPlus</strong><p>{p.custom}</p></div><span className="status ready">$5/mo</span></div></article>
+          <article className="deployment"><div className="deploymentTop"><div><strong>{p.bundlePico}</strong><p>{p.bundlePicoBody}</p></div><span className="status ready">${PICOSVC_PRICING.bundles.pico}/mo</span></div></article>
+          <article className="deployment"><div className="deploymentTop"><div><strong>{p.bundlePro}</strong><p>{p.bundleProBody}</p></div><span className="status ready">${PICOSVC_PRICING.bundles.pro}/mo</span></div></article>
         </div>
       </section>
 
