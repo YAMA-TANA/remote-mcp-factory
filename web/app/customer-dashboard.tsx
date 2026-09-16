@@ -1,12 +1,10 @@
 'use client';
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
 import { ui } from '@clerk/ui';
 import { useI18n } from './i18n';
 import { CUSTOMER_GUIDES, CUSTOMER_SLUGS, type ProductSlug } from './customer-content';
 import { SERVICE_INFO } from './service-data';
-import { SERVICE_UI } from './service-ui-config';
 import { workspaceApiError } from './workspace-helpers';
 import './customer-pages.css';
 
@@ -21,27 +19,17 @@ const COPY = {
   en: { title:'My dashboard', intro:'Manage 16 PicoSvc services in one place. Check plans, monthly usage and resource counts, then open each workspace.', products:'All services', docs:'How-to', explanation:'Overview', open:'Workspace', refresh:'Refresh', login:'Sign in to see your account', loginBody:'One account shows your resources and monthly usage across services.', noConfig:'Authentication or API connectivity is not configured.', loading:'Loading…', month:'Usage month', resources:'Resources', requests:'Monthly usage', noUsage:'No usage recorded this month', noResource:'Run-on-demand service', unknown:'Unavailable', partial:'Some service counts could not be loaded. Missing data is not reported as zero.', failed:'Could not load your account.', free:'Free', totals:'Verified resource count', first:'Choose a service to create a resource.', signedIn:'Signed in' },
   'zh-CN': { title:'我的服务总览', intro:'在同一位置管理 16 项 PicoSvc 服务，查看套餐、本月用量与资源数量，并进入工作台。', products:'所有服务', docs:'使用指南', explanation:'介绍', open:'工作台', refresh:'刷新', login:'登录以查看账号', loginBody:'用一个账号查看各服务资源与月度用量。', noConfig:'尚未配置身份验证或 API 连接。', loading:'加载中…', month:'统计月份', resources:'资源数', requests:'本月用量', noUsage:'本月无用量记录', noResource:'按需执行的服务', unknown:'无法获取', partial:'部分服务的数量无法获取；未把缺失数据视为零。', failed:'无法加载账号信息。', free:'Free', totals:'已确认资源合计', first:'选择服务并创建资源。', signedIn:'已登录' },
 } as const;
-
 const LIST: Partial<Record<ProductSlug, { path: string; key: string }>> = {
-  mock: { path: '/api/picosvc/mock/endpoints', key: 'endpoints' },
-  mcp: { path: '/api/servers', key: 'servers' },
-  hooks: { path: '/api/picosvc/hooks/inboxes', key: 'inboxes' },
-  rss: { path: '/api/picosvc/rss/feeds', key: 'feeds' },
-  mail: { path: '/api/picosvc/mail/routes', key: 'routes' },
-  qr: { path: '/api/picosvc/qr/links', key: 'links' },
-  cron: { path: '/api/picosvc/cron/jobs', key: 'jobs' },
-  functions: { path: '/api/picosvc/functions/apps', key: 'apps' },
-  json: { path: '/api/picosvc/json/stores', key: 'stores' },
-  files: { path: '/api/picosvc/files/spaces', key: 'spaces' },
-  license: { path: '/api/picosvc/license/projects', key: 'projects' },
-  flags: { path: '/api/picosvc/flags/projects', key: 'projects' },
-  monitor: { path: '/api/picosvc/monitor', key: 'monitors' },
-  forms: { path: '/api/picosvc/forms', key: 'forms' },
+  mock: { path:'/api/picosvc/mock/endpoints', key:'endpoints' }, mcp: { path:'/api/servers', key:'servers' },
+  hooks: { path:'/api/picosvc/hooks/inboxes', key:'inboxes' }, rss: { path:'/api/picosvc/rss/feeds', key:'feeds' },
+  mail: { path:'/api/picosvc/mail/routes', key:'routes' }, qr: { path:'/api/picosvc/qr/links', key:'links' },
+  cron: { path:'/api/picosvc/cron/jobs', key:'jobs' }, functions: { path:'/api/picosvc/functions/apps', key:'apps' },
+  json: { path:'/api/picosvc/json/stores', key:'stores' }, files: { path:'/api/picosvc/files/spaces', key:'spaces' },
+  license: { path:'/api/picosvc/license/projects', key:'projects' }, flags: { path:'/api/picosvc/flags/projects', key:'projects' },
+  monitor: { path:'/api/picosvc/monitor', key:'monitors' }, forms: { path:'/api/picosvc/forms', key:'forms' },
 };
-// Keep the dashboard's list paths in step with the actual per-service workspaces.
 export const DASHBOARD_LIST = LIST;
-
-function isObject(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
+function isObject(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 export default function CustomerDashboard() {
   const { locale, localizedHref } = useI18n();
   const copy = COPY[locale];
@@ -53,7 +41,6 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const accountButton = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!KEY) return;
     let active = true;
@@ -73,7 +60,6 @@ export default function CustomerDashboard() {
     clerk.mountUserButton(node);
     return () => clerk.unmountUserButton(node);
   }, [clerk, signedIn]);
-
   const refresh = useCallback(async () => {
     if (!API || !clerk || !signedIn) return;
     setLoading(true); setError('');
@@ -94,8 +80,8 @@ export default function CustomerDashboard() {
         if (!cfg) return [service, null] as const;
         try {
           const result = await request(cfg.path);
-          if (!isObject(result) || !Array.isArray(result[cfg.key])) return [service, null] as const;
-          return [service, result[cfg.key].length] as const;
+          const entries: unknown = Array.isArray(result) ? result : isObject(result) ? result[cfg.key] : null;
+          return [service, Array.isArray(entries) ? entries.length : null] as const;
         } catch { return [service, null] as const; }
       }));
       setCounts(Object.fromEntries(results) as Partial<Record<ProductSlug, Count>>);
@@ -105,7 +91,6 @@ export default function CustomerDashboard() {
     } finally { setLoading(false); }
   }, [clerk, signedIn, copy.failed]);
   useEffect(() => { if (signedIn && clerk) void refresh(); else { setAccount(null); setCounts({}); } }, [clerk, signedIn, refresh]);
-
   const known = CUSTOMER_SLUGS.filter(slug => LIST[slug] && typeof counts[slug] === 'number');
   const total = known.reduce((sum, slug) => sum + (counts[slug] || 0), 0);
   const missing = CUSTOMER_SLUGS.some(slug => LIST[slug] && counts[slug] === null);
