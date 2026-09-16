@@ -1,7 +1,7 @@
 'use client';
 
 import { LanguageSwitcher, useI18n } from '../i18n';
-import { PICOSVC_PRICING } from '../pricing-data';
+import { PICOSVC_PRICING, PICOSVC_QUOTAS } from '../pricing-data';
 
 const COPY = {
   en: {
@@ -13,6 +13,7 @@ const COPY = {
     picoPlus: 'PicoPlus', picoPlusBody: 'Per service, per month. Higher quotas for heavier individual use.',
     custom: 'Custom', customPrice: 'Contact us', customBody: 'Need more than PicoPlus, a custom quota, or a business arrangement? Talk to us.',
     perMonth: '/ month', perService: 'per service', allServices: 'all services',
+    quotaKicker: 'SERVICE QUOTAS', quotaTitle: 'Monthly limits by service.', quotaNote: 'Request, event, check, scan, invocation, validation and submission counters reset monthly. Resource-count and storage limits are concurrent caps.', service: 'Service',
     bundles: 'BUNDLES', bundlesTitle: 'Using several services? Bundle them.',
     bundlePico: 'Bundle Pico', bundlePicoBody: 'Pico tier across the PicoSvc suite. Best when you use several small services together.',
     bundlePro: 'Bundle Pro', bundleProBody: 'PicoPlus tier across the PicoSvc suite for broader and heavier usage.',
@@ -28,6 +29,7 @@ const COPY = {
     picoPlus: 'PicoPlus', picoPlusBody: '1サービスあたり月額$5。単品サービスをより多く使うための上位枠です。',
     custom: 'Custom', customPrice: '要相談', customBody: 'PicoPlusを超える利用量、個別上限、法人向け条件などはお問い合わせください。',
     perMonth: '/ 月', perService: '1サービス', allServices: '全サービス',
+    quotaKicker: 'サービス別上限', quotaTitle: '各プランの月間利用量。', quotaNote: 'request・event・check・scan・invocation・validation・submission等は毎月リセット。作成数とストレージは同時保有上限です。', service: 'サービス',
     bundles: 'BUNDLE', bundlesTitle: '複数サービスならBundle。',
     bundlePico: 'Bundle Pico', bundlePicoBody: 'PicoSvc各サービスのPico枠をまとめて利用。複数の小型サービスを使う場合に向いています。',
     bundlePro: 'Bundle Pro', bundleProBody: 'PicoSvc各サービスのPicoPlus枠をまとめて利用する上位Bundleです。',
@@ -43,6 +45,7 @@ const COPY = {
     picoPlus: 'PicoPlus', picoPlusBody: '每项服务每月 $5，为单项服务提供更高配额。',
     custom: 'Custom', customPrice: '联系我们', customBody: '如需超过 PicoPlus 的用量、自定义额度或企业方案，请联系我们。',
     perMonth: '/ 月', perService: '每项服务', allServices: '所有服务',
+    quotaKicker: '服务配额', quotaTitle: '各服务的月度限制。', quotaNote: '请求、事件、检查、扫描、调用、验证和提交等计数每月重置；资源数量和存储为同时持有上限。', service: '服务',
     bundles: 'BUNDLE', bundlesTitle: '使用多个服务？选择 Bundle。',
     bundlePico: 'Bundle Pico', bundlePicoBody: '在 PicoSvc 套件中获得 Pico 档，适合同时使用多个轻量服务。',
     bundlePro: 'Bundle Pro', bundleProBody: '在 PicoSvc 套件中获得 PicoPlus 档，适合更广泛、更高用量的场景。',
@@ -78,6 +81,30 @@ export default function PricingPage() {
           <article className="deployment"><div className="deploymentTop"><div><strong>{t.pico}</strong><p>{t.picoBody}</p></div><span className="status ready">${PICOSVC_PRICING.standalone.pico}{t.perMonth}</span></div><div className="runtime"><span>{t.perService}</span><span>${PICOSVC_PRICING.standalone.pico}</span></div></article>
           <article className="deployment"><div className="deploymentTop"><div><strong>{t.picoPlus}</strong><p>{t.picoPlusBody}</p></div><span className="status ready">${PICOSVC_PRICING.standalone.picoPlus}{t.perMonth}</span></div><div className="runtime"><span>{t.perService}</span><span>${PICOSVC_PRICING.standalone.picoPlus}</span></div></article>
           <article className="deployment"><div className="deploymentTop"><div><strong>{t.custom}</strong><p>{t.customBody}</p></div><span className="status">{t.customPrice}</span></div><div className="deploymentBottom"><a href={localizedHref('/contact')}>{t.contact}</a></div></article>
+        </div>
+      </section>
+
+      <section className="shell deploymentsSection">
+        <div className="sectionHead"><div><span className="kicker">{t.quotaKicker}</span><h2>{t.quotaTitle}</h2></div></div>
+        <p className="lede">{t.quotaNote}</p>
+        <div className="deployCard" style={{ overflowX: 'auto', padding: 0 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+            <thead>
+              <tr>
+                {[t.service, 'Free · $0', 'Pico · $1/mo', 'PicoPlus · $5/mo'].map((label) => <th key={label} style={{ textAlign: 'left', padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {PICOSVC_QUOTAS.map((row) => (
+                <tr key={row.service}>
+                  <td style={{ padding: '13px 16px', borderBottom: '1px solid var(--line)', fontWeight: 700 }}>{row.service}</td>
+                  <td style={{ padding: '13px 16px', borderBottom: '1px solid var(--line)' }}>{row.free}</td>
+                  <td style={{ padding: '13px 16px', borderBottom: '1px solid var(--line)' }}>{row.pico}</td>
+                  <td style={{ padding: '13px 16px', borderBottom: '1px solid var(--line)' }}>{row.picoPlus}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
