@@ -9,7 +9,7 @@ const migrations = readdirSync(new URL('../migrations/', import.meta.url))
   .filter((file) => /^00(?:1[0-9]|[2-9][0-9])_.*\.sql$/.test(file))
   .filter((file) => Number(file.slice(0, 4)) >= 10)
   .sort();
-assert.ok(migrations.length >= 18, 'Expected PicoSvc additive migrations 0010–0027');
+assert.ok(migrations.length >= 19, 'Expected PicoSvc additive migrations 0010–0028');
 for (const migration of migrations) {
   const sql = readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8');
   try { db.exec(sql); }
@@ -19,7 +19,7 @@ for (const migration of migrations) {
 const columns = (table) => new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
 for (const table of [
   'rss_feeds', 'rss_entries', 'webhook_events', 'webhook_deliveries', 'mock_endpoints', 'mock_rules', 'mock_requests',
-  'qr_links', 'qr_scan_daily', 'flag_projects', 'feature_flags', 'mcp_sandbox_active_minutes',
+  'qr_links', 'qr_scan_daily', 'flag_projects', 'feature_flags', 'mcp_sandbox_active_minutes', 'mcp_runtime_events', 'mcp_request_daily',
   'mail_events', 'mail_attachments', 'cron_runs', 'cron_job_options', 'cron_dispatch_claims',
   'cron_run_attempts', 'cron_notifications', 'file_objects', 'json_documents', 'json_store_tokens',
   'license_activations', 'license_validation_history', 'function_revisions', 'function_secrets', 'function_invocations',
@@ -48,6 +48,8 @@ assert.ok(columns('form_options').has('require_turnstile'), 'Forms Turnstile con
 assert.ok(columns('form_deliveries').has('response_status'), 'Forms forwarding status missing');
 assert.ok(columns('monitor_options').has('last_content_hash'), 'Monitor content baseline missing');
 assert.ok(columns('monitor_events').has('event_type'), 'Monitor change/error events missing');
+assert.ok(columns('mcp_runtime_events').has('duration_ms'), 'MCP runtime event timing missing');
+assert.ok(columns('mcp_request_daily').has('errors'), 'MCP request error metrics missing');
 assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='trg_mail_retry_cap'").get(), 'Mail retry cap trigger missing');
 assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), [], 'Foreign key validation failed');
 console.log(`D1 migration smoke OK: schema.sql + ${migrations.length} additive migrations (${migrations[0]} to ${migrations.at(-1)}).`);
