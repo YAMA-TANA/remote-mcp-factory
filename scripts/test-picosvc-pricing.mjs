@@ -32,9 +32,9 @@ const expectedLimits = {
     { mcps: 25, sandboxMcps: 2, sandboxActiveMinutes: 10_000, requests: 1_000_000, builds: 1_000 },
   ],
   mock: [
-    { endpoints: 1, requests: 1_500 },
-    { endpoints: 10, requests: 25_000 },
-    { endpoints: 100, requests: 250_000 },
+    { endpoints: 1, rules: 5, history: 100, requests: 1_500 },
+    { endpoints: 10, rules: 50, history: 1_000, requests: 25_000 },
+    { endpoints: 100, rules: 500, history: 10_000, requests: 250_000 },
   ],
   hooks: [
     { inboxes: 1, events: 500, replays: 50, history: 100, bodyBytes: 64 * 1024 },
@@ -119,6 +119,7 @@ assert.match(mcpPublicQuota?.free || '', /Edge MCP/, 'Free MCP must be advertise
 assert.match(mcpPublicQuota?.pico || '', /Edge MCP/, 'Pico MCP must be advertised as Edge-only');
 assert.match(mcpPublicQuota?.picoPlus || '', /2 Sandbox slots/, 'PicoPlus must publish its Sandbox slot limit');
 assert.match(mcpPublicQuota?.picoPlus || '', /10k active min/, 'PicoPlus must publish its Sandbox active-minute cap');
+assert.equal(PICOSVC_PRODUCTS.find((product) => product.slug === 'flags')?.name, 'PicoSvc Config', 'Remote Config must not be marketed as feature targeting');
 
 const bundlePico = PICOSVC_BUNDLES.find((bundle) => bundle.slug === 'bundle-pico');
 const bundlePro = PICOSVC_BUNDLES.find((bundle) => bundle.slug === 'bundle-pro');
