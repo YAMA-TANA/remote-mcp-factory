@@ -20,6 +20,8 @@ for (const table of [
 ]) {
   assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`), `missing ${table}`);
 }
+const hooksR2Migration = readFileSync(new URL('../migrations/0012_picosvc_hooks_r2.sql', import.meta.url), 'utf8');
+assert.match(hooksR2Migration, /ADD COLUMN body_r2_key TEXT/, 'Hooks R2 body pointer migration required');
 
 const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
 assert.match(entry, /scheduled\s*\(/, 'scheduled handler required');
@@ -55,6 +57,11 @@ assert.match(hooks, /resourceCapacity\(env, owner, 'hooks', 'inboxes', 'webhook_
 assert.match(hooks, /productLimit\(env, owner, 'hooks', 'history'\)/, 'Hooks must expose retained-history limits');
 assert.match(hooks, /pruneWebhookHistory/, 'Hooks must prune retained event history');
 assert.match(hooks, /consumeUsage\(env, inbox\.owner, 'hooks', 'events'\)/, 'Hooks inbound events must atomically consume quota');
+assert.match(hooks, /R2_BODY_THRESHOLD_BYTES/, 'Hooks must have an R2 offload threshold for raw bodies');
+assert.match(hooks, /body_r2_key/, 'Hooks must persist an R2 body pointer');
+assert.match(hooks, /env\.ARTIFACTS\.put\(r2Key, bytes/, 'Hooks must offload large bodies to R2');
+assert.match(hooks, /loadEventBody/, 'Hooks replay/detail must transparently load D1 or R2 bodies');
+assert.match(hooks, /deleteR2Keys/, 'Hooks retention/deletion must clean R2 bodies');
 
 const utility = readFileSync(new URL('../src/picosvc/utility-services.ts', import.meta.url), 'utf8');
 assert.match(utility, /consumeUsage\(env, row\.owner, 'qr', 'scans'\)/, 'Dynamic QR redirects must consume scan quota');
