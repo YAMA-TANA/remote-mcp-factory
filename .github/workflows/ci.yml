@@ -21,4 +21,18 @@ jobs:
       - run: npm run typecheck
       - run: node --experimental-strip-types scripts/test-github-app-crypto.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-pricing.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-margin.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-services.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-utility-advanced.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-json-advanced.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-license-advanced.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-files-access.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-mail-mime.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-mail-delivery.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-mail-retry-cap.mjs
+      - run: node --experimental-sqlite --experimental-strip-types scripts/test-picosvc-cron-advanced.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-functions-advanced.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-forms-advanced.mjs
+      - run: node --experimental-sqlite --experimental-strip-types scripts/test-picosvc-monitor-advanced.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-mcp-observability.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-migrations.mjs

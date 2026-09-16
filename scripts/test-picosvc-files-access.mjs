@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+
+const file = readFileSync(new URL('../src/picosvc/files-access.ts', import.meta.url), 'utf8');
+const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
+const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../migrations/0021_picosvc_files_access.sql', import.meta.url), 'utf8');
+assert.match(migration, /access_mode TEXT NOT NULL DEFAULT 'public'/);
+assert.match(migration, /cache_control TEXT NOT NULL/);
+assert.match(file, /DEPLOYMENT_SECRETS_KEY/);
+assert.match(file, /crypto\.subtle\.sign\('HMAC'/);
+assert.match(file, /expires > now \+ MAX_SIGN_SECONDS \+ 30/);
+assert.match(file, /validSignature\(request, env, space, upload \? 'upload' : 'download', path\)/);
+assert.match(file, /if \(!authorized\) return json\(/);
+assert.match(file, /if \(request\.method === 'GET'\) \{\s*const usage = await consumeUsage\(env, space\.owner, 'files', 'downloads'\)/);
+assert.match(file, /space\.access_mode === 'private' \? 'private, no-store'/);
+assert.match(file, /resourceCapacity\(env, space\.owner, 'files', 'files', 'file_objects'\)/);
+assert.match(file, /projected > limit/);
+assert.match(file, /uploadViaWorker: action === 'upload'/);
+assert.ok(entry.indexOf('filesAccessRuntimeRoute(request, env)') < entry.indexOf('picoSvcRuntimeGuardrails(request, env)'), 'File authorization must precede legacy quota metering');
+assert.ok(routes.indexOf('filesAccessManagementRoutes,') < routes.indexOf('dataManagementRoutes,'), 'Private space management must precede generic Files management');
+
+const db = new DatabaseSync(':memory:');
+db.exec('CREATE TABLE file_spaces (id TEXT PRIMARY KEY, owner TEXT NOT NULL); CREATE TABLE file_objects (space_id TEXT, path TEXT, PRIMARY KEY(space_id,path))');
+db.exec(migration);
+assert.equal(db.prepare('SELECT access_mode FROM file_spaces WHERE 1=0').all().length, 0);
+db.prepare('INSERT INTO file_spaces(id,owner) VALUES (?,?)').run('space1','owner1');
+assert.equal(db.prepare('SELECT access_mode FROM file_spaces WHERE id=?').get('space1').access_mode, 'public');
+db.prepare('UPDATE file_spaces SET access_mode=? WHERE id=?').run('private','space1');
+assert.equal(db.prepare('SELECT access_mode FROM file_spaces WHERE id=?').get('space1').access_mode, 'private');
+assert.throws(() => db.prepare('UPDATE file_spaces SET access_mode=? WHERE id=?').run('invalid','space1'));
+db.close();
+console.log('PicoSvc Files access OK: private mode, signed URL guard, quotas, SQLite access defaults.');

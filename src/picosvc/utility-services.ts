@@ -133,6 +133,9 @@ export async function qrRuntimeRoute(request: Request, env: Env): Promise<Respon
     const svg = await QRCode.toString(target, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
     return new Response(svg, { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=3600' } });
   }
+
+  const usage = await consumeUsage(env, row.owner, 'qr', 'scans');
+  if (!usage.ok) return json({ error: 'QR scan quota reached', tier: usage.tier, limit: usage.limit, used: usage.used }, 429);
   await env.DB.prepare('UPDATE qr_links SET scans=scans+1, updated_at=? WHERE id=?').bind(new Date().toISOString(), row.id).run();
   return Response.redirect(row.target_url, 302);
 }

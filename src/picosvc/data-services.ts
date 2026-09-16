@@ -1,4 +1,5 @@
 import type { Env } from '../types.js';
+import { productLimit } from './entitlements.js';
 import { cleanName, consumeUsage, json, requireIdentity, resourceCapacity } from './service-utils.js';
 import { randomPublicId, randomSecret, sha256Hex } from './security.js';
 
@@ -21,6 +22,23 @@ async function verifyStoreToken(request: Request, tokenHash: string): Promise<bo
   const auth = request.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   return Boolean(token) && await sha256Hex(token) === tokenHash;
+}
+
+async function fileStorageState(env: Env, owner: string): Promise<{ tier: 'free' | 'tiny' | 'pro'; limit: number | null; used: number }> {
+  const { tier, limit } = await productLimit(env, owner, 'files', 'storageBytes');
+  const row = await env.DB.prepare('SELECT COALESCE(SUM(size_bytes),0) AS bytes FROM file_objects WHERE owner=?')
+    .bind(owner).first<{ bytes: number }>();
+  return { tier, limit, used: Number(row?.bytes || 0) };
+}
+
+async function deleteR2Prefix(env: Env, prefix: string): Promise<void> {
+  if (!env.ARTIFACTS) return;
+  let cursor: string | undefined;
+  do {
+    const listed = await env.ARTIFACTS.list({ prefix, ...(cursor ? { cursor } : {}) });
+    if (listed.objects.length) await env.ARTIFACTS.delete(listed.objects.map((item) => item.key));
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
 }
 
 export async function dataManagementRoutes(request: Request, env: Env): Promise<Response | null> {
@@ -90,14 +108,18 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
   if (url.pathname === '/api/picosvc/files/spaces') {
     if (request.method === 'GET') {
       const rows = await env.DB.prepare('SELECT * FROM file_spaces WHERE owner=? ORDER BY created_at DESC').bind(owner).all();
-      return json({ spaces: rows.results || [] });
+      const capacity = await resourceCapacity(env, owner, 'files', 'spaces', 'file_spaces');
+      const storage = await fileStorageState(env, owner);
+      return json({ tier: capacity.tier, spaceLimit: capacity.limit, spacesUsed: capacity.used, storageLimitBytes: storage.limit, storageUsedBytes: storage.used, spaces: rows.results || [] });
     }
     if (request.method === 'POST') {
+      const capacity = await resourceCapacity(env, owner, 'files', 'spaces', 'file_spaces');
+      if (!capacity.ok) return json({ error: 'File space limit reached', ...capacity }, 402);
       const body = await request.json().catch(() => null) as Record<string, unknown> | null;
       const id = crypto.randomUUID(); const publicId = randomPublicId(); const now = new Date().toISOString();
       await env.DB.prepare('INSERT INTO file_spaces (id,owner,public_id,name,enabled,created_at,updated_at) VALUES (?,?,?,?,1,?,?)')
         .bind(id, owner, publicId, cleanName(body?.name, 'File Space'), now, now).run();
-      return json({ id, publicId, baseUrl: `${url.origin}/files/${publicId}`, name: cleanName(body?.name, 'File Space') }, 201);
+      return json({ id, publicId, baseUrl: `${url.origin}/files/${publicId}`, name: cleanName(body?.name, 'File Space'), tier: capacity.tier }, 201);
     }
     return new Response('Method Not Allowed', { status: 405, headers: { allow: 'GET,POST' } });
   }
@@ -109,7 +131,8 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
     const suffix = fileSpaceMatch[2] || '';
     if (suffix === 'objects' && request.method === 'GET') {
       const rows = await env.DB.prepare('SELECT path,content_type,size_bytes,etag,created_at,updated_at FROM file_objects WHERE space_id=? AND owner=? ORDER BY updated_at DESC LIMIT 500').bind(space.id, owner).all();
-      return json({ space: { id: space.id, publicId: space.public_id, name: space.name }, objects: rows.results || [] });
+      const storage = await fileStorageState(env, owner);
+      return json({ space: { id: space.id, publicId: space.public_id, name: space.name }, storageLimitBytes: storage.limit, storageUsedBytes: storage.used, objects: rows.results || [] });
     }
     if (suffix === 'object') {
       const path = safeObjectPath(url.searchParams.get('path') || '');
@@ -119,10 +142,15 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
         const declared = Number(request.headers.get('content-length') || '0');
         if (declared > MAX_FILE_BYTES) return json({ error: 'Files are limited to 10 MiB' }, 413);
         const body = await request.arrayBuffer(); if (body.byteLength > MAX_FILE_BYTES) return json({ error: 'Files are limited to 10 MiB' }, 413);
-        const existing = await env.DB.prepare('SELECT 1 AS ok FROM file_objects WHERE space_id=? AND path=?').bind(space.id, path).first();
+        const existing = await env.DB.prepare('SELECT size_bytes FROM file_objects WHERE space_id=? AND path=?').bind(space.id, path).first<{ size_bytes: number }>();
         if (!existing) {
           const capacity = await resourceCapacity(env, owner, 'files', 'files', 'file_objects');
           if (!capacity.ok) return json({ error: 'File count limit reached', ...capacity }, 402);
+        }
+        const storage = await fileStorageState(env, owner);
+        const projectedStorage = storage.used - Number(existing?.size_bytes || 0) + body.byteLength;
+        if (storage.limit !== null && projectedStorage > storage.limit) {
+          return json({ error: 'File storage limit reached', tier: storage.tier, limit: storage.limit, used: storage.used, projected: projectedStorage }, 402);
         }
         const key = `picosvc/files/${space.id}/${path}`;
         const contentType = (request.headers.get('content-type') || 'application/octet-stream').slice(0, 200);
@@ -130,7 +158,7 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
         const now = new Date().toISOString();
         await env.DB.prepare(`INSERT INTO file_objects (space_id,owner,path,content_type,size_bytes,etag,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(space_id,path) DO UPDATE SET content_type=excluded.content_type,size_bytes=excluded.size_bytes,etag=excluded.etag,updated_at=excluded.updated_at`)
           .bind(space.id, owner, path, contentType, body.byteLength, result?.etag || null, now, now).run();
-        return json({ path, sizeBytes: body.byteLength, contentType, publicUrl: `${url.origin}/files/${space.public_id}/${path}` });
+        return json({ path, sizeBytes: body.byteLength, contentType, storageUsedBytes: projectedStorage, storageLimitBytes: storage.limit, publicUrl: `${url.origin}/files/${space.public_id}/${path}` });
       }
       if (request.method === 'DELETE') {
         if (env.ARTIFACTS) await env.ARTIFACTS.delete(`picosvc/files/${space.id}/${path}`);
@@ -140,10 +168,7 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
       return new Response('Method Not Allowed', { status: 405, headers: { allow: 'PUT,DELETE' } });
     }
     if (!suffix && request.method === 'DELETE') {
-      if (env.ARTIFACTS) {
-        const listed = await env.ARTIFACTS.list({ prefix: `picosvc/files/${space.id}/` });
-        if (listed.objects.length) await env.ARTIFACTS.delete(listed.objects.map((item) => item.key));
-      }
+      await deleteR2Prefix(env, `picosvc/files/${space.id}/`);
       await env.DB.prepare('DELETE FROM file_spaces WHERE id=? AND owner=?').bind(space.id, owner).run();
       return new Response(null, { status: 204 });
     }
@@ -153,13 +178,16 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
   if (url.pathname === '/api/picosvc/license/projects') {
     if (request.method === 'GET') {
       const rows = await env.DB.prepare('SELECT * FROM license_projects WHERE owner=? ORDER BY created_at DESC').bind(owner).all();
-      return json({ projects: rows.results || [] });
+      const capacity = await resourceCapacity(env, owner, 'license', 'projects', 'license_projects');
+      return json({ tier: capacity.tier, limit: capacity.limit, projects: rows.results || [] });
     }
     if (request.method === 'POST') {
+      const capacity = await resourceCapacity(env, owner, 'license', 'projects', 'license_projects');
+      if (!capacity.ok) return json({ error: 'License project limit reached', ...capacity }, 402);
       const body = await request.json().catch(() => null) as Record<string, unknown> | null;
       const id = crypto.randomUUID(); const publicId = randomPublicId(); const now = new Date().toISOString();
       await env.DB.prepare('INSERT INTO license_projects (id,owner,public_id,name,created_at,updated_at) VALUES (?,?,?,?,?,?)').bind(id, owner, publicId, cleanName(body?.name, 'License Project'), now, now).run();
-      return json({ id, publicId, name: cleanName(body?.name, 'License Project'), validationUrl: `${url.origin}/license/${publicId}/validate` }, 201);
+      return json({ id, publicId, name: cleanName(body?.name, 'License Project'), validationUrl: `${url.origin}/license/${publicId}/validate`, tier: capacity.tier }, 201);
     }
   }
 
@@ -201,13 +229,16 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
   if (url.pathname === '/api/picosvc/flags/projects') {
     if (request.method === 'GET') {
       const rows = await env.DB.prepare('SELECT * FROM flag_projects WHERE owner=? ORDER BY created_at DESC').bind(owner).all();
-      return json({ projects: rows.results || [] });
+      const capacity = await resourceCapacity(env, owner, 'flags', 'projects', 'flag_projects');
+      return json({ tier: capacity.tier, limit: capacity.limit, projects: rows.results || [] });
     }
     if (request.method === 'POST') {
+      const capacity = await resourceCapacity(env, owner, 'flags', 'projects', 'flag_projects');
+      if (!capacity.ok) return json({ error: 'Flag project limit reached', ...capacity }, 402);
       const body = await request.json().catch(() => null) as Record<string, unknown> | null;
       const id = crypto.randomUUID(); const publicId = randomPublicId(); const now = new Date().toISOString();
       await env.DB.prepare('INSERT INTO flag_projects (id,owner,public_id,name,created_at,updated_at) VALUES (?,?,?,?,?,?)').bind(id, owner, publicId, cleanName(body?.name, 'Flag Project'), now, now).run();
-      return json({ id, publicId, name: cleanName(body?.name, 'Flag Project'), endpoint: `${url.origin}/flags/${publicId}` }, 201);
+      return json({ id, publicId, name: cleanName(body?.name, 'Flag Project'), endpoint: `${url.origin}/flags/${publicId}`, tier: capacity.tier }, 201);
     }
   }
 
@@ -225,7 +256,7 @@ export async function dataManagementRoutes(request: Request, env: Env): Promise<
       if (!key) return json({ error: 'key must match [A-Za-z0-9._-] and be 1-100 chars' }, 400);
       const existing = await env.DB.prepare('SELECT 1 AS ok FROM feature_flags WHERE project_id=? AND key=?').bind(project.id, key).first();
       if (!existing) {
-        const { tier, limit } = await import('./entitlements.js').then((mod) => mod.productLimit(env, owner, 'flags', 'flags'));
+        const { tier, limit } = await productLimit(env, owner, 'flags', 'flags');
         const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM feature_flags f JOIN flag_projects p ON p.id=f.project_id WHERE p.owner=?').bind(owner).first<{ count: number }>();
         if (limit !== null && Number(count?.count || 0) >= limit) return json({ error: 'Feature flag limit reached', tier, limit }, 402);
       }
@@ -337,7 +368,7 @@ export async function dataRuntimeRoute(request: Request, env: Env): Promise<Resp
     if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405, headers: { allow: 'GET' } });
     const project = await env.DB.prepare('SELECT * FROM flag_projects WHERE public_id=?').bind(flagsMatch[1].toLowerCase()).first<any>();
     if (!project) return json({ error: 'Flag project not found' }, 404);
-    const usage = await consumeUsage(env, project.owner, 'flags', 'requests'); if (!usage.ok) return json({ error: 'Flag request quota reached' }, 429);
+    const usage = await consumeUsage(env, project.owner, 'flags', 'requests'); if (!usage.ok) return json({ error: 'Flag request quota reached', ...usage }, 429);
     const rows = await env.DB.prepare('SELECT key,value_json FROM feature_flags WHERE project_id=? AND enabled=1 ORDER BY key').bind(project.id).all<any>();
     const flags: Record<string, unknown> = {}; for (const row of rows.results || []) flags[row.key] = JSON.parse(row.value_json);
     return json({ project: project.name, flags }, 200);
@@ -348,7 +379,6 @@ export async function dataRuntimeRoute(request: Request, env: Env): Promise<Resp
     if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: { allow: 'POST' } });
     const form = await env.DB.prepare('SELECT * FROM forms WHERE public_id=? AND enabled=1').bind(formsMatch[1].toLowerCase()).first<any>();
     if (!form) return json({ error: 'Form not found' }, 404);
-    const usage = await consumeUsage(env, form.owner, 'forms', 'submissions'); if (!usage.ok) return json({ error: 'Form submission quota reached' }, 429);
     const declared = Number(request.headers.get('content-length') || '0'); if (declared > MAX_FORM_BYTES) return json({ error: 'Submission is limited to 128 KiB' }, 413);
     const type = request.headers.get('content-type') || '';
     let payload: unknown;
@@ -359,6 +389,7 @@ export async function dataRuntimeRoute(request: Request, env: Env): Promise<Resp
       const text = await request.text(); if (new TextEncoder().encode(text).byteLength > MAX_FORM_BYTES) return json({ error: 'Submission is limited to 128 KiB' }, 413);
       payload = Object.fromEntries(new URLSearchParams(text).entries());
     } else return json({ error: 'Use application/json or application/x-www-form-urlencoded' }, 415);
+    const usage = await consumeUsage(env, form.owner, 'forms', 'submissions'); if (!usage.ok) return json({ error: 'Form submission quota reached', ...usage }, 429);
     const headers: Record<string, string> = {}; for (const name of ['user-agent', 'referer', 'origin']) { const value = request.headers.get(name); if (value) headers[name] = value.slice(0, 1000); }
     const id = crypto.randomUUID(); const receivedAt = new Date().toISOString();
     await env.DB.prepare('INSERT INTO form_submissions (id,form_id,owner,payload_json,headers_json,received_at) VALUES (?,?,?,?,?,?)').bind(id, form.id, form.owner, JSON.stringify(payload), JSON.stringify(headers), receivedAt).run();

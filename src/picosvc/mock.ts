@@ -1,6 +1,7 @@
 import { clerkIdentity } from '../auth.js';
 import type { Env } from '../types.js';
-import { incrementProductUsage, productLimit } from './entitlements.js';
+import { productLimit } from './entitlements.js';
+import { consumeUsage } from './service-utils.js';
 
 interface MockEndpointRow {
   id: string;
@@ -82,6 +83,11 @@ export async function mockRuntimeRoute(request: Request, env: Env): Promise<Resp
     return new Response('Method Not Allowed', { status: 405, headers: { allow: row.method } });
   }
 
+  const usage = await consumeUsage(env, row.owner, 'mock', 'requests');
+  if (!usage.ok) {
+    return json({ error: 'Mock request quota reached', product: 'mock', tier: usage.tier, limit: usage.limit, used: usage.used }, 429);
+  }
+
   const headers = new Headers();
   let configured: Record<string, string> = {};
   try { configured = JSON.parse(row.headers_json || '{}'); } catch {}
@@ -91,8 +97,8 @@ export async function mockRuntimeRoute(request: Request, env: Env): Promise<Resp
   if (!headers.has('content-type') && row.content_type) headers.set('content-type', row.content_type);
   if (!headers.has('access-control-allow-origin')) headers.set('access-control-allow-origin', '*');
   headers.set('x-picosvc-mock', row.public_id);
+  headers.set('x-picosvc-tier', usage.tier);
 
-  await incrementProductUsage(env, row.owner, 'mock', 'requests', 1);
   const noBody = request.method === 'HEAD' || NULL_BODY_STATUSES.has(row.status_code);
   return new Response(noBody ? null : row.body, { status: row.status_code, headers });
 }

@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { cronMatchesInTimezone, validCronExpression, validTimezone } from '../src/picosvc/cron-calendar.ts';
+
+assert.equal(validTimezone('Asia/Tokyo'), 'Asia/Tokyo');
+assert.equal(validTimezone('invalid/timezone'), null);
+assert.equal(validCronExpression('0 12 * * 1-5'), true);
+assert.equal(validCronExpression('0 25 * * *'), false);
+assert.equal(cronMatchesInTimezone('30 15 * * 3', new Date('2026-09-16T06:30:00Z'), 'Asia/Tokyo'), true);
+assert.equal(cronMatchesInTimezone('30 15 * * 3', new Date('2026-09-16T06:30:00Z'), 'UTC'), false);
+assert.equal(cronMatchesInTimezone('30 15 * * 4', new Date('2026-09-16T06:30:00Z'), 'Asia/Tokyo'), false);
+assert.equal(cronMatchesInTimezone('0 0 * * 0', new Date('2026-09-20T00:00:00Z'), 'UTC'), true);
+assert.equal(cronMatchesInTimezone('0 0 * * 7', new Date('2026-09-20T00:00:00Z'), 'UTC'), true);
+assert.equal(cronMatchesInTimezone('0 0 * * 0-6', new Date('2026-09-20T00:00:00Z'), 'UTC'), true, 'Sunday must match weekday range 0-6');
+assert.equal(cronMatchesInTimezone('0 0 * * 1', new Date('2026-09-20T00:00:00Z'), 'UTC'), false);
+
+const source = readFileSync(new URL('../src/picosvc/cron-advanced.ts', import.meta.url), 'utf8');
+const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
+const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url), 'utf8');
+const old = readFileSync(new URL('../src/picosvc/automation-services.ts', import.meta.url), 'utf8');
+assert.match(source, /VALUES \(\?,\?,\?,\?,\?,\?,\?,\?,0,NULL,\?,\?\)/, 'Advanced job must not run through legacy scheduler');
+assert.match(old, /FROM cron_jobs WHERE enabled=1/, 'Legacy scheduler must remain separate');
+assert.match(source, /cron_job_options o ON o.job_id=j.id WHERE o.active=1 AND j.enabled=0/, 'Advanced scheduler must select only advanced enabled jobs');
+assert.match(source, /ON CONFLICT\(job_id,scheduled_minute\) DO NOTHING RETURNING/, 'Cron dispatch must dedupe overlapping scheduler events');
+assert.match(source, /consumeUsage\(env, job.owner, 'cron', 'runs'\)/, 'Cron quota must apply');
+assert.match(source, /RETRY_BACKOFF_MS = \[1_000, 3_000, 9_000\]/, 'Retries must back off');
+assert.match(source, /cron_notifications/, 'Notifications must be recorded');
+assert.match(source, /AND j.id=\?/, 'Management reads must scope job to owner');
+assert.match(entry, /runAdvancedCronJobs\(env, new Date\(controller.scheduledTime\)\)/, 'Advanced Cron must be scheduled');
+assert.ok(routes.indexOf('cronAdvancedManagementRoutes,') < routes.indexOf('cronManagementRoutes,'), 'Advanced Cron routes must precede legacy manager');
+
+const db = new DatabaseSync(':memory:');
+db.exec('PRAGMA foreign_keys=ON');
+db.exec('CREATE TABLE cron_jobs (id TEXT PRIMARY KEY, owner TEXT NOT NULL); CREATE TABLE cron_runs (id TEXT PRIMARY KEY,job_id TEXT NOT NULL,owner TEXT NOT NULL,FOREIGN KEY(job_id) REFERENCES cron_jobs(id) ON DELETE CASCADE)');
+db.exec(readFileSync(new URL('../migrations/0023_picosvc_cron_delivery.sql', import.meta.url), 'utf8'));
+db.prepare('INSERT INTO cron_jobs(id,owner) VALUES (?,?)').run('job1','owner1');
+const claim = db.prepare('INSERT INTO cron_dispatch_claims (job_id,scheduled_minute,claimed_at) VALUES (?,?,?) ON CONFLICT(job_id,scheduled_minute) DO NOTHING RETURNING job_id');
+assert.equal(claim.get('job1','2026-09-16T06:30','now').job_id, 'job1');
+assert.equal(claim.get('job1','2026-09-16T06:30','now'), undefined);
+assert.throws(() => db.prepare('INSERT INTO cron_run_attempts (run_id,job_id,owner,attempt,attempted_at) VALUES (?,?,?,?,?)').run('nonexistent','job1','owner1',1,'now'), /FOREIGN KEY/);
+db.close();
+console.log('PicoSvc advanced Cron OK: timezone matching, owner scope, single dispatch, retry and migration.');
