@@ -19,6 +19,7 @@ import { jsonAdvancedRuntimeRoute } from './picosvc/json-advanced.js';
 import { jsonScopedWriteGuard } from './picosvc/json-scoped-guard.js';
 import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
 import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
+import { mcpObservedRuntimeRoute } from './picosvc/mcp-observability.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
@@ -99,6 +100,8 @@ export default {
       if (response) return withCors(response, origin);
       return withCors(Response.json({ error: 'PicoSvc route not found' }, { status: 404 }), origin);
     }
+    const observedMcp = await mcpObservedRuntimeRoute(request, env, () => legacyEntry.fetch(request, env, ctx));
+    if (observedMcp) return observedMcp;
     return legacyEntry.fetch(request, env, ctx);
   },
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
