@@ -28,6 +28,7 @@ import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
 import { monitorAdvancedManagementRoutes } from './monitor-advanced.js';
 import { picoSvcHealthRoute } from './platform-health.js';
+import { shotQualityManagementRoutes } from './shot-quality.js';
 import { utilityAdvancedManagementRoutes } from './utility-advanced.js';
 import { utilityManagementRoutes } from './utility-services.js';
 import { picoSvcUsageDashboard } from './usage-dashboard.js';
@@ -42,6 +43,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   for (const handler of [
     picoSvcHealthRoute,
     picoSvcUsageDashboard,
+    shotQualityManagementRoutes,
     mcpObservabilityManagementRoutes,
     filesAccessManagementRoutes,
     formsAdvancedManagementRoutes,
