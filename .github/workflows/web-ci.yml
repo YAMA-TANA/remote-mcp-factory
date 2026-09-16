@@ -46,17 +46,27 @@ jobs:
           test -f out/en/hooks/index.html
           test -f out/ja/hooks/index.html
           test -f out/zh-cn/hooks/index.html
+          test -f out/en/pricing/index.html
+          test -f out/ja/pricing/index.html
+          test -f out/zh-cn/pricing/index.html
           test -f out/ja/contact/index.html
           test -f out/zh-cn/privacy/index.html
           test -f out/sitemap.xml
           test -f out/robots.txt
           grep -q 'https://picosvc.com/ja/' out/ja/index.html
           grep -q 'https://picosvc.com/ja/hooks/' out/ja/hooks/index.html
-          grep -qi 'hreflang="en"' out/ja/hooks/index.html
-          grep -qi 'hreflang="ja"' out/ja/hooks/index.html
-          grep -qi 'hreflang="zh-CN"' out/ja/hooks/index.html
-          grep -qi 'hreflang="x-default"' out/ja/hooks/index.html
-          grep -q 'https://picosvc.com/en/hooks/' out/sitemap.xml
-          grep -q 'https://picosvc.com/ja/hooks/' out/sitemap.xml
-          grep -q 'https://picosvc.com/zh-cn/hooks/' out/sitemap.xml
+          grep -q 'https://picosvc.com/ja/pricing/' out/ja/pricing/index.html
+          grep -qi 'hreflang="en"' out/ja/pricing/index.html
+          grep -qi 'hreflang="ja"' out/ja/pricing/index.html
+          grep -qi 'hreflang="zh-CN"' out/ja/pricing/index.html
+          grep -qi 'hreflang="x-default"' out/ja/pricing/index.html
+          grep -Fq 'Bundle Pico' out/en/pricing/index.html
+          grep -Fq 'Bundle Pro' out/en/pricing/index.html
+          grep -Fq '$1' out/en/pricing/index.html
+          grep -Fq '$5' out/en/pricing/index.html
+          grep -Fq '$22' out/en/pricing/index.html
+          grep -Fq 'PicoPlus' out/en/pricing/index.html
+          grep -q 'https://picosvc.com/en/pricing/' out/sitemap.xml
+          grep -q 'https://picosvc.com/ja/pricing/' out/sitemap.xml
+          grep -q 'https://picosvc.com/zh-cn/pricing/' out/sitemap.xml
           grep -q 'https://picosvc.com/sitemap.xml' out/robots.txt
