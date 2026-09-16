@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { LocaleProvider } from '../i18n';
+import SiteFooter from '../components/SiteFooter';
 import { LOCALE_SLUGS, slugToLocale } from '../i18n-data';
 
 export const dynamicParams = false;
@@ -19,5 +20,10 @@ export default async function LocalizedLayout({
   const locale = slugToLocale(slug);
   if (!locale) notFound();
 
-  return <LocaleProvider initialLocale={locale} routed>{children}</LocaleProvider>;
+  return (
+    <LocaleProvider initialLocale={locale} routed>
+      {children}
+      <SiteFooter />
+    </LocaleProvider>
+  );
 }
