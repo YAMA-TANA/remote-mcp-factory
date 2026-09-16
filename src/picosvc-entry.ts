@@ -59,7 +59,11 @@ export default {
     }
 
     const guardrailResponse = await picoSvcRuntimeGuardrails(request, env);
-    if (guardrailResponse) return guardrailResponse;
+    if (guardrailResponse) {
+      return url.pathname.startsWith('/api/picosvc/')
+        ? withCors(guardrailResponse, allowedOrigin(request, env))
+        : guardrailResponse;
+    }
 
     for (const handler of [
       hooksRuntimeRoute,
