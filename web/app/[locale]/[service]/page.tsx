@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../service-dashboard';
+import ShotWorkspace from '../../shot-workspace';
 import '../../service-advanced.css';
 import { LOCALE_SLUGS, localeToSlug, slugToLocale } from '../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../service-data';
@@ -47,5 +48,5 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function GenericServicePage({ params }: { params: Promise<{ locale: string; service: string }> }) {
   const { service } = await params;
   if (!isGenericServiceSlug(service)) notFound();
-  return <ServiceDashboard service={service} />;
+  return service === 'shot' ? <ShotWorkspace /> : <ServiceDashboard service={service} />;
 }
