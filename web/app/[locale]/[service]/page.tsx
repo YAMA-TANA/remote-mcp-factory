@@ -1,14 +1,16 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../service-dashboard';
-import { localeToSlug, slugToLocale } from '../../i18n-data';
+import { LOCALE_SLUGS, localeToSlug, slugToLocale } from '../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../service-data';
 import { SITE_URL } from '../../seo';
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return GENERIC_SERVICE_SLUGS.map((service) => ({ service }));
+  return LOCALE_SLUGS.flatMap((locale) =>
+    GENERIC_SERVICE_SLUGS.map((service) => ({ locale, service })),
+  );
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; service: string }> }): Promise<Metadata> {
