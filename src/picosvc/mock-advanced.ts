@@ -232,7 +232,10 @@ function responseFromOpenApi(operation: any): { statusCode: number; contentType:
   const contentType = Object.keys(content)[0] || 'application/json; charset=utf-8';
   const media = content[contentType] || {};
   let example = media.example ?? media.schema?.example;
-  if (example === undefined && media.examples && typeof media.examples === 'object') example = Object.values(media.examples)[0]?.value;
+  if (example === undefined && media.examples && typeof media.examples === 'object') {
+    const sample = (Object.values(media.examples as Record<string, any>) as any[])[0];
+    example = sample?.value;
+  }
   if (example === undefined) example = { ok: true };
   return { statusCode, contentType, body: typeof example === 'string' ? example : JSON.stringify(example, null, 2) };
 }
