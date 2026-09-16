@@ -30,7 +30,7 @@ async function createReadyFeed(request: Request, env: Env): Promise<Response> {
   let reason = 'No RSS entries could be extracted from the source page.';
   try { await previewRssFeed(env, feed); }
   catch (error) { reason = error instanceof Error ? error.message.slice(0, 240) : 'Unable to retrieve the source page.'; }
-  await env.DB.prepare('DELETE FROM rss_feeds WHERE id=? AND owner=? AND last_checked_at IS NULL')
+  await env.DB.prepare('DELETE FROM rss_feeds WHERE id=? AND owner=?')
     .bind(feed.id, feed.owner).run();
   // An unsuccessful initial extraction should not consume a monthly feed check.
   await env.DB.prepare(`UPDATE product_usage_monthly
