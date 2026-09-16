@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './ui-refresh.css';
 import { LocaleProvider } from './i18n';
 import SiteFooter from './components/SiteFooter';
 
