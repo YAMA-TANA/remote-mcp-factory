@@ -48,8 +48,8 @@ jobs:
           test -f out/sitemap.xml
           test -f out/robots.txt
           grep -q 'https://picosvc.com/ja/' out/ja/index.html
-          grep -q 'hreflang="en"' out/ja/index.html
-          grep -q 'hreflang="ja"' out/ja/index.html
-          grep -q 'hreflang="zh-CN"' out/ja/index.html
-          grep -q 'hreflang="x-default"' out/ja/index.html
+          grep -qi 'hreflang="en"' out/ja/index.html
+          grep -qi 'hreflang="ja"' out/ja/index.html
+          grep -qi 'hreflang="zh-CN"' out/ja/index.html
+          grep -qi 'hreflang="x-default"' out/ja/index.html
           grep -q 'https://picosvc.com/sitemap.xml' out/robots.txt
