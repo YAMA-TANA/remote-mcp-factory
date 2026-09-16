@@ -1,0 +1,18 @@
+/* Mock endpoint configuration and actions, designed for narrow screens. */
+.mockWorkspace .mockEditor{scroll-margin-top:24px}
+.mockWorkspace .mockEditor .options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:19px}
+.mockWorkspace .mockEditor label{display:grid;gap:6px;min-width:0;font-size:13px;color:#d8e8d9}
+.mockWorkspace .mockEditor .options input,.mockWorkspace .mockEditor .options select,.mockWorkspace .mockEditor textarea{width:100%;min-width:0;box-sizing:border-box;background:#0b1720;color:#f5fcf5;border:1px solid #496458;border-radius:10px;padding:11px 13px}
+.mockWorkspace .mockEditor textarea{font-family:ui-monospace,monospace;line-height:1.55}
+.mockWorkspace .mockEditor small{color:#aecab4;line-height:1.45}
+.mockWorkspace .mockEditor .mockHelp{display:block;margin-top:7px}
+.mockWorkspace .mockEditor .mockEnabled{display:flex;align-items:center;gap:10px;margin-top:16px}
+.mockWorkspace .mockEnabled input{width:18px;height:18px;accent-color:#b8ff66}
+.mockWorkspace .mockActions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.mockWorkspace .mockActions button{min-height:42px}
+.mockWorkspace .mockNotice{margin-top:12px}
+.mockWorkspace .mockEndpoint{min-width:0}
+.mockWorkspace .mockEndpoint .success code{overflow-wrap:anywhere}
+.mockWorkspace .mockEndpoint .deploymentBottom{display:flex;flex-wrap:wrap;gap:8px}
+.mockWorkspace .mockOpen{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:40px}
+@media(max-width:640px){.mockWorkspace .mockEditor .options{grid-template-columns:1fr}.mockWorkspace .mockActions .primary{flex:1 1 100%}.mockWorkspace .mockEndpoint .deploymentBottom button,.mockWorkspace .mockEndpoint .deploymentBottom a{min-height:42px}}
