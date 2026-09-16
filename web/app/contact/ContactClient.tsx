@@ -34,11 +34,11 @@ const COPY = {
 } as const;
 
 export default function ContactClient() {
-  const { locale, messages } = useI18n();
+  const { locale, messages, localizedHref } = useI18n();
   const t = COPY[locale]; const c = messages.common;
   return (
     <main>
-      <nav className="nav shell"><a className="brand" href="/"><span className="brandMark">P</span><span>PicoSvc</span></a><div className="navRight"><a href="/">{c.products}</a><a href="/terms">{c.terms}</a><a href="/privacy">{c.privacy}</a><LanguageSwitcher /></div></nav>
+      <nav className="nav shell"><a className="brand" href={localizedHref('/')}><span className="brandMark">P</span><span>PicoSvc</span></a><div className="navRight"><a href={localizedHref('/')}>{c.products}</a><a href={localizedHref('/terms')}>{c.terms}</a><a href={localizedHref('/privacy')}>{c.privacy}</a><LanguageSwitcher /></div></nav>
       <article className="legal shell">
         <div className="eyebrow"><span className="dot" /> {c.support}</div><h1>{t.title}</h1><p>{t.intro}</p>
         <h2>{c.email}</h2><ProtectedContact kind="email" /><p className="legalMeta">{t.emailNote}</p>
