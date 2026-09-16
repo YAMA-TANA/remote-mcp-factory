@@ -16,7 +16,9 @@ function subscriptionPlanSlugs(subscription: any): string[] {
 }
 
 function parseStandalone(slug: string): Grant | null {
-  const match = slug.match(/^picosvc-([a-z]+)-(pico|picoplus)$/);
+  // Clerk Billing plan keys accept lowercase alphanumerics and underscores,
+  // while older deployments used hyphenated slugs. Accept both spellings.
+  const match = slug.match(/^picosvc[-_]([a-z]+)[-_](pico|picoplus)$/);
   if (match && PRODUCT_SLUGS.has(match[1] as PicoSvcProductSlug)) {
     return {
       product: match[1] as PicoSvcProductSlug,
@@ -32,7 +34,8 @@ function parseStandalone(slug: string): Grant | null {
 }
 
 function parseBundle(slug: string): BundleGrant[] {
-  const tier: PicoSvcTier | null = slug === 'picosvc-bundle-pico' ? 'tiny' : slug === 'picosvc-bundle-pro' ? 'pro' : null;
+  const normalized = slug.replaceAll('_', '-');
+  const tier: PicoSvcTier | null = normalized === 'picosvc-bundle-pico' ? 'tiny' : normalized === 'picosvc-bundle-pro' ? 'pro' : null;
   if (!tier) return [];
   const bundle = tier === 'tiny' ? 'bundle-pico' : 'bundle-pro';
   return PICOSVC_PRODUCTS.map((product) => ({ bundle, product: product.slug, tier, source: `clerk:${slug}` }));
