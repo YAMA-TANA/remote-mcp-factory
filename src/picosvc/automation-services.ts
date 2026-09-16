@@ -1,4 +1,5 @@
 import type { Env } from '../types.js';
+import { productLimit } from './entitlements.js';
 import { cleanName, consumeUsage, json, requireIdentity, resourceCapacity } from './service-utils.js';
 import { fetchPublic, randomPublicId, safeHeaderObject, safePublicUrl, sha256Hex } from './security.js';
 
@@ -34,8 +35,10 @@ export async function refreshRssFeed(env: Env, feed: any): Promise<{ changed: bo
     const page = extractPage(loaded.html, feed.source_url);
     await env.DB.prepare('INSERT INTO rss_entries (id,feed_id,title,link,guid,description,published_at) VALUES (?,?,?,?,?,?,?)')
       .bind(crypto.randomUUID(), feed.id, page.title, feed.source_url, `${feed.source_url}#${loaded.hash}`, page.description, now).run();
-    await env.DB.prepare('DELETE FROM rss_entries WHERE feed_id=? AND id NOT IN (SELECT id FROM rss_entries WHERE feed_id=? ORDER BY published_at DESC LIMIT 100)')
-      .bind(feed.id, feed.id).run();
+    const { limit: entriesPerFeed } = await productLimit(env, feed.owner, 'rss', 'entriesPerFeed');
+    const keep = Math.max(1, entriesPerFeed ?? 20);
+    await env.DB.prepare('DELETE FROM rss_entries WHERE feed_id=? AND id NOT IN (SELECT id FROM rss_entries WHERE feed_id=? ORDER BY published_at DESC LIMIT ?)')
+      .bind(feed.id, feed.id, keep).run();
   }
   await env.DB.prepare('UPDATE rss_feeds SET last_hash=?,last_checked_at=?,updated_at=? WHERE id=?').bind(loaded.hash, now, now, feed.id).run();
   return { changed, hash: loaded.hash };
@@ -136,13 +139,20 @@ export async function runScheduledServices(env: Env, now = new Date()): Promise<
   const monitors = await env.DB.prepare('SELECT * FROM monitors WHERE enabled=1 ORDER BY last_checked_at ASC LIMIT 100').all<any>();
   for (const monitor of monitors.results || []) {
     const last = monitor.last_checked_at ? Date.parse(monitor.last_checked_at) : 0;
-    if (!last || now.getTime() - last >= Number(monitor.interval_minutes || 15) * 60_000) await refreshMonitor(env, monitor);
+    const { limit: minimumInterval } = await productLimit(env, monitor.owner, 'monitor', 'minIntervalMinutes');
+    const interval = Math.max(Number(monitor.interval_minutes || 15), minimumInterval ?? 5);
+    if (!last || now.getTime() - last >= interval * 60_000) await refreshMonitor(env, monitor);
   }
 
   const feeds = await env.DB.prepare('SELECT * FROM rss_feeds WHERE enabled=1 ORDER BY last_checked_at ASC LIMIT 100').all<any>();
   for (const feed of feeds.results || []) {
     const last = feed.last_checked_at ? Date.parse(feed.last_checked_at) : 0;
-    if (!last || now.getTime() - last >= 15 * 60_000) await refreshRssFeed(env, feed).catch(() => undefined);
+    const { limit: refreshMinutes } = await productLimit(env, feed.owner, 'rss', 'refreshMinutes');
+    const interval = refreshMinutes ?? 1_440;
+    if (!last || now.getTime() - last >= interval * 60_000) {
+      const usage = await consumeUsage(env, feed.owner, 'rss', 'checks');
+      if (usage.ok) await refreshRssFeed(env, feed).catch(() => undefined);
+    }
   }
 }
 
@@ -157,7 +167,9 @@ export async function automationManagementRoutes(request: Request, env: Env): Pr
     if (request.method === 'GET') {
       const rows = await env.DB.prepare('SELECT * FROM rss_feeds WHERE owner=? ORDER BY created_at DESC').bind(owner).all<any>();
       const capacity = await resourceCapacity(env, owner, 'rss', 'feeds', 'rss_feeds');
-      return json({ tier: capacity.tier, limit: capacity.limit, feeds: (rows.results || []).map((row) => ({ ...row, feedUrl: `${url.origin}/rss/${row.public_id}.xml` })) });
+      const { limit: refreshMinutes } = await productLimit(env, owner, 'rss', 'refreshMinutes');
+      const { limit: monthlyChecks } = await productLimit(env, owner, 'rss', 'checks');
+      return json({ tier: capacity.tier, limit: capacity.limit, refreshMinutes, monthlyChecks, feeds: (rows.results || []).map((row) => ({ ...row, feedUrl: `${url.origin}/rss/${row.public_id}.xml` })) });
     }
     if (request.method === 'POST') {
       const capacity = await resourceCapacity(env, owner, 'rss', 'feeds', 'rss_feeds'); if (!capacity.ok) return json({ error: 'RSS feed limit reached', ...capacity }, 402);
@@ -166,15 +178,23 @@ export async function automationManagementRoutes(request: Request, env: Env): Pr
       await env.DB.prepare('INSERT INTO rss_feeds (id,owner,public_id,name,source_url,enabled,last_hash,last_checked_at,created_at,updated_at) VALUES (?,?,?,?,?,1,NULL,NULL,?,?)')
         .bind(id, owner, publicId, cleanName(body?.name, 'Web Feed'), source.toString(), nowIso, nowIso).run();
       const feed = await env.DB.prepare('SELECT * FROM rss_feeds WHERE id=?').bind(id).first<any>();
-      if (feed) await refreshRssFeed(env, feed).catch(() => undefined);
-      return json({ id, publicId, sourceUrl: source.toString(), feedUrl: `${url.origin}/rss/${publicId}.xml`, tier: capacity.tier }, 201);
+      if (feed) {
+        const usage = await consumeUsage(env, owner, 'rss', 'checks');
+        if (usage.ok) await refreshRssFeed(env, feed).catch(() => undefined);
+      }
+      const { limit: refreshMinutes } = await productLimit(env, owner, 'rss', 'refreshMinutes');
+      return json({ id, publicId, sourceUrl: source.toString(), feedUrl: `${url.origin}/rss/${publicId}.xml`, tier: capacity.tier, refreshMinutes }, 201);
     }
   }
 
   const rssMatch = url.pathname.match(/^\/api\/picosvc\/rss\/feeds\/([0-9a-f-]{36})(?:\/(refresh))?$/i);
   if (rssMatch) {
     const feed = await env.DB.prepare('SELECT * FROM rss_feeds WHERE id=? AND owner=?').bind(rssMatch[1], owner).first<any>(); if (!feed) return json({ error: 'RSS feed not found' }, 404);
-    if (rssMatch[2] === 'refresh' && request.method === 'POST') return json(await refreshRssFeed(env, feed));
+    if (rssMatch[2] === 'refresh' && request.method === 'POST') {
+      const usage = await consumeUsage(env, owner, 'rss', 'checks');
+      if (!usage.ok) return json({ error: 'RSS refresh quota reached', ...usage }, 429);
+      return json({ ...(await refreshRssFeed(env, feed)), tier: usage.tier, monthlyChecksUsed: usage.used });
+    }
     if (!rssMatch[2] && request.method === 'PATCH') {
       const body = await request.json().catch(() => null) as Record<string, unknown> | null; const source = body?.sourceUrl === undefined ? null : safePublicUrl(body.sourceUrl); if (body?.sourceUrl !== undefined && !source) return json({ error: 'sourceUrl must be public HTTP(S)' }, 400);
       const enabled = body?.enabled === undefined ? feed.enabled : body.enabled ? 1 : 0; const name = body?.name === undefined ? feed.name : cleanName(body.name, feed.name);
@@ -217,15 +237,21 @@ export async function automationManagementRoutes(request: Request, env: Env): Pr
   }
 
   if (url.pathname === '/api/picosvc/monitor') {
-    if (request.method === 'GET') { const rows = await env.DB.prepare('SELECT * FROM monitors WHERE owner=? ORDER BY created_at DESC').bind(owner).all(); const capacity = await resourceCapacity(env, owner, 'monitor', 'monitors', 'monitors'); return json({ tier: capacity.tier, limit: capacity.limit, monitors: rows.results || [] }); }
+    if (request.method === 'GET') {
+      const rows = await env.DB.prepare('SELECT * FROM monitors WHERE owner=? ORDER BY created_at DESC').bind(owner).all();
+      const capacity = await resourceCapacity(env, owner, 'monitor', 'monitors', 'monitors');
+      const { limit: minIntervalMinutes } = await productLimit(env, owner, 'monitor', 'minIntervalMinutes');
+      return json({ tier: capacity.tier, limit: capacity.limit, minIntervalMinutes, monitors: rows.results || [] });
+    }
     if (request.method === 'POST') {
       const capacity = await resourceCapacity(env, owner, 'monitor', 'monitors', 'monitors'); if (!capacity.ok) return json({ error: 'Monitor limit reached', ...capacity }, 402);
       const body = await request.json().catch(() => null) as Record<string, unknown> | null; const target = safePublicUrl(body?.targetUrl); if (!target) return json({ error: 'targetUrl must be public HTTP(S)' }, 400);
       const webhook = body?.webhookUrl ? safePublicUrl(body.webhookUrl) : null; if (body?.webhookUrl && !webhook) return json({ error: 'webhookUrl must be public HTTP(S)' }, 400);
-      const interval = Math.max(5, Math.min(10080, Number(body?.intervalMinutes || 15))); const id = crypto.randomUUID(); const nowIso = new Date().toISOString();
+      const { limit: minInterval } = await productLimit(env, owner, 'monitor', 'minIntervalMinutes');
+      const interval = Math.max(minInterval ?? 5, Math.min(10080, Number(body?.intervalMinutes || minInterval || 15))); const id = crypto.randomUUID(); const nowIso = new Date().toISOString();
       await env.DB.prepare('INSERT INTO monitors (id,owner,name,target_url,webhook_url,interval_minutes,enabled,last_hash,last_checked_at,last_changed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,1,NULL,NULL,NULL,?,?)')
         .bind(id, owner, cleanName(body?.name, 'Page Monitor'), target.toString(), webhook?.toString() || null, interval, nowIso, nowIso).run();
-      return json({ id, name: cleanName(body?.name, 'Page Monitor'), targetUrl: target.toString(), webhookUrl: webhook?.toString() || null, intervalMinutes: interval, tier: capacity.tier }, 201);
+      return json({ id, name: cleanName(body?.name, 'Page Monitor'), targetUrl: target.toString(), webhookUrl: webhook?.toString() || null, intervalMinutes: interval, minIntervalMinutes: minInterval, tier: capacity.tier }, 201);
     }
   }
 
@@ -235,10 +261,12 @@ export async function automationManagementRoutes(request: Request, env: Env): Pr
     if (request.method === 'PATCH') {
       const body = await request.json().catch(() => null) as Record<string, unknown> | null; const target = body?.targetUrl === undefined ? null : safePublicUrl(body.targetUrl); if (body?.targetUrl !== undefined && !target) return json({ error: 'targetUrl must be public HTTP(S)' }, 400);
       const webhook = body?.webhookUrl === undefined ? undefined : body.webhookUrl ? safePublicUrl(body.webhookUrl) : null; if (body?.webhookUrl && !webhook) return json({ error: 'webhookUrl must be public HTTP(S)' }, 400);
-      const interval = body?.intervalMinutes === undefined ? monitor.interval_minutes : Math.max(5,Math.min(10080,Number(body.intervalMinutes))); const enabled = body?.enabled === undefined ? monitor.enabled : body.enabled ? 1 : 0;
+      const { limit: minInterval } = await productLimit(env, owner, 'monitor', 'minIntervalMinutes');
+      const requestedInterval = body?.intervalMinutes === undefined ? monitor.interval_minutes : Number(body.intervalMinutes);
+      const interval = Math.max(minInterval ?? 5, Math.min(10080, requestedInterval)); const enabled = body?.enabled === undefined ? monitor.enabled : body.enabled ? 1 : 0;
       await env.DB.prepare('UPDATE monitors SET name=?,target_url=?,webhook_url=?,interval_minutes=?,enabled=?,updated_at=? WHERE id=? AND owner=?')
         .bind(body?.name === undefined ? monitor.name : cleanName(body.name, monitor.name), target?.toString() || monitor.target_url, webhook === undefined ? monitor.webhook_url : webhook?.toString() || null, interval, enabled, new Date().toISOString(), monitor.id, owner).run();
-      return json({ id: monitor.id, enabled: Boolean(enabled), intervalMinutes: interval });
+      return json({ id: monitor.id, enabled: Boolean(enabled), intervalMinutes: interval, minIntervalMinutes: minInterval });
     }
     if (request.method === 'DELETE') { await env.DB.prepare('DELETE FROM monitors WHERE id=? AND owner=?').bind(monitor.id, owner).run(); return new Response(null,{status:204}); }
   }
@@ -249,7 +277,8 @@ export async function automationManagementRoutes(request: Request, env: Env): Pr
 export async function rssRuntimeRoute(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url); const match = url.pathname.match(/^\/rss\/([a-f0-9]{32})\.xml$/i); if (!match) return null;
   const feed = await env.DB.prepare('SELECT * FROM rss_feeds WHERE public_id=? AND enabled=1').bind(match[1].toLowerCase()).first<any>(); if (!feed) return new Response('Feed not found',{status:404});
-  const rows = await env.DB.prepare('SELECT * FROM rss_entries WHERE feed_id=? ORDER BY published_at DESC LIMIT 50').bind(feed.id).all<any>();
+  const { limit: entriesPerFeed } = await productLimit(env, feed.owner, 'rss', 'entriesPerFeed');
+  const rows = await env.DB.prepare('SELECT * FROM rss_entries WHERE feed_id=? ORDER BY published_at DESC LIMIT ?').bind(feed.id, Math.max(1, entriesPerFeed ?? 20)).all<any>();
   const items = (rows.results || []).map((entry) => `<item><title>${xmlEscape(entry.title)}</title><link>${xmlEscape(entry.link)}</link><guid isPermaLink="false">${xmlEscape(entry.guid)}</guid><description>${xmlEscape(entry.description)}</description><pubDate>${new Date(entry.published_at).toUTCString()}</pubDate></item>`).join('');
   const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${xmlEscape(feed.name)}</title><link>${xmlEscape(feed.source_url)}</link><description>PicoSvc Web to RSS feed</description>${items}</channel></rss>`;
   return new Response(xml,{headers:{'content-type':'application/rss+xml; charset=utf-8','cache-control':'public, max-age=300'}});
