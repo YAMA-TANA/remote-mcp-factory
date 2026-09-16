@@ -1,4 +1,5 @@
 import PricingPage from '../../pricing/page';
+import ClerkPricingTable from '../../components/ClerkPricingTable';
 import { localeMetadata, parseLocaleParam } from '../../seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -6,4 +7,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return localeMetadata(parseLocaleParam(locale), 'pricing');
 }
 
-export default PricingPage;
+export default function LocalizedPricingPage() {
+  return <><PricingPage /><ClerkPricingTable /></>;
+}
