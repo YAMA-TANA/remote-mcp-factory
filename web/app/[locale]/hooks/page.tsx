@@ -1,22 +1,20 @@
-import HooksPage from '../../hooks/page';
-import ProductLanding, { ProductIntro } from '../../product-landing';
-import { LOCALE_SLUGS, slugToLocale } from '../../i18n-data';
-import { localeMetadata, parseLocaleParam } from '../../seo';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-
-export function generateStaticParams() {
-  return LOCALE_SLUGS.map((locale) => ({ locale }));
+import CustomerProductPage from '../../customer-product-page';
+import { CUSTOMER_GUIDES } from '../../customer-content';
+import { LOCALE_SLUGS, slugToLocale } from '../../i18n-data';
+import { SITE_URL } from '../../seo';
+export function generateStaticParams() { return LOCALE_SLUGS.map(locale => ({ locale })); }
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale: slug } = await params;
+  const locale = slugToLocale(slug);
+  if (!locale) return {};
+  const href = (lang: string) => `${SITE_URL}/${lang}/hooks/`;
+  return { title:'Webhook Inbox | PicoSvc', description: CUSTOMER_GUIDES.hooks.summary[locale], robots:{index:true,follow:true}, icons:{icon:'/icons/hooks.svg'}, alternates:{canonical:href(slug),languages:{en:href('en'),ja:href('ja'),'zh-CN':href('zh-cn'),'x-default':href('en')}} };
 }
-
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  const base = localeMetadata(parseLocaleParam(locale), 'hooks');
-  return { ...base, description: locale === 'ja' ? 'PicoSvc Hooks：Webhookの受信・確認・再送、活用例、料金と利用枠、Webhook.siteとの機能範囲をログイン不要で紹介。' : locale === 'zh-cn' ? '无需登录即可了解 PicoSvc Hooks 的使用场景、配额与同类服务。' : 'Explore PicoSvc Hooks webhook use cases, plans, setup, and alternatives without signing in.', icons: { icon: '/icons/hooks.svg', shortcut: '/icons/hooks.svg' } };
-}
-
 export default async function HooksProductPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale: localeSlug } = await params;
-  const locale = slugToLocale(localeSlug);
+  const { locale: slug } = await params;
+  const locale = slugToLocale(slug);
   if (!locale) notFound();
-  return <><ProductIntro service="hooks" locale={locale} /><div id="workspace"><HooksPage /></div><ProductLanding service="hooks" locale={locale} /></>;
+  return <CustomerProductPage service="hooks" locale={locale} />;
 }
