@@ -24,7 +24,6 @@ export function validTimezone(value: unknown): string | null {
 }
 
 function matchesField(expression: string, value: number, min: number, max: number, dayOfWeek = false): boolean {
-  const normalized = dayOfWeek && value === 0 ? 7 : value;
   return expression.split(',').some((atom) => {
     if (atom === '*') return true;
     const step = atom.match(/^\*\/(\d+)$/);
@@ -32,7 +31,9 @@ function matchesField(expression: string, value: number, min: number, max: numbe
     const range = atom.match(/^(\d+)-(\d+)(?:\/(\d+))?$/);
     if (range) {
       const start = Number(range[1]); const end = Number(range[2]); const stride = Number(range[3] || 1);
-      return normalized >= start && normalized <= end && (normalized - start) % stride === 0;
+      // Sunday accepts both 0 and 7; preserve 0-6 and 1-7 range meanings.
+      const candidates = dayOfWeek && value === 0 ? [0, 7] : [value];
+      return candidates.some((candidate) => candidate >= start && candidate <= end && (candidate - start) % stride === 0);
     }
     if (/^\d+$/.test(atom)) return Number(atom) === value || (dayOfWeek && value === 0 && Number(atom) === 7);
     return false;
