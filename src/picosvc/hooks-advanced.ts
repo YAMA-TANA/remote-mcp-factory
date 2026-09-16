@@ -134,10 +134,11 @@ export async function hooksAdvancedManagementRoutes(request: Request, env: Env):
   const replayMatch = url.pathname.match(/^\/api\/picosvc\/hooks\/events\/([0-9a-f-]{36})\/replay$/i);
   if (replayMatch && request.method === 'POST') {
     const cloned = request.clone();
+    const authRequest = new Request(cloned.url, { method: 'GET', headers: cloned.headers });
     const started = Date.now();
     const response = await hooksManagementRoutes(request, env);
     if (!response) return null;
-    const identity = await requireIdentity(cloned, env);
+    const identity = await requireIdentity(authRequest, env);
     if (!(identity instanceof Response)) {
       const event = await env.DB.prepare('SELECT * FROM webhook_events WHERE id=? AND owner=?').bind(replayMatch[1], identity.ownerId).first<any>();
       const body = await cloned.json().catch(() => null) as Record<string, unknown> | null;
@@ -172,7 +173,7 @@ export async function hooksAdvancedManagementRoutes(request: Request, env: Env):
       if (!body) return json({ error: 'JSON body required' }, 400);
       const forward = body.forwardUrl === undefined ? inbox.forward_url : body.forwardUrl ? safePublicUrl(body.forwardUrl) : null;
       if (body.forwardUrl && !forward) return json({ error: 'forwardUrl must be a public HTTP(S) URL' }, 400);
-      let responseStatus = body.responseStatus === undefined ? inbox.response_status : body.responseStatus === null ? null : Number(body.responseStatus);
+      const responseStatus = body.responseStatus === undefined ? inbox.response_status : body.responseStatus === null ? null : Number(body.responseStatus);
       if (responseStatus !== null && (!Number.isInteger(responseStatus) || responseStatus < 200 || responseStatus > 599)) return json({ error: 'responseStatus must be null or 200-599' }, 400);
       const responseHeaders = body.responseHeaders === undefined ? parseObject(inbox.response_headers_json) : safeResponseHeaders(body.responseHeaders);
       const responseBody = body.responseBody === undefined ? inbox.response_body : body.responseBody === null ? null : String(body.responseBody).slice(0, 64 * 1024);
