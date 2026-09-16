@@ -34,7 +34,8 @@ assert.equal((await inspectShot(Buffer.from('not a PDF'.padEnd(180, ' ')), 'pdf'
 const route = source('src/picosvc/shot-quality.ts');
 const router = source('src/picosvc/routes.ts');
 const migration = source('migrations/0029_picosvc_shot_api_keys.sql');
-const page = source('web/app/[locale]/[service]/page.tsx');
+const publicPage = source('web/app/[locale]/[service]/page.tsx');
+const appPage = source('web/app/[locale]/[service]/app/page.tsx');
 assert.ok(router.indexOf('shotQualityManagementRoutes,') < router.indexOf('utilityAdvancedManagementRoutes,'), 'Quality handler must run before legacy screenshot handler');
 assert.match(route, /waitUntil.*networkidle2|networkidle2.*waitUntil/s, 'Screenshot must wait for JavaScript-heavy pages by default');
 assert.match(route, /blank_capture/, 'Blank screenshot must return an explicit error');
@@ -42,5 +43,6 @@ assert.match(route, /token_hash/, 'Screenshot API keys must be hashed');
 assert.match(route, /revoked_at/, 'Screenshot API keys must be revocable');
 assert.match(route, /consumeUsage/, 'Automated screenshots must count against the owner quota');
 assert.match(migration, /CREATE TABLE IF NOT EXISTS shot_api_keys/, 'API keys require an additive database migration');
-assert.match(page, /service === 'shot' \? <ShotWorkspace/, 'Dedicated API-first Screenshot workspace must be linked');
+assert.match(appPage, /service === 'shot' \? <ShotWorkspace/, 'Dedicated API-first Screenshot workspace must be linked from the app route');
+assert.doesNotMatch(publicPage, /<ShotWorkspace/, 'Public product page must not embed the Screenshot workspace');
 console.log('Screenshot quality OK: blank/visible/invalid PNG, PDF signatures, scoped API keys and routing.');
