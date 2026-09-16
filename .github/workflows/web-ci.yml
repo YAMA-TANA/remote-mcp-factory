@@ -8,7 +8,7 @@ on:
       - 'src/types.ts'
       - '.github/workflows/web-ci.yml'
   push:
-    branches: [next-pages-ui]
+    branches: [main, next-pages-ui]
     paths:
       - 'web/**'
       - 'src/entry.ts'
@@ -79,6 +79,9 @@ jobs:
           grep -Fq '$5' out/en/pricing/index.html
           grep -Fq '$22' out/en/pricing/index.html
           grep -Fq 'PicoPlus' out/en/pricing/index.html
+          grep -Fq 'SERVICE QUOTAS' out/en/pricing/index.html
+          grep -Fq '300 dynamic QR · 150k scans' out/en/pricing/index.html
+          grep -Fq '25 spaces · 10k files · 10 GB' out/en/pricing/index.html
           grep -q 'https://picosvc.com/en/pricing/' out/sitemap.xml
           grep -q 'https://picosvc.com/ja/pricing/' out/sitemap.xml
           grep -q 'https://picosvc.com/zh-cn/pricing/' out/sitemap.xml
