@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../service-dashboard';
 import ShotWorkspace from '../../shot-workspace';
 import MonitorDiagnostics from '../../monitor-diagnostics';
+import ProductOverview from '../../product-overview';
 import '../../service-advanced.css';
 import { LOCALE_SLUGS, localeToSlug, slugToLocale } from '../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../service-data';
@@ -24,9 +25,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const info = SERVICE_INFO[service];
   const pathFor = (targetLocale: 'en' | 'ja' | 'zh-CN') => `${SITE_URL}/${localeToSlug(targetLocale)}/${service}/`;
   const descriptions = {
-    en: `${info.role} with PicoSvc. Free tier, Pico $1/month and PicoPlus $5/month.`,
-    ja: `PicoSvc ${info.name} — ${info.role}。Free、Pico 月$1、PicoPlus 月$5で利用できます。`,
-    'zh-CN': `PicoSvc ${info.name} — ${info.role}。支持 Free、Pico $1/月和 PicoPlus $5/月。`,
+    en: `${info.role} with PicoSvc. Learn what it does, how to start, and how alternatives differ. Free tier, Pico $1/month and PicoPlus $5/month.`,
+    ja: `PicoSvc ${info.name} — ${info.role}。できること・使い方・競合との機能範囲をログイン不要で紹介。Free、Pico 月$1、PicoPlus 月$5。`,
+    'zh-CN': `PicoSvc ${info.name} — ${info.role}。无需登录即可了解功能、用法及与同类服务的差异。Free、Pico $1/月、PicoPlus $5/月。`,
   } as const;
   const title = `PicoSvc ${info.name}`;
   const canonical = pathFor(locale);
@@ -49,12 +50,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function GenericServicePage({ params }: { params: Promise<{ locale: string; service: string }> }) {
-  const { service } = await params;
-  if (!isGenericServiceSlug(service)) notFound();
+  const { locale: localeSlug, service } = await params;
+  const locale = slugToLocale(localeSlug);
+  if (!locale || !isGenericServiceSlug(service)) notFound();
   const iconStyle = { '--product-icon': `url('/icons/${service}.svg')` } as CSSProperties;
   return <div className="picoProductTheme" style={iconStyle}>
     {service === 'shot' ? <ShotWorkspace />
       : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></>
       : <ServiceDashboard service={service} />}
+    <ProductOverview service={service} locale={locale} />
   </div>;
 }
