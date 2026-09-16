@@ -12,6 +12,7 @@ import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
 import { jsonAdvancedRuntimeRoute } from './picosvc/json-advanced.js';
+import { jsonScopedWriteGuard } from './picosvc/json-scoped-guard.js';
 import { handleIncomingEmail } from './picosvc/mail-service.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
@@ -30,13 +31,9 @@ function allowedOrigin(request: Request, env: Env): string | null {
     const url = new URL(origin);
     if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return origin;
     if (url.protocol === 'https:' && url.hostname.endsWith('.pages.dev')) return origin;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
   const configured = (env.WEB_ORIGINS || '')
-    .split(',')
-    .map((value) => value.trim().replace(/\/$/, ''))
-    .filter(Boolean);
+    .split(',').map((value) => value.trim().replace(/\/$/, '')).filter(Boolean);
   return configured.includes(origin.replace(/\/$/, '')) ? origin : null;
 }
 
@@ -49,11 +46,7 @@ function withCors(response: Response, origin: string | null): Response {
   headers.set('access-control-expose-headers', 'etag');
   headers.set('access-control-max-age', '86400');
   headers.append('vary', 'Origin');
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
@@ -62,7 +55,8 @@ export default {
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
       return Response.redirect('https://picosvc.com/', 302);
     }
-    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env);
+    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env)
+      || await jsonScopedWriteGuard(request, env);
     if (guardrailResponse) {
       return url.pathname.startsWith('/api/picosvc/')
         ? withCors(guardrailResponse, allowedOrigin(request, env))
@@ -70,7 +64,6 @@ export default {
     }
     const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
     if (sandboxMeterResponse) return sandboxMeterResponse;
-
     for (const handler of [
       hooksAdvancedRuntimeRoute,
       hooksRuntimeRoute,
