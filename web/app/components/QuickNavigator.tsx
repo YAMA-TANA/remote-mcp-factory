@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { SERVICE_INFO, type GenericServiceSlug } from '../service-data';
+import ServiceIcon from './ServiceIcon';
 import './quick-navigator.css';
 
 type NavSlug = GenericServiceSlug | 'mock';
@@ -90,7 +91,7 @@ export default function QuickNavigator() {
         <div className="picoQuickHead"><label htmlFor="pico-quick-input">{t.hint}</label><button type="button" className="picoQuickClose" onClick={close} aria-label={t.close}>✕</button></div>
         <input id="pico-quick-input" ref={inputRef} type="search" autoComplete="off" value={query} onChange={event => setQuery(event.target.value)} placeholder={t.placeholder} aria-label={t.hint} />
         <div className="picoQuickResults" aria-live="polite">
-          {products.length > 0 && <div className="picoQuickGroup"><h3>{t.services}</h3>{products.map(slug => <a key={slug} href={localizedHref(`/${slug}`)} onClick={() => setOpen(false)}><span className="picoQuickInitial" aria-hidden="true">{productInfo(slug).name.slice(0, 1)}</span><span className="picoQuickDescription"><strong>{productInfo(slug).name}</strong><small>{productInfo(slug).role}</small></span><span aria-hidden="true">↗</span></a>)}</div>}
+          {products.length > 0 && <div className="picoQuickGroup"><h3>{t.services}</h3>{products.map(slug => <a key={slug} href={localizedHref(`/${slug}`)} onClick={() => setOpen(false)}><span className="picoQuickInitial" aria-hidden="true"><ServiceIcon name={slug} size={38} /></span><span className="picoQuickDescription"><strong>{productInfo(slug).name}</strong><small>{productInfo(slug).role}</small></span><span aria-hidden="true">↗</span></a>)}</div>}
           {pages.length > 0 && <div className="picoQuickGroup"><h3>{t.pages}</h3>{pages.map(page => <a key={page.path} href={localizedHref(page.path)} onClick={() => setOpen(false)}><span className="picoQuickInitial" aria-hidden="true">↗</span><span className="picoQuickDescription"><strong>{page.name}</strong></span><span aria-hidden="true">↗</span></a>)}</div>}
           {!products.length && !pages.length && <p className="picoQuickEmpty">{t.noResults}</p>}
         </div>
