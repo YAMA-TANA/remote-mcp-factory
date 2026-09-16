@@ -33,6 +33,11 @@ export const SERVICE_UI: Record<GenericServiceSlug, ServiceUI> = {
       { key: 'visibility', label: 'Access', kind: 'select', initial: 'token', options: ['token', 'public'] },
     ],
   },
+  hooks: {
+    title: 'Webhook inboxes', description: 'Receive, inspect, and replay webhook requests.',
+    listPath: '/api/picosvc/hooks/inboxes', collection: 'inboxes', createPath: '/api/picosvc/hooks/inboxes', createLabel: 'Create inbox',
+    empty: 'No inboxes yet.', fields: [{ key: 'name', label: 'Inbox name', initial: 'Development webhook', required: true }],
+  },
   rss: {
     title: 'RSS feeds', description: 'Turn a page into a feed and use its published URL in an RSS reader.',
     listPath: '/api/picosvc/rss/feeds', collection: 'feeds', createPath: '/api/picosvc/rss/feeds', createLabel: 'Create feed',
