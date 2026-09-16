@@ -292,6 +292,8 @@ export async function hooksManagementRoutes(request: Request, env: Env): Promise
     headers.set('x-picosvc-replay', event.id);
 
     const bytes = decodeBase64(event.body_base64);
+    const replayBody = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(replayBody).set(bytes);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10_000);
     try {
@@ -299,7 +301,7 @@ export async function hooksManagementRoutes(request: Request, env: Env): Promise
       const replay = await fetch(target.toString(), {
         method,
         headers,
-        body: method === 'GET' || method === 'HEAD' ? undefined : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        body: method === 'GET' || method === 'HEAD' ? undefined : replayBody,
         redirect: 'manual',
         signal: controller.signal,
       });
