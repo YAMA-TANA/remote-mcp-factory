@@ -1,5 +1,6 @@
 import legacyEntry, { Sandbox } from './entry.js';
 import { rssRuntimeRoute, runScheduledServices } from './picosvc/automation-services.js';
+import { configRuntimeRoute } from './picosvc/config-service.js';
 import {
   picoSvcEmailGuardrails,
   picoSvcPostResponseGuardrails,
@@ -73,6 +74,7 @@ export default {
       hooksRuntimeRoute,
       mockRuntimeRoute,
       qrRuntimeRoute,
+      configRuntimeRoute,
       dataRuntimeRoute,
       functionRuntimeRoute,
       rssRuntimeRoute,
