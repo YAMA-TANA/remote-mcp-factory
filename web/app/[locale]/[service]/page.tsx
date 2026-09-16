@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../service-dashboard';
 import ShotWorkspace from '../../shot-workspace';
 import MonitorDiagnostics from '../../monitor-diagnostics';
-import ProductLanding from '../../product-landing';
+import ProductLanding, { ProductIntro } from '../../product-landing';
 import '../../service-advanced.css';
 import { LOCALE_SLUGS, localeToSlug, slugToLocale } from '../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../service-data';
@@ -55,11 +55,12 @@ export default async function GenericServicePage({ params }: { params: Promise<{
   if (!locale || !isGenericServiceSlug(service)) notFound();
   const iconStyle = { '--product-icon': `url('/icons/${service}.svg')` } as CSSProperties;
   return <div className="picoProductTheme" style={iconStyle}>
-    <ProductLanding service={service} locale={locale} />
+    <ProductIntro service={service} locale={locale} />
     <div id="workspace">
       {service === 'shot' ? <ShotWorkspace />
         : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></>
         : <ServiceDashboard service={service} />}
     </div>
+    <ProductLanding service={service} locale={locale} />
   </div>;
 }
