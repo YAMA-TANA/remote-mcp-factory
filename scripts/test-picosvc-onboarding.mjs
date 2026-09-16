@@ -14,8 +14,9 @@ assert.ok(routes.indexOf('reliableOnboardingRoutes,') < routes.indexOf('automati
 assert.match(onboarding, /response\.status !== 201/, 'Do not interfere with validation, auth or quota error responses');
 assert.match(onboarding, /feed\.last_checked_at && count > 0/, 'RSS must have content before reporting ready');
 assert.match(onboarding, /initial_rss_fetch_failed/, 'Initial RSS errors must have a stable code');
+assert.match(onboarding, /error: `RSS feed was not created:/, 'RSS errors must be readable by generic workspace');
 assert.match(onboarding, /DELETE FROM rss_feeds WHERE id=\? AND owner=\?/, 'Failed RSS feeds must be removed');
-assert.match(onboarding, /quantity=MAX\(0,quantity-1\)/, 'Failed RSS attempts must refund one monthly check');
+assert.doesNotMatch(onboarding, /quantity\s*=\s*MAX\(0,quantity-1\)/, 'Never blindly refund shared quotas on an unsuccessful fetch');
 assert.match(onboarding, /INSERT INTO monitor_options/, 'New Monitors must use tracked mode');
 assert.match(onboarding, /UPDATE monitors SET enabled=0/, 'Disable legacy Monitor scheduler when tracking is enabled');
 assert.match(onboarding, /monitor_setup_unavailable/, 'Missing monitoring migrations must produce a useful error');
@@ -50,10 +51,8 @@ db.prepare('INSERT INTO rss_entries(id,feed_id,title,link,guid,published_at) VAL
 db.prepare('INSERT INTO product_usage_monthly(owner,product,metric,month,quantity,updated_at) VALUES(?,?,?,?,?,?)')
   .run('test-owner', 'rss', 'checks', now.slice(0, 7), 1, now);
 db.prepare('DELETE FROM rss_feeds WHERE id=? AND owner=?').run(feedId, 'test-owner');
-db.prepare(`UPDATE product_usage_monthly SET quantity=MAX(0,quantity-1),updated_at=? WHERE owner=? AND product='rss' AND metric='checks' AND month=? AND quantity>0`)
-  .run(now, 'test-owner', now.slice(0, 7));
 assert.equal(db.prepare('SELECT COUNT(*) AS count FROM rss_entries WHERE feed_id=?').get(feedId).count, 0, 'Failed feed cleanup must cascade to entries');
-assert.equal(db.prepare("SELECT quantity FROM product_usage_monthly WHERE owner='test-owner' AND product='rss'").get().quantity, 0, 'Failed feed check must be refunded');
+assert.equal(db.prepare("SELECT quantity FROM product_usage_monthly WHERE owner='test-owner' AND product='rss'").get().quantity, 1, 'Feed cleanup must not reset the check quota');
 assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), [], 'No orphaned foreign keys');
 db.close();
-console.log('PicoSvc onboarding contracts and D1 cleanup / scheduler isolation OK.');
+console.log('PicoSvc onboarding contracts, D1 cleanup, usage accounting and scheduler isolation OK.');
