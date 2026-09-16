@@ -7,6 +7,7 @@ import {
   PICOSVC_PRODUCTS,
   type PicoSvcProductSlug,
 } from './catalog.js';
+import { hooksManagementRoutes } from './hooks.js';
 import { mockManagementRoutes } from './mock.js';
 
 function json(body: unknown, status = 200): Response {
@@ -19,6 +20,9 @@ function monthKey(now = new Date()): string {
 
 export async function picoSvcRoutes(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
+
+  const hooksResponse = await hooksManagementRoutes(request, env);
+  if (hooksResponse) return hooksResponse;
 
   const mockResponse = await mockManagementRoutes(request, env);
   if (mockResponse) return mockResponse;
