@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+
+const guard = readFileSync(new URL('../src/picosvc/mail-retry-guard.ts', import.meta.url), 'utf8');
+const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url), 'utf8');
+assert.match(guard, /MAX_MAIL_ATTEMPTS = 4/);
+assert.match(guard, /WHERE id=\? AND owner=\?/, 'Manual retry must verify ownership');
+assert.match(guard, /event\.attempts >= MAX_MAIL_ATTEMPTS/, 'Manual retry must reject exhausted deliveries');
+assert.ok(routes.indexOf('mailManualRetryGuard,') < routes.indexOf('mailAdvancedManagementRoutes,'), 'Retry guard must precede delivery handler');
+const db = new DatabaseSync(':memory:');
+db.exec('CREATE TABLE mail_events (id TEXT PRIMARY KEY,attempts INTEGER NOT NULL DEFAULT 0,delivery_status TEXT NOT NULL)');
+db.exec(readFileSync(new URL('../migrations/0025_picosvc_mail_retry_cap.sql', import.meta.url), 'utf8'));
+db.prepare('INSERT INTO mail_events(id,delivery_status) VALUES (?,?)').run('event','retry');
+const update = db.prepare('UPDATE mail_events SET attempts=attempts+1 WHERE id=?');
+for (let i = 0; i < 4; i += 1) update.run('event');
+assert.equal(db.prepare('SELECT attempts FROM mail_events WHERE id=?').get('event').attempts, 4);
+assert.throws(() => update.run('event'), /Mail delivery attempt limit exceeded/);
+assert.equal(db.prepare('SELECT attempts FROM mail_events WHERE id=?').get('event').attempts, 4, 'Rejected retry must not change accounting');
+db.close();
+console.log('PicoSvc Mail retry cap OK: API owner guard and SQLite hard ceiling at four attempts.');

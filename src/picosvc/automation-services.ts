@@ -1,5 +1,6 @@
 import type { Env } from '../types.js';
 import { productLimit } from './entitlements.js';
+import { extractRssItems, type RssSelectors } from './rss-extractor.js';
 import { cleanName, consumeUsage, json, requireIdentity, resourceCapacity } from './service-utils.js';
 import { fetchPublic, randomPublicId, safeHeaderObject, safePublicUrl, sha256Hex } from './security.js';
 
@@ -16,8 +17,35 @@ function extractPage(html: string, sourceUrl: string) {
   return { title, description: (meta || text.slice(0, 500)).trim() };
 }
 
+function selectorValue(value: unknown): string | null {
+  if (value === null || value === '') return null;
+  if (typeof value !== 'string') return null;
+  const selector = value.trim();
+  return selector && selector.length <= 300 ? selector : null;
+}
+
+function selectorsFromFeed(feed: any): RssSelectors {
+  return {
+    item: feed.item_selector || null,
+    title: feed.title_selector || null,
+    link: feed.link_selector || null,
+    content: feed.content_selector || null,
+    date: feed.date_selector || null,
+  };
+}
+
+function serializedSelectors(feed: any) {
+  return {
+    itemSelector: feed.item_selector || null,
+    titleSelector: feed.title_selector || null,
+    linkSelector: feed.link_selector || null,
+    contentSelector: feed.content_selector || null,
+    dateSelector: feed.date_selector || null,
+  };
+}
+
 async function loadPage(url: string): Promise<{ html: string; hash: string }> {
-  const response = await fetchPublic(url, { headers: { 'user-agent': 'PicoSvc-Monitor/1.0' } });
+  const response = await fetchPublic(url, { headers: { 'user-agent': 'PicoSvc-RSS/1.0' } });
   if (!response.ok) throw new Error(`Upstream returned HTTP ${response.status}`);
   const declared = Number(response.headers.get('content-length') || '0');
   if (declared > MAX_PAGE_BYTES) throw new Error('Page exceeds 2 MiB');
@@ -27,21 +55,64 @@ async function loadPage(url: string): Promise<{ html: string; hash: string }> {
   return { html, hash: await sha256Hex(html) };
 }
 
-export async function refreshRssFeed(env: Env, feed: any): Promise<{ changed: boolean; hash: string }> {
+async function extractedFeedItems(env: Env, feed: any, html: string, now: string) {
+  const extraction = await extractRssItems(html, feed.source_url, selectorsFromFeed(feed), now);
+  if (extraction.items.length) return extraction;
+
+  const page = extractPage(html, feed.source_url);
+  return {
+    mode: 'auto-headings' as const,
+    itemSelector: null,
+    items: [{
+      title: page.title,
+      link: feed.source_url,
+      description: page.description,
+      publishedAt: now,
+      guid: await sha256Hex(`${feed.source_url}\n${page.title}\n${page.description}`),
+    }],
+  };
+}
+
+export async function previewRssFeed(env: Env, feed: any) {
+  const loaded = await loadPage(feed.source_url);
+  const now = new Date().toISOString();
+  const extraction = await extractedFeedItems(env, feed, loaded.html, now);
+  return {
+    hash: loaded.hash,
+    mode: extraction.mode,
+    detectedItemSelector: extraction.itemSelector,
+    selectors: serializedSelectors(feed),
+    items: extraction.items.slice(0, 20),
+  };
+}
+
+export async function refreshRssFeed(env: Env, feed: any): Promise<{ changed: boolean; hash: string; extracted: number; inserted: number; mode: string }> {
   const loaded = await loadPage(feed.source_url);
   const now = new Date().toISOString();
   const changed = Boolean(feed.last_hash && feed.last_hash !== loaded.hash);
-  if (!feed.last_hash || changed) {
-    const page = extractPage(loaded.html, feed.source_url);
-    await env.DB.prepare('INSERT INTO rss_entries (id,feed_id,title,link,guid,description,published_at) VALUES (?,?,?,?,?,?,?)')
-      .bind(crypto.randomUUID(), feed.id, page.title, feed.source_url, `${feed.source_url}#${loaded.hash}`, page.description, now).run();
-    const { limit: entriesPerFeed } = await productLimit(env, feed.owner, 'rss', 'entriesPerFeed');
-    const keep = Math.max(1, entriesPerFeed ?? 20);
-    await env.DB.prepare('DELETE FROM rss_entries WHERE feed_id=? AND id NOT IN (SELECT id FROM rss_entries WHERE feed_id=? ORDER BY published_at DESC LIMIT ?)')
-      .bind(feed.id, feed.id, keep).run();
+  const extraction = await extractedFeedItems(env, feed, loaded.html, now);
+  let inserted = 0;
+
+  for (const item of extraction.items) {
+    const result = await env.DB.prepare(`
+      INSERT INTO rss_entries (id,feed_id,title,link,guid,description,published_at)
+      SELECT ?,?,?,?,?,?,?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM rss_entries WHERE feed_id=? AND guid=?
+      )
+    `).bind(
+      crypto.randomUUID(), feed.id, item.title, item.link, item.guid, item.description, item.publishedAt,
+      feed.id, item.guid,
+    ).run();
+    inserted += Number(result.meta?.changes || 0);
   }
+
+  const { limit: entriesPerFeed } = await productLimit(env, feed.owner, 'rss', 'entriesPerFeed');
+  const keep = Math.max(1, entriesPerFeed ?? 20);
+  await env.DB.prepare('DELETE FROM rss_entries WHERE feed_id=? AND id NOT IN (SELECT id FROM rss_entries WHERE feed_id=? ORDER BY published_at DESC, id DESC LIMIT ?)')
+    .bind(feed.id, feed.id, keep).run();
   await env.DB.prepare('UPDATE rss_feeds SET last_hash=?,last_checked_at=?,updated_at=? WHERE id=?').bind(loaded.hash, now, now, feed.id).run();
-  return { changed, hash: loaded.hash };
+  return { changed, hash: loaded.hash, extracted: extraction.items.length, inserted, mode: extraction.mode };
 }
 
 async function refreshMonitor(env: Env, monitor: any): Promise<void> {
@@ -169,37 +240,46 @@ export async function automationManagementRoutes(request: Request, env: Env): Pr
       const capacity = await resourceCapacity(env, owner, 'rss', 'feeds', 'rss_feeds');
       const { limit: refreshMinutes } = await productLimit(env, owner, 'rss', 'refreshMinutes');
       const { limit: monthlyChecks } = await productLimit(env, owner, 'rss', 'checks');
-      return json({ tier: capacity.tier, limit: capacity.limit, refreshMinutes, monthlyChecks, feeds: (rows.results || []).map((row) => ({ ...row, feedUrl: `${url.origin}/rss/${row.public_id}.xml` })) });
+      return json({ tier: capacity.tier, limit: capacity.limit, refreshMinutes, monthlyChecks, feeds: (rows.results || []).map((row) => ({ ...row, ...serializedSelectors(row), feedUrl: `${url.origin}/rss/${row.public_id}.xml` })) });
     }
     if (request.method === 'POST') {
       const capacity = await resourceCapacity(env, owner, 'rss', 'feeds', 'rss_feeds'); if (!capacity.ok) return json({ error: 'RSS feed limit reached', ...capacity }, 402);
       const body = await request.json().catch(() => null) as Record<string, unknown> | null; const source = safePublicUrl(body?.sourceUrl); if (!source) return json({ error: 'sourceUrl must be public HTTP(S)' }, 400);
       const id = crypto.randomUUID(); const publicId = randomPublicId(); const nowIso = new Date().toISOString();
-      await env.DB.prepare('INSERT INTO rss_feeds (id,owner,public_id,name,source_url,enabled,last_hash,last_checked_at,created_at,updated_at) VALUES (?,?,?,?,?,1,NULL,NULL,?,?)')
-        .bind(id, owner, publicId, cleanName(body?.name, 'Web Feed'), source.toString(), nowIso, nowIso).run();
+      const itemSelector = selectorValue(body?.itemSelector); const titleSelector = selectorValue(body?.titleSelector); const linkSelector = selectorValue(body?.linkSelector); const contentSelector = selectorValue(body?.contentSelector); const dateSelector = selectorValue(body?.dateSelector);
+      await env.DB.prepare('INSERT INTO rss_feeds (id,owner,public_id,name,source_url,enabled,last_hash,last_checked_at,item_selector,title_selector,link_selector,content_selector,date_selector,created_at,updated_at) VALUES (?,?,?,?,?,1,NULL,NULL,?,?,?,?,?,?,?)')
+        .bind(id, owner, publicId, cleanName(body?.name, 'Web Feed'), source.toString(), itemSelector, titleSelector, linkSelector, contentSelector, dateSelector, nowIso, nowIso).run();
       const feed = await env.DB.prepare('SELECT * FROM rss_feeds WHERE id=?').bind(id).first<any>();
       if (feed) {
         const usage = await consumeUsage(env, owner, 'rss', 'checks');
         if (usage.ok) await refreshRssFeed(env, feed).catch(() => undefined);
       }
       const { limit: refreshMinutes } = await productLimit(env, owner, 'rss', 'refreshMinutes');
-      return json({ id, publicId, sourceUrl: source.toString(), feedUrl: `${url.origin}/rss/${publicId}.xml`, tier: capacity.tier, refreshMinutes }, 201);
+      return json({ id, publicId, sourceUrl: source.toString(), feedUrl: `${url.origin}/rss/${publicId}.xml`, tier: capacity.tier, refreshMinutes, selectors: { itemSelector, titleSelector, linkSelector, contentSelector, dateSelector } }, 201);
     }
   }
 
-  const rssMatch = url.pathname.match(/^\/api\/picosvc\/rss\/feeds\/([0-9a-f-]{36})(?:\/(refresh))?$/i);
+  const rssMatch = url.pathname.match(/^\/api\/picosvc\/rss\/feeds\/([0-9a-f-]{36})(?:\/(refresh|preview))?$/i);
   if (rssMatch) {
     const feed = await env.DB.prepare('SELECT * FROM rss_feeds WHERE id=? AND owner=?').bind(rssMatch[1], owner).first<any>(); if (!feed) return json({ error: 'RSS feed not found' }, 404);
+    if (rssMatch[2] === 'preview' && request.method === 'POST') {
+      const usage = await consumeUsage(env, owner, 'rss', 'checks');
+      if (!usage.ok) return json({ error: 'RSS preview quota reached', ...usage }, 429);
+      try { return json({ ...(await previewRssFeed(env, feed)), tier: usage.tier, monthlyChecksUsed: usage.used }); }
+      catch (error) { return json({ error: 'RSS extraction failed', detail: error instanceof Error ? error.message : String(error) }, 422); }
+    }
     if (rssMatch[2] === 'refresh' && request.method === 'POST') {
       const usage = await consumeUsage(env, owner, 'rss', 'checks');
       if (!usage.ok) return json({ error: 'RSS refresh quota reached', ...usage }, 429);
-      return json({ ...(await refreshRssFeed(env, feed)), tier: usage.tier, monthlyChecksUsed: usage.used });
+      try { return json({ ...(await refreshRssFeed(env, feed)), tier: usage.tier, monthlyChecksUsed: usage.used }); }
+      catch (error) { return json({ error: 'RSS refresh failed', detail: error instanceof Error ? error.message : String(error) }, 422); }
     }
     if (!rssMatch[2] && request.method === 'PATCH') {
       const body = await request.json().catch(() => null) as Record<string, unknown> | null; const source = body?.sourceUrl === undefined ? null : safePublicUrl(body.sourceUrl); if (body?.sourceUrl !== undefined && !source) return json({ error: 'sourceUrl must be public HTTP(S)' }, 400);
       const enabled = body?.enabled === undefined ? feed.enabled : body.enabled ? 1 : 0; const name = body?.name === undefined ? feed.name : cleanName(body.name, feed.name);
-      await env.DB.prepare('UPDATE rss_feeds SET name=?,source_url=?,enabled=?,updated_at=? WHERE id=? AND owner=?').bind(name, source?.toString() || feed.source_url, enabled, new Date().toISOString(), feed.id, owner).run();
-      return json({ id: feed.id, name, sourceUrl: source?.toString() || feed.source_url, enabled: Boolean(enabled) });
+      const itemSelector = body?.itemSelector === undefined ? feed.item_selector : selectorValue(body.itemSelector); const titleSelector = body?.titleSelector === undefined ? feed.title_selector : selectorValue(body.titleSelector); const linkSelector = body?.linkSelector === undefined ? feed.link_selector : selectorValue(body.linkSelector); const contentSelector = body?.contentSelector === undefined ? feed.content_selector : selectorValue(body.contentSelector); const dateSelector = body?.dateSelector === undefined ? feed.date_selector : selectorValue(body.dateSelector);
+      await env.DB.prepare('UPDATE rss_feeds SET name=?,source_url=?,enabled=?,item_selector=?,title_selector=?,link_selector=?,content_selector=?,date_selector=?,updated_at=? WHERE id=? AND owner=?').bind(name, source?.toString() || feed.source_url, enabled, itemSelector, titleSelector, linkSelector, contentSelector, dateSelector, new Date().toISOString(), feed.id, owner).run();
+      return json({ id: feed.id, name, sourceUrl: source?.toString() || feed.source_url, enabled: Boolean(enabled), selectors: { itemSelector, titleSelector, linkSelector, contentSelector, dateSelector } });
     }
     if (!rssMatch[2] && request.method === 'DELETE') { await env.DB.prepare('DELETE FROM rss_feeds WHERE id=? AND owner=?').bind(feed.id, owner).run(); return new Response(null, { status: 204 }); }
   }

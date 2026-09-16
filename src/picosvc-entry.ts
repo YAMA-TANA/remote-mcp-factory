@@ -1,11 +1,31 @@
 import legacyEntry, { Sandbox } from './entry.js';
 import { rssRuntimeRoute, runScheduledServices } from './picosvc/automation-services.js';
+import { configRuntimeRoute } from './picosvc/config-service.js';
+import { runAdvancedCronJobs } from './picosvc/cron-advanced.js';
+import {
+  picoSvcEmailGuardrails,
+  picoSvcPostResponseGuardrails,
+  picoSvcRuntimeGuardrails,
+  picoSvcScheduledGuardrails,
+} from './picosvc/cost-guardrails.js';
 import { dataRuntimeRoute } from './picosvc/data-services.js';
+import { filesAccessRuntimeRoute } from './picosvc/files-access.js';
+import { formsAdvancedRuntimeRoute } from './picosvc/forms-advanced.js';
+import { functionsAdvancedRuntimeRoute } from './picosvc/functions-runtime-advanced.js';
 import { functionRuntimeRoute } from './picosvc/functions-service.js';
+import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
-import { handleIncomingEmail } from './picosvc/mail-service.js';
+import { jsonAdvancedRuntimeRoute } from './picosvc/json-advanced.js';
+import { jsonScopedWriteGuard } from './picosvc/json-scoped-guard.js';
+import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
+import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
+import { mcpObservedRuntimeRoute } from './picosvc/mcp-observability.js';
+import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
+import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
+import { runAdvancedMonitorChecks } from './picosvc/monitor-advanced.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
+import { utilityAdvancedRuntimeRoute } from './picosvc/utility-advanced.js';
 import { qrRuntimeRoute } from './picosvc/utility-services.js';
 import type { Env } from './types.js';
 
@@ -18,72 +38,92 @@ function allowedOrigin(request: Request, env: Env): string | null {
     const url = new URL(origin);
     if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return origin;
     if (url.protocol === 'https:' && url.hostname.endsWith('.pages.dev')) return origin;
-  } catch {
-    return null;
-  }
-
-  const configured = (env.WEB_ORIGINS || '')
-    .split(',')
-    .map((value) => value.trim().replace(/\/$/, ''))
-    .filter(Boolean);
+  } catch { return null; }
+  const configured = (env.WEB_ORIGINS || '').split(',').map((value) => value.trim().replace(/\/$/, '')).filter(Boolean);
   return configured.includes(origin.replace(/\/$/, '')) ? origin : null;
 }
-
 function withCors(response: Response, origin: string | null): Response {
   if (!origin) return response;
   const headers = new Headers(response.headers);
   headers.set('access-control-allow-origin', origin);
   headers.set('access-control-allow-methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
-  headers.set('access-control-allow-headers', 'authorization,content-type');
+  headers.set('access-control-allow-headers', 'authorization,content-type,if-match,if-none-match');
+  headers.set('access-control-expose-headers', 'etag');
   headers.set('access-control-max-age', '86400');
   headers.append('vary', 'Origin');
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
       return Response.redirect('https://picosvc.com/', 302);
     }
-
+    const filesResponse = await filesAccessRuntimeRoute(request, env);
+    if (filesResponse) return filesResponse;
+    const guardrailResponse = await picoSvcRuntimeGuardrails(request, env) || await jsonScopedWriteGuard(request, env);
+    if (guardrailResponse) {
+      return url.pathname.startsWith('/api/picosvc/') ? withCors(guardrailResponse, allowedOrigin(request, env)) : guardrailResponse;
+    }
+    const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
+    if (sandboxMeterResponse) return sandboxMeterResponse;
     for (const handler of [
+      hooksAdvancedRuntimeRoute,
       hooksRuntimeRoute,
+      mockAdvancedRuntimeRoute,
       mockRuntimeRoute,
+      utilityAdvancedRuntimeRoute,
       qrRuntimeRoute,
+      configRuntimeRoute,
+      jsonAdvancedRuntimeRoute,
+      licenseAdvancedRuntimeRoute,
+      formsAdvancedRuntimeRoute,
       dataRuntimeRoute,
+      functionsAdvancedRuntimeRoute,
       functionRuntimeRoute,
       rssRuntimeRoute,
     ]) {
       const response = await handler(request, env);
-      if (response) return response;
+      if (response) {
+        await picoSvcPostResponseGuardrails(request, env, response);
+        return response;
+      }
     }
-
     if (url.pathname.startsWith('/api/picosvc/')) {
       const origin = allowedOrigin(request, env);
       if (request.method === 'OPTIONS') {
         if (!origin) return new Response(null, { status: 403 });
         return withCors(new Response(null, { status: 204 }), origin);
       }
-
       const response = await picoSvcRoutes(request, env);
       if (response) return withCors(response, origin);
       return withCors(Response.json({ error: 'PicoSvc route not found' }, { status: 404 }), origin);
     }
-
+    const observedMcp = await mcpObservedRuntimeRoute(request, env, () => legacyEntry.fetch(request, env, ctx));
+    if (observedMcp) return observedMcp;
     return legacyEntry.fetch(request, env, ctx);
   },
-
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runScheduledServices(env, new Date(controller.scheduledTime)));
+    ctx.waitUntil((async () => {
+      try {
+        await runScheduledServices(env, new Date(controller.scheduledTime));
+        await runAdvancedMonitorChecks(env, new Date(controller.scheduledTime));
+        await runAdvancedCronJobs(env, new Date(controller.scheduledTime));
+        await runMailRetries(env);
+      } finally {
+        await pruneMailR2Owners(env);
+        await picoSvcScheduledGuardrails(env);
+      }
+    })());
   },
-
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(handleIncomingEmail(message, env));
+    ctx.waitUntil((async () => {
+      try { await handleIncomingMailAdvanced(message, env); }
+      finally {
+        await pruneIncomingMailR2(message, env);
+        await picoSvcEmailGuardrails(message, env);
+      }
+    })());
   },
 };

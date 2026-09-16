@@ -4,7 +4,7 @@ import { compiledBridgeOperation } from './bridge-policy.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { EdgeBuildRow, Env, ServerRow } from './types.js';
 
-const EDGE_CPU_MS_PER_REQUEST = 1_000;
+const EDGE_CPU_MS_PER_REQUEST = 50;
 const EDGE_SUBREQUESTS_PER_REQUEST = 64;
 
 function sanitizedEdgeRequest(request: Request<any, any>): Request {
