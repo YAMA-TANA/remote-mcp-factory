@@ -20,6 +20,7 @@ import { hooksManagementRoutes } from './hooks.js';
 import { jsonAdvancedManagementRoutes } from './json-advanced.js';
 import { licenseAdvancedManagementRoutes } from './license-advanced.js';
 import { mailAdvancedManagementRoutes } from './mail-advanced.js';
+import { mailManualRetryGuard } from './mail-retry-guard.js';
 import { mailManagementRoutes } from './mail-service.js';
 import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
@@ -40,6 +41,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   for (const handler of [
     picoSvcUsageDashboard,
     filesAccessManagementRoutes,
+    mailManualRetryGuard,
     mailAdvancedManagementRoutes,
     cronAdvancedManagementRoutes,
     functionsAdvancedManagementRoutes,
