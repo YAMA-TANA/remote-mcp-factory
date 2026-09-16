@@ -9,7 +9,7 @@ const migrations = readdirSync(new URL('../migrations/', import.meta.url))
   .filter((file) => /^00(?:1[0-9]|[2-9][0-9])_.*\.sql$/.test(file))
   .filter((file) => Number(file.slice(0, 4)) >= 10)
   .sort();
-assert.ok(migrations.length >= 14, 'Expected PicoSvc additive migrations 0010–0023');
+assert.ok(migrations.length >= 15, 'Expected PicoSvc additive migrations 0010–0024');
 for (const migration of migrations) {
   const sql = readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8');
   try { db.exec(sql); }
@@ -22,7 +22,7 @@ for (const table of [
   'qr_links', 'qr_scan_daily', 'flag_projects', 'feature_flags', 'mcp_sandbox_active_minutes',
   'mail_events', 'mail_attachments', 'cron_runs', 'cron_job_options', 'cron_dispatch_claims',
   'cron_run_attempts', 'cron_notifications', 'file_objects', 'json_documents', 'json_store_tokens',
-  'license_activations', 'license_validation_history',
+  'license_activations', 'license_validation_history', 'function_revisions', 'function_secrets', 'function_invocations',
 ]) assert.ok(columns(table).size > 0, `${table}: missing table`);
 assert.ok(columns('webhook_events').has('body_r2_key'), 'Hooks R2 pointer missing');
 assert.ok(columns('rss_feeds').has('item_selector'), 'RSS item selector missing');
@@ -40,6 +40,9 @@ assert.ok(columns('mail_events').has('next_retry_at'), 'Mail retry scheduling mi
 assert.ok(columns('mail_events').has('payload_r2_key'), 'Mail retry payload pointer missing');
 assert.ok(columns('cron_job_options').has('timezone'), 'Cron timezone missing');
 assert.ok(columns('cron_job_options').has('expected_status'), 'Cron expected status missing');
+assert.ok(columns('function_apps').has('current_revision'), 'Function revision pointer missing');
+assert.ok(columns('function_revisions').has('revision_no'), 'Function revision log missing');
+assert.ok(columns('function_invocations').has('status_code'), 'Function execution log missing');
 assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), [], 'Foreign key validation failed');
 console.log(`D1 migration smoke OK: schema.sql + ${migrations.length} additive migrations (${migrations[0]} to ${migrations.at(-1)}).`);
 db.close();
