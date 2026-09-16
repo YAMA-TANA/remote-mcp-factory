@@ -15,7 +15,7 @@ import { hooksRuntimeRoute } from './picosvc/hooks.js';
 import { jsonAdvancedRuntimeRoute } from './picosvc/json-advanced.js';
 import { jsonScopedWriteGuard } from './picosvc/json-scoped-guard.js';
 import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
-import { handleIncomingEmail } from './picosvc/mail-service.js';
+import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
@@ -104,15 +104,23 @@ export default {
 
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil((async () => {
-      try { await runScheduledServices(env, new Date(controller.scheduledTime)); }
-      finally { await picoSvcScheduledGuardrails(env); }
+      try {
+        await runScheduledServices(env, new Date(controller.scheduledTime));
+        await runMailRetries(env);
+      } finally {
+        await pruneMailR2Owners(env);
+        await picoSvcScheduledGuardrails(env);
+      }
     })());
   },
 
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil((async () => {
-      try { await handleIncomingEmail(message, env); }
-      finally { await picoSvcEmailGuardrails(message, env); }
+      try { await handleIncomingMailAdvanced(message, env); }
+      finally {
+        await pruneIncomingMailR2(message, env);
+        await picoSvcEmailGuardrails(message, env);
+      }
     })());
   },
 };
