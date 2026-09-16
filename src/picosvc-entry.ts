@@ -10,6 +10,7 @@ import {
 } from './picosvc/cost-guardrails.js';
 import { dataRuntimeRoute } from './picosvc/data-services.js';
 import { filesAccessRuntimeRoute } from './picosvc/files-access.js';
+import { functionsAdvancedRuntimeRoute } from './picosvc/functions-runtime-advanced.js';
 import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
@@ -80,6 +81,7 @@ export default {
       jsonAdvancedRuntimeRoute,
       licenseAdvancedRuntimeRoute,
       dataRuntimeRoute,
+      functionsAdvancedRuntimeRoute,
       functionRuntimeRoute,
       rssRuntimeRoute,
     ]) {
