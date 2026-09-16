@@ -1,22 +1,20 @@
-import MockPage from '../../mock/page';
-import ProductLanding, { ProductIntro } from '../../product-landing';
-import { LOCALE_SLUGS, slugToLocale } from '../../i18n-data';
-import { localeMetadata, parseLocaleParam } from '../../seo';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-
-export function generateStaticParams() {
-  return LOCALE_SLUGS.map((locale) => ({ locale }));
+import CustomerProductPage from '../../customer-product-page';
+import { CUSTOMER_GUIDES } from '../../customer-content';
+import { LOCALE_SLUGS, slugToLocale } from '../../i18n-data';
+import { SITE_URL } from '../../seo';
+export function generateStaticParams() { return LOCALE_SLUGS.map(locale => ({ locale })); }
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale: slug } = await params;
+  const locale = slugToLocale(slug);
+  if (!locale) return {};
+  const href = (lang: string) => `${SITE_URL}/${lang}/mock/`;
+  return { title:'Mock API | PicoSvc', description: CUSTOMER_GUIDES.mock.summary[locale], robots:{index:true,follow:true}, icons:{icon:'/icons/mock.svg'}, alternates:{canonical:href(slug),languages:{en:href('en'),ja:href('ja'),'zh-CN':href('zh-cn'),'x-default':href('en')}} };
 }
-
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  const base = localeMetadata(parseLocaleParam(locale), 'mock');
-  return { ...base, description: locale === 'ja' ? 'PicoSvc Mock API：できること、活用例、料金と利用枠、Mockoonとの機能範囲の違いをログイン不要で紹介。' : locale === 'zh-cn' ? '无需登录即可了解 PicoSvc Mock API 的功能、用例、配额与同类产品。' : 'Explore PicoSvc Mock API use cases, plans, setup, and alternatives without signing in.', icons: { icon: '/icons/mock.svg', shortcut: '/icons/mock.svg' } };
-}
-
 export default async function MockProductPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale: localeSlug } = await params;
-  const locale = slugToLocale(localeSlug);
+  const { locale: slug } = await params;
+  const locale = slugToLocale(slug);
   if (!locale) notFound();
-  return <><ProductIntro service="mock" locale={locale} /><div id="workspace"><MockPage /></div><ProductLanding service="mock" locale={locale} /></>;
+  return <CustomerProductPage service="mock" locale={locale} />;
 }
