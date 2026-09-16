@@ -60,14 +60,21 @@ export default {
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard')) {
       return Response.redirect('https://picosvc.com/', 302);
     }
+    const picoApi = url.pathname.startsWith('/api/picosvc/');
+    const origin = picoApi ? allowedOrigin(request, env) : null;
+    // Preflight must be resolved before service handlers or authentication guards.
+    if (picoApi && request.method === 'OPTIONS') {
+      if (!origin) return new Response(null, { status: 403 });
+      return withCors(new Response(null, { status: 204 }), origin);
+    }
     const filesResponse = await filesAccessRuntimeRoute(request, env);
-    if (filesResponse) return filesResponse;
+    if (filesResponse) return picoApi ? withCors(filesResponse, origin) : filesResponse;
     const guardrailResponse = await picoSvcRuntimeGuardrails(request, env) || await jsonScopedWriteGuard(request, env);
     if (guardrailResponse) {
-      return url.pathname.startsWith('/api/picosvc/') ? withCors(guardrailResponse, allowedOrigin(request, env)) : guardrailResponse;
+      return picoApi ? withCors(guardrailResponse, origin) : guardrailResponse;
     }
     const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
-    if (sandboxMeterResponse) return sandboxMeterResponse;
+    if (sandboxMeterResponse) return picoApi ? withCors(sandboxMeterResponse, origin) : sandboxMeterResponse;
     for (const handler of [
       hooksAdvancedRuntimeRoute,
       hooksRuntimeRoute,
@@ -87,15 +94,10 @@ export default {
       const response = await handler(request, env);
       if (response) {
         await picoSvcPostResponseGuardrails(request, env, response);
-        return response;
+        return picoApi ? withCors(response, origin) : response;
       }
     }
-    if (url.pathname.startsWith('/api/picosvc/')) {
-      const origin = allowedOrigin(request, env);
-      if (request.method === 'OPTIONS') {
-        if (!origin) return new Response(null, { status: 403 });
-        return withCors(new Response(null, { status: 204 }), origin);
-      }
+    if (picoApi) {
       const response = await picoSvcRoutes(request, env);
       if (response) return withCors(response, origin);
       return withCors(Response.json({ error: 'PicoSvc route not found' }, { status: 404 }), origin);
