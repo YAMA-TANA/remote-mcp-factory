@@ -9,7 +9,7 @@ const migrations = readdirSync(new URL('../migrations/', import.meta.url))
   .filter((file) => /^00(?:1[0-9]|[2-9][0-9])_.*\.sql$/.test(file))
   .filter((file) => Number(file.slice(0, 4)) >= 10)
   .sort();
-assert.ok(migrations.length >= 11, 'Expected PicoSvc additive migrations 0010–0020');
+assert.ok(migrations.length >= 12, 'Expected PicoSvc additive migrations 0010–0021');
 for (const migration of migrations) {
   const sql = readFileSync(new URL(`../migrations/${migration}`, import.meta.url), 'utf8');
   try { db.exec(sql); }
@@ -32,6 +32,8 @@ assert.ok(columns('json_stores').has('public_read'), 'JSON private/public settin
 assert.ok(columns('license_keys').has('activation_limit'), 'License activation cap missing');
 assert.ok(columns('license_keys').has('device_binding'), 'License device binding setting missing');
 assert.ok(columns('license_keys').has('customer_ref'), 'License customer reference missing');
+assert.ok(columns('file_spaces').has('access_mode'), 'Files access mode missing');
+assert.ok(columns('file_objects').has('cache_control'), 'Files cache metadata missing');
 assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), [], 'Foreign key validation failed');
 console.log(`D1 migration smoke OK: schema.sql + ${migrations.length} additive migrations (${migrations[0]} to ${migrations.at(-1)}).`);
 db.close();
