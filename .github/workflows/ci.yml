@@ -19,6 +19,7 @@ jobs:
           node-version: 22
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
+      - run: node scripts/test-picosvc-docs.mjs
       - run: node --experimental-strip-types scripts/test-github-app-crypto.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-pricing.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-margin.mjs
