@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './ui-refresh.css';
 import './ui-finishing.css';
+import './icon-system.css';
 import { LocaleProvider } from './i18n';
 import SiteFooter from './components/SiteFooter';
 
