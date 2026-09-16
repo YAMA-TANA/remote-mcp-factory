@@ -27,14 +27,13 @@ export async function monitorDraftPreviewRoute(request: Request, env: Env): Prom
   const saved = await env.DB.prepare('SELECT content_selector,ignore_selector,strip_pattern FROM monitor_options WHERE monitor_id=? AND owner=?')
     .bind(monitor.id, identity.ownerId).first<{ content_selector: string | null; ignore_selector: string | null; strip_pattern: string | null }>();
 
+  // The browser is not required to send Content-Length; do not silently ignore a draft.
+  const raw = await request.text().catch(() => '');
+  if (new TextEncoder().encode(raw).byteLength > 4_096) return json({ error: { code: 'invalid_options', message: 'Preview options exceed 4 KiB' } }, 413);
   let draft: Record<string, unknown> | null = null;
-  if ((request.headers.get('content-length') || '0') !== '0') {
-    const raw = await request.text().catch(() => '');
-    if (raw.length > 4_096) return json({ error: { code: 'invalid_options', message: 'Preview options exceed 4 KiB' } }, 413);
-    if (raw.trim()) {
-      try { const parsed: unknown = JSON.parse(raw); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid options'); draft = parsed as Record<string, unknown>; }
-      catch { return json({ error: { code: 'invalid_options', message: 'Preview requires a JSON object' } }, 400); }
-    }
+  if (raw.trim()) {
+    try { const parsed: unknown = JSON.parse(raw); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid options'); draft = parsed as Record<string, unknown>; }
+    catch { return json({ error: { code: 'invalid_options', message: 'Preview requires a JSON object' } }, 400); }
   }
   const contentSelector = selector(draft?.contentSelector === undefined ? saved?.content_selector ?? null : draft.contentSelector);
   const ignoreSelector = selector(draft?.ignoreSelector === undefined ? saved?.ignore_selector ?? null : draft.ignoreSelector);
