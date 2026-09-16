@@ -4,6 +4,7 @@ import SiteFooter from '../components/SiteFooter';
 import QuickNavigator from '../components/QuickNavigator';
 import { LOCALE_SLUGS, slugToLocale } from '../i18n-data';
 import '../product-intro.css';
+import '../customer-mobile.css';
 
 export const dynamicParams = false;
 
