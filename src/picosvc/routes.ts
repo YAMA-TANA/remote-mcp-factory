@@ -9,6 +9,7 @@ import {
 } from './catalog.js';
 import { automationManagementRoutes } from './automation-services.js';
 import { configManagementRoutes } from './config-service.js';
+import { cronAdvancedManagementRoutes } from './cron-advanced.js';
 import { cronManagementRoutes } from './cron-service.js';
 import { dataManagementRoutes } from './data-services.js';
 import { filesAccessManagementRoutes } from './files-access.js';
@@ -39,6 +40,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     picoSvcUsageDashboard,
     filesAccessManagementRoutes,
     mailAdvancedManagementRoutes,
+    cronAdvancedManagementRoutes,
     hooksAdvancedManagementRoutes,
     hooksManagementRoutes,
     mockAdvancedManagementRoutes,
