@@ -7,6 +7,10 @@ const expected = [
 ];
 assert.deepEqual(PICOSVC_PRODUCTS.map((product) => product.slug), expected);
 assert.equal(PICOSVC_PRODUCTS.find((product) => product.slug === 'mail')?.endpointHost, 'picosvc.com', 'Mail must use the apex domain');
+const mcpProduct = PICOSVC_PRODUCTS.find((product) => product.slug === 'mcp');
+assert.equal(mcpProduct?.tiers.free.limits?.sandboxActiveMinutes, 0, 'MCP Free must not include Sandbox active minutes');
+assert.equal(mcpProduct?.tiers.tiny.limits?.sandboxActiveMinutes, 0, 'MCP Pico must stay Edge-only');
+assert.equal(mcpProduct?.tiers.pro.limits?.sandboxActiveMinutes, 10_000, 'MCP PicoPlus must have a hard monthly Sandbox active-minute cap');
 for (const product of PICOSVC_PRODUCTS) {
   assert.equal(product.status, 'active', `${product.slug} must be active`);
   assert.ok(product.tiers.free.limits && Object.keys(product.tiers.free.limits).length > 0, `${product.slug} needs Free limits`);
@@ -22,6 +26,9 @@ for (const table of [
 }
 const hooksR2Migration = readFileSync(new URL('../migrations/0012_picosvc_hooks_r2.sql', import.meta.url), 'utf8');
 assert.match(hooksR2Migration, /ADD COLUMN body_r2_key TEXT/, 'Hooks R2 body pointer migration required');
+const sandboxMinuteMigration = readFileSync(new URL('../migrations/0013_picosvc_mcp_sandbox_minutes.sql', import.meta.url), 'utf8');
+assert.match(sandboxMinuteMigration, /CREATE TABLE IF NOT EXISTS mcp_sandbox_active_minutes/, 'MCP Sandbox minute ledger required');
+assert.match(sandboxMinuteMigration, /PRIMARY KEY \(owner, server_id, active_minute\)/, 'Sandbox minute ledger must deduplicate active minutes per MCP');
 
 const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
 assert.match(entry, /scheduled\s*\(/, 'scheduled handler required');
@@ -30,6 +37,7 @@ assert.match(entry, /picoSvcRuntimeGuardrails/, 'PicoSvc runtime guardrails must
 assert.match(entry, /picoSvcPostResponseGuardrails/, 'PicoSvc post-response retention guardrails must run');
 assert.match(entry, /picoSvcScheduledGuardrails/, 'scheduled retention pruning must run');
 assert.match(entry, /picoSvcEmailGuardrails/, 'mail retention pruning must run after inbound email');
+assert.match(entry, /mcpSandboxActiveMinuteGuard/, 'Sandbox active-minute metering must run before the legacy MCP runtime');
 const mailService = readFileSync(new URL('../src/picosvc/mail-service.ts', import.meta.url), 'utf8');
 assert.match(mailService, /const MAIL_DOMAIN = 'picosvc\.com'/, 'Mail domain must be picosvc.com');
 assert.match(mailService, /domain !== MAIL_DOMAIN/, 'Mail handler must reject other domains');
@@ -93,6 +101,13 @@ assert.match(guardrails, /consumeUsage\(env, event\.owner, 'hooks', 'replays'\)/
 assert.match(guardrails, /pruneHistory\(env, form\.owner, 'forms', 'form_submissions', 'received_at'\)/, 'Forms must prune retained submission history');
 assert.match(guardrails, /pruneHistory\(env, route\.owner, 'mail', 'mail_events', 'received_at'\)/, 'Mail must prune retained delivery history');
 assert.match(guardrails, /pruneOwnersAboveMinimum\(env, 'cron', 'cron_runs', 'ran_at'\)/, 'Cron must prune retained execution history');
+
+const sandboxMeter = readFileSync(new URL('../src/picosvc/mcp-sandbox-meter.ts', import.meta.url), 'utf8');
+assert.match(sandboxMeter, /SANDBOX_IDLE_LEASE_MINUTES = 10/, 'Sandbox metering must match the runtime 10-minute sleep lease');
+assert.match(sandboxMeter, /productLimit\(env, row\.owner, 'mcp', 'sandboxActiveMinutes'\)/, 'Sandbox meter must use the product active-minute cap');
+assert.match(sandboxMeter, /ON CONFLICT\(owner,server_id,active_minute\) DO NOTHING/, 'Sandbox active minutes must be deduplicated');
+assert.match(sandboxMeter, /consumeUsage\(env, row\.owner, 'mcp', 'sandboxActiveMinutes', claimed\.length\)/, 'Sandbox minute claims must consume the atomic monthly quota');
+assert.match(sandboxMeter, /requestAuthorizedForServer/, 'Protected MCPs must authenticate before active-minute usage can be charged');
 
 const functions = readFileSync(new URL('../src/picosvc/functions-service.ts', import.meta.url), 'utf8');
 assert.match(functions, /limits:\s*\{\s*cpuMs:\s*500,\s*subRequests:\s*32\s*\}/, 'Functions must have a hard Dynamic Worker CPU/subrequest ceiling');
