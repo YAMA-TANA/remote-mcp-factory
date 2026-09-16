@@ -25,6 +25,7 @@ import { mailManualRetryGuard } from './mail-retry-guard.js';
 import { mailManagementRoutes } from './mail-service.js';
 import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
+import { monitorAdvancedManagementRoutes } from './monitor-advanced.js';
 import { utilityAdvancedManagementRoutes } from './utility-advanced.js';
 import { utilityManagementRoutes } from './utility-services.js';
 import { picoSvcUsageDashboard } from './usage-dashboard.js';
@@ -40,6 +41,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     picoSvcUsageDashboard,
     filesAccessManagementRoutes,
     formsAdvancedManagementRoutes,
+    monitorAdvancedManagementRoutes,
     mailManualRetryGuard,
     mailAdvancedManagementRoutes,
     cronAdvancedManagementRoutes,
