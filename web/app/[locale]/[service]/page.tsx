@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function GenericServicePage({ params }: { params: Promise<{ locale: string; service: string }> }) {
   const { service } = await params;
   if (!isGenericServiceSlug(service)) notFound();
-  if (service === 'shot') return <ShotWorkspace />;
-  if (service === 'monitor') return <><ServiceDashboard service={service} /><MonitorDiagnostics /></>;
-  return <ServiceDashboard service={service} />;
+  return service === 'shot' ? <ShotWorkspace />
+    : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></>
+    : <ServiceDashboard service={service} />;
 }
