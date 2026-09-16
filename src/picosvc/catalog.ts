@@ -100,17 +100,17 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     { mcps: 5, sandboxMcps: 0, sandboxActiveMinutes: 0, requests: 250_000, builds: 200 },
     { mcps: 25, sandboxMcps: 2, sandboxActiveMinutes: 10_000, requests: 1_000_000, builds: 1_000 },
   ) }),
-  product({ slug: 'mock', name: 'PicoSvc Mock', role: 'Static-rule Mock API', status: 'active', endpointHost: 'mock.picosvc.com', tiers: tiers(
-    { endpoints: 1, requests: 1_500 },
-    { endpoints: 10, requests: 25_000 },
-    { endpoints: 100, requests: 250_000 },
+  product({ slug: 'mock', name: 'PicoSvc Mock', role: 'Rule-based Mock API / request inspector', status: 'active', endpointHost: 'mock.picosvc.com', tiers: tiers(
+    { endpoints: 1, rules: 5, history: 100, requests: 1_500 },
+    { endpoints: 10, rules: 50, history: 1_000, requests: 25_000 },
+    { endpoints: 100, rules: 500, history: 10_000, requests: 250_000 },
   ) }),
   product({ slug: 'hooks', name: 'PicoSvc Hooks', role: 'Webhook inbox / manual replay', status: 'active', endpointHost: 'hooks.picosvc.com', tiers: tiers(
     { inboxes: 1, events: 500, replays: 50, history: 100, bodyBytes: 64 * 1024 },
     { inboxes: 5, events: 10_000, replays: 1_000, history: 1_000, bodyBytes: 128 * 1024 },
     { inboxes: 25, events: 100_000, replays: 10_000, history: 10_000, bodyBytes: 256 * 1024 },
   ) }),
-  product({ slug: 'rss', name: 'PicoSvc RSS', role: 'Web page change to RSS', status: 'active', endpointHost: 'rss.picosvc.com', tiers: tiers(
+  product({ slug: 'rss', name: 'PicoSvc RSS', role: 'Multi-item Web to RSS extraction', status: 'active', endpointHost: 'rss.picosvc.com', tiers: tiers(
     { feeds: 3, checks: 150, requests: 10_000, refreshMinutes: 1_440, entriesPerFeed: 5 },
     { feeds: 20, checks: 6_000, requests: 100_000, refreshMinutes: 180, entriesPerFeed: 15 },
     { feeds: 100, checks: 160_000, requests: 1_000_000, refreshMinutes: 30, entriesPerFeed: 20 },
