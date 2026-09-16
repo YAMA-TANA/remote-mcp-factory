@@ -10,6 +10,7 @@ on:
       - 'scripts/test-picosvc-creation.mjs'
       - 'scripts/test-picosvc-icons.mjs'
       - 'scripts/test-picosvc-discovery.mjs'
+      - 'scripts/test-picosvc-public-product-pages.mjs'
       - '.github/workflows/web-ci.yml'
   push:
     branches: [main, next-pages-ui]
@@ -21,6 +22,7 @@ on:
       - 'scripts/test-picosvc-creation.mjs'
       - 'scripts/test-picosvc-icons.mjs'
       - 'scripts/test-picosvc-discovery.mjs'
+      - 'scripts/test-picosvc-public-product-pages.mjs'
       - '.github/workflows/web-ci.yml'
 
 permissions:
@@ -47,6 +49,7 @@ jobs:
         env:
           NEXT_PUBLIC_FACTORY_API_URL: https://factory.example.workers.dev
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+      - run: node ../scripts/test-picosvc-public-product-pages.mjs
       - name: Verify static export
         run: |
           test -f out/index.html
