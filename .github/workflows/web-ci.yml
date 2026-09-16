@@ -7,6 +7,7 @@ on:
       - 'src/entry.ts'
       - 'src/types.ts'
       - 'scripts/test-picosvc-workspace.mjs'
+      - 'scripts/test-picosvc-icons.mjs'
       - '.github/workflows/web-ci.yml'
   push:
     branches: [main, next-pages-ui]
@@ -15,6 +16,7 @@ on:
       - 'src/entry.ts'
       - 'src/types.ts'
       - 'scripts/test-picosvc-workspace.mjs'
+      - 'scripts/test-picosvc-icons.mjs'
       - '.github/workflows/web-ci.yml'
 
 permissions:
@@ -35,6 +37,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: node --experimental-strip-types ../scripts/test-picosvc-workspace.mjs
+      - run: node ../scripts/test-picosvc-icons.mjs
       - run: npm run build
         env:
           NEXT_PUBLIC_FACTORY_API_URL: https://factory.example.workers.dev
@@ -54,6 +57,9 @@ jobs:
           test -f out/zh-cn/pricing/index.html
           test -f out/ja/contact/index.html
           test -f out/zh-cn/privacy/index.html
+          for icon in picosvc mock mcp hooks rss mail shot fetch qr cron functions json files license flags monitor forms; do
+            test -f "out/icons/$icon.svg"
+          done
           for service in rss mail shot fetch qr cron functions json files license flags monitor forms; do
             test -f "out/en/$service/index.html"
             test -f "out/ja/$service/index.html"
