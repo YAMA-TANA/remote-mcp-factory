@@ -22,6 +22,7 @@ import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, run
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
+import { runAdvancedMonitorChecks } from './picosvc/monitor-advanced.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
 import { utilityAdvancedRuntimeRoute } from './picosvc/utility-advanced.js';
 import { qrRuntimeRoute } from './picosvc/utility-services.js';
@@ -104,6 +105,7 @@ export default {
     ctx.waitUntil((async () => {
       try {
         await runScheduledServices(env, new Date(controller.scheduledTime));
+        await runAdvancedMonitorChecks(env, new Date(controller.scheduledTime));
         await runAdvancedCronJobs(env, new Date(controller.scheduledTime));
         await runMailRetries(env);
       } finally {
