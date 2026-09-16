@@ -5,6 +5,7 @@ import { tryCompileToEdge } from './edge-compiler.js';
 import { EDGE_SMOKE_SCRIPT } from './edge-scripts.js';
 import { createInstallationAccessToken } from './github-app.js';
 import { ensureGitHubSchema } from './github-schema.js';
+import { productLimit } from './picosvc/entitlements.js';
 import { ensureEdgeBuildSchema } from './schema-compat.js';
 import { loadDeploymentSecrets } from './secrets.js';
 import type { Env, ServerRow } from './types.js';
@@ -36,6 +37,38 @@ function workdir(row: ServerRow): string {
 export function serverSandbox(env: Env, row: Pick<ServerRow, 'id' | 'owner'>): Sandbox {
   const key = `mcp-${row.owner}-${row.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 60);
   return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '10m' });
+}
+
+async function sandboxSlotState(
+  env: Env,
+  row: Pick<ServerRow, 'id' | 'owner'>,
+): Promise<{ ok: boolean; tier: 'free' | 'tiny' | 'pro'; limit: number | null; used: number }> {
+  if (env.ALLOW_DEV_AUTH === 'true') return { ok: true, tier: 'pro', limit: null, used: 0 };
+  const { tier, limit } = await productLimit(env, row.owner, 'mcp', 'sandboxMcps');
+  const count = await env.DB.prepare(`
+    SELECT COUNT(*) AS count
+    FROM servers
+    WHERE owner=? AND enabled=1 AND id<>? AND detected_runtime LIKE 'sandbox-%'
+  `).bind(row.owner, row.id).first<{ count: number }>();
+  const used = Number(count?.count || 0);
+  return { ok: limit === null || used < limit, tier, limit, used };
+}
+
+async function assertExistingSandboxAllowed(env: Env, row: ServerRow): Promise<void> {
+  if (env.ALLOW_DEV_AUTH === 'true' || !row.detected_runtime?.startsWith('sandbox-')) return;
+  const { tier, limit } = await productLimit(env, row.owner, 'mcp', 'sandboxMcps');
+  if (limit === null) return;
+  if (limit <= 0) throw new Error(`Sandbox MCP runtime is not included in the ${tier} tier. Use an Edge-compatible MCP or upgrade to PicoPlus.`);
+  const rows = await env.DB.prepare(`
+    SELECT id
+    FROM servers
+    WHERE owner=? AND enabled=1 AND detected_runtime LIKE 'sandbox-%'
+    ORDER BY created_at ASC, id ASC
+    LIMIT ?
+  `).bind(row.owner, limit).all<{ id: string }>();
+  if (!(rows.results || []).some((entry) => entry.id === row.id)) {
+    throw new Error(`Sandbox MCP runtime limit reached for the ${tier} tier (${limit} slot${limit === 1 ? '' : 's'}).`);
+  }
 }
 
 async function cloneRepository(env: Env, sandbox: Sandbox, row: ServerRow): Promise<void> {
@@ -175,6 +208,18 @@ async function buildServerOnce(env: Env, row: ServerRow): Promise<void> {
         .bind('incompatible', `${edge.compatibility.summary}. Using Sandbox until bridge rewriting is verified.`, new Date().toISOString(), row.id).run();
     }
 
+    const slot = await sandboxSlotState(env, row);
+    if (!slot.ok) {
+      const reason = slot.limit === 0
+        ? `This MCP requires Sandbox fallback, but ${slot.tier} is Edge-only. Use an Edge-compatible MCP or upgrade to PicoPlus.`
+        : `This MCP requires Sandbox fallback, but the ${slot.tier} Sandbox limit is ${slot.limit} and all slots are in use.`;
+      await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
+        .bind('incompatible', reason, new Date().toISOString(), row.id).run();
+      await env.DB.prepare('UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=?, updated_at=? WHERE id=?')
+        .bind('error', 'sandbox-required', command, reason, new Date().toISOString(), row.id).run();
+      return;
+    }
+
     await prepareSandboxFallback(env, row, sandbox, detection);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -226,6 +271,7 @@ export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
   if (row.detected_runtime === 'local-bound') {
     throw new Error('Local-bound MCPs require a local relay and cannot run in the cloud runtime');
   }
+  await assertExistingSandboxAllowed(env, row);
   await ensureGitHubSchema(env);
   const sandbox = serverSandbox(env, row);
 
