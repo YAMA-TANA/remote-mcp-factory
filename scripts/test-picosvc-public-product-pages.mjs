@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// Run AFTER `npm run build` from the repository root; check rendered HTML, not only JSX source.
+// Run AFTER `npm run build`; verify exported HTML, not just the JSX source.
+const exportDirectory = fileURLToPath(new URL('../web/out/', import.meta.url));
 const products = {
   mcp: 'Smithery', mock: 'Mockoon Cloud', hooks: 'Webhook.site', rss: 'PolitePol',
   mail: 'Resend Receiving', shot: 'Browserless', fetch: 'Firecrawl', qr: 'Bitly QR Codes',
@@ -17,7 +19,7 @@ const phrases = {
 };
 for (const [locale, expected] of Object.entries(phrases)) {
   for (const [slug, competitor] of Object.entries(products)) {
-    const file = join('web', 'out', locale, slug, 'index.html');
+    const file = join(exportDirectory, locale, slug, 'index.html');
     const html = readFileSync(file, 'utf8');
     assert.match(html, new RegExp(`id="${slug}-overview-title"`), `${file}: public overview is missing`);
     assert.ok(html.includes('productOverviewCompare'), `${file}: comparison section is missing`);
