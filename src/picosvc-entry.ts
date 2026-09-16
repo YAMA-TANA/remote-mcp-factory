@@ -13,6 +13,7 @@ import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
 import { jsonAdvancedRuntimeRoute } from './picosvc/json-advanced.js';
 import { jsonScopedWriteGuard } from './picosvc/json-scoped-guard.js';
+import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
 import { handleIncomingEmail } from './picosvc/mail-service.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
@@ -73,6 +74,7 @@ export default {
       qrRuntimeRoute,
       configRuntimeRoute,
       jsonAdvancedRuntimeRoute,
+      licenseAdvancedRuntimeRoute,
       dataRuntimeRoute,
       functionRuntimeRoute,
       rssRuntimeRoute,
