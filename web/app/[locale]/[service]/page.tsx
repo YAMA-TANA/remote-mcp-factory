@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../service-dashboard';
@@ -32,8 +33,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title,
     description: descriptions[locale],
-    icons: { icon: `/icons/${service}.svg`, shortcut: `/icons/${service}.svg` },
     robots: { index: true, follow: true },
+    icons: { icon: `/icons/${service}.svg` },
     alternates: {
       canonical,
       languages: {
@@ -50,7 +51,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function GenericServicePage({ params }: { params: Promise<{ locale: string; service: string }> }) {
   const { service } = await params;
   if (!isGenericServiceSlug(service)) notFound();
-  return service === 'shot' ? <ShotWorkspace />
-    : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></>
-    : <ServiceDashboard service={service} />;
+  const iconStyle = { '--product-icon': `url('/icons/${service}.svg')` } as CSSProperties;
+  return <div className="picoProductTheme" style={iconStyle}>
+    {service === 'shot' ? <ShotWorkspace />
+      : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></>
+      : <ServiceDashboard service={service} />}
+  </div>;
 }

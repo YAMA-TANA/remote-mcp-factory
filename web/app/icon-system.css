@@ -1,9 +1,17 @@
-/* Crisp, resolution-independent PicoSvc icons. No raster assets or image-generation dependencies. */
-.brandMark:has(> svg){display:inline-grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border:0;background:none;box-shadow:none;overflow:visible}
-.brandMark>svg{display:block;width:36px;height:36px;max-width:none;flex-shrink:0}
-.homeProductIcon:has(> svg){display:inline-grid;place-items:center;width:56px;height:56px;flex:0 0 56px;border:0;background:none;border-radius:15px;overflow:visible}
-.homeProductIcon>svg{display:block;width:54px;height:54px;max-width:100%;filter:drop-shadow(0 5px 12px rgba(3,10,4,.25))}
-.homeProduct:hover .homeProductIcon>svg{filter:drop-shadow(0 6px 16px rgba(136,255,105,.15))}
-.picoQuickInitial:has(> svg){background:none;border:0;overflow:visible}
-.picoQuickInitial>svg{display:block;width:36px;height:36px;flex:0 0 36px}
-@media(prefers-reduced-motion:reduce){.homeProductIcon>svg{transition:none}}
+/* Rich, hand-authored SVGs remain crisp at any resolution. No runtime art generation. */
+.picoServiceVector{display:block;object-fit:contain;flex-shrink:0;max-width:100%;height:auto}
+.brandMark:has(> .picoServiceVector){display:inline-grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border:0;background:none;box-shadow:none;overflow:visible}
+.brandMark>.picoServiceVector{width:38px;height:38px;max-width:none;filter:drop-shadow(0 3px 9px rgba(58,217,171,.13))}
+.homeProductIcon:has(> .picoServiceVector){display:inline-grid;place-items:center;width:68px;height:68px;flex:0 0 68px;border:0;background:radial-gradient(circle at 35% 25%,rgba(168,255,115,.11),transparent 68%);border-radius:20px;overflow:visible}
+.homeProductIcon>.picoServiceVector{width:62px;height:62px;max-width:100%;filter:drop-shadow(0 7px 13px rgba(0,0,0,.36));transition:transform .2s ease,filter .2s ease}
+.homeProduct{border-radius:20px;position:relative;overflow:hidden;isolation:isolate}
+.homeProduct:before{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(193,255,151,.34),transparent);pointer-events:none}
+.homeProduct:hover .homeProductIcon>.picoServiceVector,.homeProduct:focus-within .homeProductIcon>.picoServiceVector{transform:translateY(-2px) scale(1.04);filter:drop-shadow(0 9px 18px rgba(100,255,164,.2))}
+.homeProduct:hover{border-color:#557b63;box-shadow:0 15px 42px rgba(0,0,0,.26),inset 0 1px 0 rgba(207,255,177,.09)}
+.picoQuickInitial:has(> .picoServiceVector){background:none;border:0;overflow:visible}
+.picoQuickInitial>.picoServiceVector{display:block;width:37px;height:37px;flex:0 0 37px;max-width:none}
+.picoProductTheme .serviceHero{position:relative;padding-right:105px}
+.picoProductTheme .serviceHero:after{content:'';position:absolute;right:0;top:59px;width:84px;height:84px;background-image:var(--product-icon);background-position:center;background-repeat:no-repeat;background-size:contain;filter:drop-shadow(0 9px 25px rgba(87,220,159,.12));pointer-events:none}
+@media(max-width:760px){.homeProductIcon:has(> .picoServiceVector){width:60px;height:60px;flex-basis:60px}.homeProductIcon>.picoServiceVector{width:57px;height:57px}.picoProductTheme .serviceHero{padding-right:76px}.picoProductTheme .serviceHero:after{top:51px;width:63px;height:63px}}
+@media(max-width:420px){.picoProductTheme .serviceHero{padding-right:0;padding-top:110px}.picoProductTheme .serviceHero:after{top:29px;left:0;right:auto;width:66px;height:66px}}
+@media(prefers-reduced-motion:reduce){.homeProductIcon>.picoServiceVector{transition:none}.homeProduct:hover .homeProductIcon>.picoServiceVector,.homeProduct:focus-within .homeProductIcon>.picoServiceVector{transform:none}}
