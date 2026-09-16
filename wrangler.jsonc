@@ -75,7 +75,8 @@
     "CLERK_PICOPLUS_PLAN_SLUG": "picoplus",
     "CLERK_PRO_PLAN_SLUG": "pro",
     "CLERK_TEAM_PLAN_SLUG": "team",
-    "WEB_ORIGINS": "https://remote-mcp-factory.pages.dev,https://picosvc.com,https://app.picosvc.com"
+    "PUBLIC_MCP_ORIGIN": "https://mcp.picosvc.com",
+    "WEB_ORIGINS": "https://picosvc.com,https://app.picosvc.com"
   },
   "r2_buckets": [
     {
