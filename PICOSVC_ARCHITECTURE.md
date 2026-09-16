@@ -25,7 +25,7 @@ The existing Remote MCP Factory becomes **PicoSvc MCP**. Its Dynamic Worker / Sa
 | PicoSvc Monitor | Web page change monitoring | `api.picosvc.com/v1/monitor` |
 | PicoSvc Forms | Form backend | `forms.picosvc.com` |
 
-Marketing pages should stay on paths such as `picosvc.com/mock` and `picosvc.com/mcp`. Subdomains are reserved for runtime endpoints where they make URLs clearer or isolate traffic.
+Marketing pages stay on `picosvc.com` with locale-prefixed paths such as `picosvc.com/ja/mock` and `picosvc.com/en/hooks`. Subdomains are reserved for runtime endpoints where they make URLs clearer or isolate traffic.
 
 ## Repository model
 
@@ -125,24 +125,34 @@ This keeps cancellation and renewal logic explicit. Cancelling one standalone pr
 - `PICOSVC_BILLING_MODEL` — declares billing as per-product with bundle support
 - `PICOSVC_BUNDLES` — concrete bundle offers; kept empty until an actual bundle and price are approved
 
-Known active pricing may be represented directly for MCP and Mock. Planned products may expose known quotas while leaving undecided paid prices as `null`.
+MCP, Mock, and Hooks are currently active products. Known active pricing is represented directly for MCP and Mock. Hooks is active with Free/Tiny/Pro event limits, while its undecided paid prices remain `null`. Other planned products may expose known quotas while leaving undecided paid prices as `null`.
 
 ## API
 
 - `GET /api/picosvc/catalog` — public product catalog, per-product billing model, and active bundle definitions
 - `GET /api/picosvc/products/:slug` — one product definition
 - `GET /api/picosvc/account` — authenticated standalone entitlements, bundle grants, and current-month product usage
+- `/api/picosvc/mock/endpoints` — authenticated PicoSvc Mock management
+- `/api/picosvc/hooks/inboxes` — authenticated webhook inbox management and monthly usage
+- `/api/picosvc/hooks/inboxes/:id/events` — paginated webhook event inspection
+- `/api/picosvc/hooks/events/:id` — event detail/delete
+- `/api/picosvc/hooks/events/:id/replay` — replay a stored event to a permitted public HTTP(S) target
+- `/hooks/:publicId/*` — public webhook receiver for an enabled inbox
+
+Hooks stores request bodies up to 512 KiB, redacts authentication/cookie headers, and counts accepted inbound events against the owner’s monthly Hooks event quota. Deleting an event does not subtract already consumed usage. Replay does not count as a new inbound event.
 
 Existing MCP routes remain unchanged.
 
 ## Legal pages
 
-The web application publishes:
+The web application publishes localized versions of:
 
 - `/terms` — Terms of Service
 - `/privacy` — Privacy Policy
+- `/contact` — Contact & Support
+- `/tokushoho` — Specified Commercial Transactions Act disclosure
 
-Both documents reflect the independent-product billing model and optional bundles. Before paid public launch, verify the operator/legal entity, private support or privacy-contact channel, tax/commercial-disclosure requirements, and governing-law language for the actual business entity.
+The canonical pages live under `/en`, `/ja`, and `/zh-cn`; legacy non-prefixed routes remain compatibility entry points. The documents reflect the independent-product billing model and optional bundles. Before paid public launch, verify the operator/legal entity, private support or privacy-contact channel, tax/commercial-disclosure requirements, and governing-law language for the actual business entity.
 
 ## Deployment direction
 
