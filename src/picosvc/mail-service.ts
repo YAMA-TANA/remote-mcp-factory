@@ -4,6 +4,11 @@ import { fetchPublic, randomPublicId, safePublicUrl } from './security.js';
 import { productLimit } from './entitlements.js';
 
 const MAX_RAW_BYTES = 1024 * 1024;
+const MAIL_DOMAIN = 'picosvc.com';
+
+function publicAddress(publicId: string): string {
+  return `${publicId}@${MAIL_DOMAIN}`;
+}
 
 function encodeBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -22,7 +27,7 @@ export async function mailManagementRoutes(request: Request, env: Env): Promise<
     if (request.method === 'GET') {
       const rows = await env.DB.prepare('SELECT * FROM mail_routes WHERE owner=? ORDER BY created_at DESC').bind(owner).all<any>();
       const { tier, limit } = await productLimit(env, owner, 'mail', 'routes');
-      return json({ tier, limit, routes: (rows.results || []).map((row) => ({ id: row.id, publicId: row.public_id, name: row.name, webhookUrl: row.webhook_url, enabled: Boolean(row.enabled), address: `${row.public_id}@in.picosvc.com`, createdAt: row.created_at, updatedAt: row.updated_at })) });
+      return json({ tier, limit, routes: (rows.results || []).map((row) => ({ id: row.id, publicId: row.public_id, name: row.name, webhookUrl: row.webhook_url, enabled: Boolean(row.enabled), address: publicAddress(row.public_id), createdAt: row.created_at, updatedAt: row.updated_at })) });
     }
     if (request.method === 'POST') {
       const { tier, limit } = await productLimit(env, owner, 'mail', 'routes');
@@ -33,7 +38,7 @@ export async function mailManagementRoutes(request: Request, env: Env): Promise<
       const id = crypto.randomUUID(); const publicId = randomPublicId(); const now = new Date().toISOString();
       await env.DB.prepare('INSERT INTO mail_routes (id,owner,public_id,name,webhook_url,enabled,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)')
         .bind(id, owner, publicId, cleanName(body?.name, 'Email Route'), webhook.toString(), now, now).run();
-      return json({ id, publicId, name: cleanName(body?.name, 'Email Route'), webhookUrl: webhook.toString(), address: `${publicId}@in.picosvc.com`, tier }, 201);
+      return json({ id, publicId, name: cleanName(body?.name, 'Email Route'), webhookUrl: webhook.toString(), address: publicAddress(publicId), tier }, 201);
     }
     return new Response('Method Not Allowed', { status: 405, headers: { allow: 'GET,POST' } });
   }
@@ -44,22 +49,22 @@ export async function mailManagementRoutes(request: Request, env: Env): Promise<
   if (!route) return json({ error: 'Mail route not found' }, 404);
   if (routeMatch[2] === 'events' && request.method === 'GET') {
     const rows = await env.DB.prepare('SELECT * FROM mail_events WHERE route_id=? AND owner=? ORDER BY received_at DESC LIMIT 200').bind(route.id, owner).all();
-    return json({ route: { id: route.id, publicId: route.public_id, name: route.name, address: `${route.public_id}@in.picosvc.com` }, events: rows.results || [] });
+    return json({ route: { id: route.id, publicId: route.public_id, name: route.name, address: publicAddress(route.public_id) }, events: rows.results || [] });
   }
   if (!routeMatch[2] && request.method === 'PATCH') {
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const webhook = body?.webhookUrl === undefined ? null : safePublicUrl(body.webhookUrl); if (body?.webhookUrl !== undefined && !webhook) return json({ error: 'webhookUrl must be a public HTTP(S) URL' }, 400);
     const enabled = body?.enabled === undefined ? route.enabled : body.enabled ? 1 : 0; const name = body?.name === undefined ? route.name : cleanName(body.name, route.name);
     await env.DB.prepare('UPDATE mail_routes SET name=?,webhook_url=?,enabled=?,updated_at=? WHERE id=? AND owner=?').bind(name, webhook?.toString() || route.webhook_url, enabled, new Date().toISOString(), route.id, owner).run();
-    return json({ id: route.id, name, webhookUrl: webhook?.toString() || route.webhook_url, enabled: Boolean(enabled), address: `${route.public_id}@in.picosvc.com` });
+    return json({ id: route.id, name, webhookUrl: webhook?.toString() || route.webhook_url, enabled: Boolean(enabled), address: publicAddress(route.public_id) });
   }
   if (!routeMatch[2] && request.method === 'DELETE') { await env.DB.prepare('DELETE FROM mail_routes WHERE id=? AND owner=?').bind(route.id, owner).run(); return new Response(null, { status: 204 }); }
   return null;
 }
 
 export async function handleIncomingEmail(message: ForwardableEmailMessage, env: Env): Promise<void> {
-  const local = message.to.split('@')[0]?.toLowerCase() || '';
-  if (!/^[a-f0-9]{32}$/.test(local)) return;
+  const [local, domain] = message.to.trim().toLowerCase().split('@');
+  if (domain !== MAIL_DOMAIN || !local || !/^[a-f0-9]{32}$/.test(local)) return;
   const route = await env.DB.prepare('SELECT * FROM mail_routes WHERE public_id=? AND enabled=1').bind(local).first<any>();
   if (!route) return;
   const usage = await consumeUsage(env, route.owner, 'mail', 'mails');

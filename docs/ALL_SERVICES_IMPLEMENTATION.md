@@ -68,7 +68,7 @@ The localized Pricing page mounts Clerk's official PricingTable for user or Orga
 - Sandbox
 - one-minute Cron Trigger
 
-Incoming Mail additionally requires Cloudflare Email Service / Email Routing to route `*@in.picosvc.com` to this Worker. DNS and Email Routing rules are account-level infrastructure and are not created by Worker source code.
+Incoming Mail additionally requires Cloudflare Email Service / Email Routing to route `*@picosvc.com` to this Worker. DNS and Email Routing rules are account-level infrastructure and are not created by Worker source code.
 
 ## Database
 
