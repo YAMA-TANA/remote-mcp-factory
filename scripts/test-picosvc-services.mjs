@@ -24,6 +24,10 @@ for (const table of [
 const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
 assert.match(entry, /scheduled\s*\(/, 'scheduled handler required');
 assert.match(entry, /email\s*\(/, 'email handler required');
+assert.match(entry, /picoSvcRuntimeGuardrails/, 'PicoSvc runtime guardrails must run before public service handlers');
+assert.match(entry, /picoSvcPostResponseGuardrails/, 'PicoSvc post-response retention guardrails must run');
+assert.match(entry, /picoSvcScheduledGuardrails/, 'scheduled retention pruning must run');
+assert.match(entry, /picoSvcEmailGuardrails/, 'mail retention pruning must run after inbound email');
 const mailService = readFileSync(new URL('../src/picosvc/mail-service.ts', import.meta.url), 'utf8');
 assert.match(mailService, /const MAIL_DOMAIN = 'picosvc\.com'/, 'Mail domain must be picosvc.com');
 assert.match(mailService, /domain !== MAIL_DOMAIN/, 'Mail handler must reject other domains');
@@ -68,6 +72,23 @@ assert.match(data, /resourceCapacity\(env, owner, 'files', 'spaces', 'file_space
 assert.match(data, /resourceCapacity\(env, owner, 'license', 'projects', 'license_projects'\)/, 'License must cap projects');
 assert.match(data, /resourceCapacity\(env, owner, 'flags', 'projects', 'flag_projects'\)/, 'Flags must cap projects');
 assert.match(data, /deleteR2Prefix/, 'Files space deletion must clean the full R2 prefix');
+assert.match(data, /MAX_FORM_BYTES/, 'Forms must reject oversized submissions before storing them');
+
+const guardrails = readFileSync(new URL('../src/picosvc/cost-guardrails.ts', import.meta.url), 'utf8');
+assert.match(guardrails, /productLimit\(env, owner, 'json', 'documents'\)/, 'JSON must enforce account-wide document limits');
+assert.match(guardrails, /productLimit\(env, owner, 'json', 'storageBytes'\)/, 'JSON must enforce account-wide storage-byte limits');
+assert.match(guardrails, /LENGTH\(CAST\(d\.value_json AS BLOB\)\)/, 'JSON storage accounting must count bytes, not characters');
+assert.match(guardrails, /consumeUsage\(env, space\.owner, 'files', 'downloads'\)/, 'Files public delivery must consume download quota');
+assert.match(guardrails, /consumeUsage\(env, feed\.owner, 'rss', 'requests'\)/, 'RSS public delivery must consume request quota');
+assert.match(guardrails, /productLimit\(env, feed\.owner, 'rss', 'refreshMinutes'\)/, 'Manual RSS refresh must honor tier refresh interval');
+assert.match(guardrails, /productLimit\(env, inbox\.owner, 'hooks', 'bodyBytes'\)/, 'Hooks must enforce tier-specific body size limits');
+assert.match(guardrails, /consumeUsage\(env, event\.owner, 'hooks', 'replays'\)/, 'Hooks replay must consume replay quota');
+assert.match(guardrails, /pruneHistory\(env, form\.owner, 'forms', 'form_submissions', 'received_at'\)/, 'Forms must prune retained submission history');
+assert.match(guardrails, /pruneHistory\(env, route\.owner, 'mail', 'mail_events', 'received_at'\)/, 'Mail must prune retained delivery history');
+assert.match(guardrails, /pruneOwnersAboveMinimum\(env, 'cron', 'cron_runs', 'ran_at'\)/, 'Cron must prune retained execution history');
+
+const functions = readFileSync(new URL('../src/picosvc/functions-service.ts', import.meta.url), 'utf8');
+assert.match(functions, /limits:\s*\{\s*cpuMs:\s*500,\s*subRequests:\s*32\s*\}/, 'Functions must have a hard Dynamic Worker CPU/subrequest ceiling');
 
 const mcpRuntime = readFileSync(new URL('../src/runtime.ts', import.meta.url), 'utf8');
 assert.match(mcpRuntime, /productLimit\(env, row\.owner, 'mcp', 'sandboxMcps'\)/, 'MCP Sandbox fallback must be plan-gated');
