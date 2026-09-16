@@ -6,6 +6,7 @@ const expected = [
   'mcp','mock','hooks','rss','mail','shot','fetch','qr','cron','functions','json','files','license','flags','monitor','forms',
 ];
 assert.deepEqual(PICOSVC_PRODUCTS.map((product) => product.slug), expected);
+assert.equal(PICOSVC_PRODUCTS.find((product) => product.slug === 'mail')?.endpointHost, 'picosvc.com', 'Mail must use the apex domain');
 for (const product of PICOSVC_PRODUCTS) {
   assert.equal(product.status, 'active', `${product.slug} must be active`);
   assert.ok(product.tiers.free.limits && Object.keys(product.tiers.free.limits).length > 0, `${product.slug} needs Free limits`);
@@ -23,6 +24,10 @@ for (const table of [
 const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
 assert.match(entry, /scheduled\s*\(/, 'scheduled handler required');
 assert.match(entry, /email\s*\(/, 'email handler required');
+const mailService = readFileSync(new URL('../src/picosvc/mail-service.ts', import.meta.url), 'utf8');
+assert.match(mailService, /const MAIL_DOMAIN = 'picosvc\.com'/, 'Mail domain must be picosvc.com');
+assert.match(mailService, /domain !== MAIL_DOMAIN/, 'Mail handler must reject other domains');
+assert.doesNotMatch(mailService, /in\.picosvc\.com/, 'Legacy in.picosvc.com must not remain');
 for (const runtime of ['qrRuntimeRoute','dataRuntimeRoute','functionRuntimeRoute','rssRuntimeRoute','hooksRuntimeRoute','mockRuntimeRoute']) {
   assert.match(entry, new RegExp(runtime), `missing runtime ${runtime}`);
 }

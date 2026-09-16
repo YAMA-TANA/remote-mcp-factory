@@ -95,7 +95,7 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
   product({ slug: 'mock', name: 'PicoSvc Mock', role: 'Mock API', status: 'active', endpointHost: 'mock.picosvc.com', tiers: tiers({ endpoints: 1 }, { endpoints: 10 }, { endpoints: 100 }) }),
   product({ slug: 'hooks', name: 'PicoSvc Hooks', role: 'Webhook inbox / replay', status: 'active', endpointHost: 'hooks.picosvc.com', tiers: tiers({ events: 500 }, { events: 10_000 }, { events: 100_000 }) }),
   product({ slug: 'rss', name: 'PicoSvc RSS', role: 'Web to RSS', status: 'active', endpointHost: 'rss.picosvc.com', tiers: tiers({ feeds: 3 }, { feeds: 20 }, { feeds: 100 }) }),
-  product({ slug: 'mail', name: 'PicoSvc Mail', role: 'Email to Webhook', status: 'active', endpointHost: 'in.picosvc.com', tiers: tiers({ routes: 1, mails: 100 }, { routes: 5, mails: 2_000 }, { routes: 25, mails: 20_000 }) }),
+  product({ slug: 'mail', name: 'PicoSvc Mail', role: 'Email to Webhook', status: 'active', endpointHost: 'picosvc.com', tiers: tiers({ routes: 1, mails: 100 }, { routes: 5, mails: 2_000 }, { routes: 25, mails: 20_000 }) }),
   product({ slug: 'shot', name: 'PicoSvc Shot', role: 'Screenshot / PDF', status: 'active', endpointHost: 'api.picosvc.com', tiers: tiers({ shots: 20 }, { shots: 300 }, { shots: 1_500 }) }),
   product({ slug: 'fetch', name: 'PicoSvc Fetch', role: 'URL to Markdown / metadata', status: 'active', endpointHost: 'api.picosvc.com', tiers: tiers({ requests: 20 }, { requests: 1_000 }, { requests: 10_000 }) }),
   product({ slug: 'qr', name: 'PicoSvc QR', role: 'Dynamic QR / redirect', status: 'active', endpointHost: 'qr.picosvc.com', tiers: tiers({ qrs: 5 }, { qrs: 100 }, { qrs: 1_000 }) }),
