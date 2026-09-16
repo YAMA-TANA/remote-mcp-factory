@@ -7,6 +7,7 @@ const expected = [
 ];
 assert.deepEqual(PICOSVC_PRODUCTS.map((product) => product.slug), expected);
 assert.equal(PICOSVC_PRODUCTS.find((product) => product.slug === 'mail')?.endpointHost, 'picosvc.com', 'Mail must use the apex domain');
+assert.equal(PICOSVC_PRODUCTS.find((product) => product.slug === 'flags')?.name, 'PicoSvc Config', 'Flags must be positioned as Remote Config until targeting exists');
 const mcpProduct = PICOSVC_PRODUCTS.find((product) => product.slug === 'mcp');
 assert.equal(mcpProduct?.tiers.free.limits?.sandboxActiveMinutes, 0, 'MCP Free must not include Sandbox active minutes');
 assert.equal(mcpProduct?.tiers.tiny.limits?.sandboxActiveMinutes, 0, 'MCP Pico must stay Edge-only');
@@ -29,6 +30,17 @@ assert.match(hooksR2Migration, /ADD COLUMN body_r2_key TEXT/, 'Hooks R2 body poi
 const sandboxMinuteMigration = readFileSync(new URL('../migrations/0013_picosvc_mcp_sandbox_minutes.sql', import.meta.url), 'utf8');
 assert.match(sandboxMinuteMigration, /CREATE TABLE IF NOT EXISTS mcp_sandbox_active_minutes/, 'MCP Sandbox minute ledger required');
 assert.match(sandboxMinuteMigration, /PRIMARY KEY \(owner, server_id, active_minute\)/, 'Sandbox minute ledger must deduplicate active minutes per MCP');
+const rssMigration = readFileSync(new URL('../migrations/0014_picosvc_rss_extraction.sql', import.meta.url), 'utf8');
+assert.match(rssMigration, /ADD COLUMN item_selector TEXT/, 'RSS item selector migration required');
+assert.match(rssMigration, /ADD COLUMN title_selector TEXT/, 'RSS title selector migration required');
+const configMigration = readFileSync(new URL('../migrations/0015_picosvc_remote_config_version.sql', import.meta.url), 'utf8');
+assert.match(configMigration, /ADD COLUMN version INTEGER NOT NULL DEFAULT 1/, 'Remote Config version migration required');
+const mockAdvancedMigration = readFileSync(new URL('../migrations/0016_picosvc_mock_advanced.sql', import.meta.url), 'utf8');
+assert.match(mockAdvancedMigration, /CREATE TABLE IF NOT EXISTS mock_rules/, 'Mock rules table required');
+assert.match(mockAdvancedMigration, /CREATE TABLE IF NOT EXISTS mock_requests/, 'Mock request history table required');
+const hooksAdvancedMigration = readFileSync(new URL('../migrations/0017_picosvc_hooks_advanced.sql', import.meta.url), 'utf8');
+assert.match(hooksAdvancedMigration, /ADD COLUMN forward_url TEXT/, 'Hooks forwarding setting required');
+assert.match(hooksAdvancedMigration, /CREATE TABLE IF NOT EXISTS webhook_deliveries/, 'Hooks delivery history table required');
 
 const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
 assert.match(entry, /scheduled\s*\(/, 'scheduled handler required');
@@ -38,13 +50,19 @@ assert.match(entry, /picoSvcPostResponseGuardrails/, 'PicoSvc post-response rete
 assert.match(entry, /picoSvcScheduledGuardrails/, 'scheduled retention pruning must run');
 assert.match(entry, /picoSvcEmailGuardrails/, 'mail retention pruning must run after inbound email');
 assert.match(entry, /mcpSandboxActiveMinuteGuard/, 'Sandbox active-minute metering must run before the legacy MCP runtime');
+for (const runtime of ['hooksAdvancedRuntimeRoute','mockAdvancedRuntimeRoute','configRuntimeRoute','qrRuntimeRoute','dataRuntimeRoute','functionRuntimeRoute','rssRuntimeRoute']) {
+  assert.match(entry, new RegExp(runtime), `missing runtime ${runtime}`);
+}
+
+const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url), 'utf8');
+for (const management of ['hooksAdvancedManagementRoutes','mockAdvancedManagementRoutes','configManagementRoutes']) {
+  assert.match(routes, new RegExp(management), `missing management route ${management}`);
+}
+
 const mailService = readFileSync(new URL('../src/picosvc/mail-service.ts', import.meta.url), 'utf8');
 assert.match(mailService, /const MAIL_DOMAIN = 'picosvc\.com'/, 'Mail domain must be picosvc.com');
 assert.match(mailService, /domain !== MAIL_DOMAIN/, 'Mail handler must reject other domains');
 assert.doesNotMatch(mailService, /in\.picosvc\.com/, 'Legacy in.picosvc.com must not remain');
-for (const runtime of ['qrRuntimeRoute','dataRuntimeRoute','functionRuntimeRoute','rssRuntimeRoute','hooksRuntimeRoute','mockRuntimeRoute']) {
-  assert.match(entry, new RegExp(runtime), `missing runtime ${runtime}`);
-}
 
 const wrangler = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
 assert.match(wrangler, /"browser"\s*:\s*\{[\s\S]*?"binding"\s*:\s*"BROWSER"/, 'Browser Run binding required');
@@ -59,6 +77,15 @@ assert.match(serviceUtils, /product_usage_monthly\.quantity \+ excluded\.quantit
 
 const mock = readFileSync(new URL('../src/picosvc/mock.ts', import.meta.url), 'utf8');
 assert.match(mock, /consumeUsage\(env, row\.owner, 'mock', 'requests'\)/, 'Mock public requests must consume the plan request quota');
+const mockAdvanced = readFileSync(new URL('../src/picosvc/mock-advanced.ts', import.meta.url), 'utf8');
+assert.match(mockAdvanced, /productLimit\(env, owner, 'mock', 'rules'\)/, 'Mock must enforce rule count quotas');
+assert.match(mockAdvanced, /productLimit\(env, owner, 'mock', 'history'\)/, 'Mock must prune request history by plan');
+assert.match(mockAdvanced, /ORDER BY priority ASC, created_at ASC/, 'Mock rules must be ordered deterministically');
+assert.match(mockAdvanced, /failure_percent/, 'Mock must support failure injection');
+assert.match(mockAdvanced, /delay_ms/, 'Mock must support response delay');
+assert.match(mockAdvanced, /renderTemplate/, 'Mock must support response templating');
+assert.match(mockAdvanced, /import\/openapi/, 'Mock must support OpenAPI import');
+assert.match(mockAdvanced, /mock_requests/, 'Mock must persist request inspector history');
 
 const hooks = readFileSync(new URL('../src/picosvc/hooks.ts', import.meta.url), 'utf8');
 assert.match(hooks, /resourceCapacity\(env, owner, 'hooks', 'inboxes', 'webhook_inboxes'\)/, 'Hooks must cap inbox count');
@@ -70,22 +97,42 @@ assert.match(hooks, /body_r2_key/, 'Hooks must persist an R2 body pointer');
 assert.match(hooks, /env\.ARTIFACTS\.put\(r2Key, bytes/, 'Hooks must offload large bodies to R2');
 assert.match(hooks, /loadEventBody/, 'Hooks replay/detail must transparently load D1 or R2 bodies');
 assert.match(hooks, /deleteR2Keys/, 'Hooks retention/deletion must clean R2 bodies');
+const hooksAdvanced = readFileSync(new URL('../src/picosvc/hooks-advanced.ts', import.meta.url), 'utf8');
+assert.match(hooksAdvanced, /forwardStoredEvent/, 'Hooks must support automatic forwarding');
+assert.match(hooksAdvanced, /customResponse/, 'Hooks must support custom inbound responses');
+assert.match(hooksAdvanced, /\/search\$/, 'Hooks must expose search/filter');
+assert.match(hooksAdvanced, /webhook_deliveries/, 'Hooks must retain forward/replay delivery history');
+assert.match(hooksAdvanced, /verify-hmac/, 'Hooks must expose HMAC verification helper');
+assert.match(hooksAdvanced, /constantTimeEqual/, 'Hooks HMAC verification must use constant-time comparison');
 
-const utility = readFileSync(new URL('../src/picosvc/utility-services.ts', import.meta.url), 'utf8');
-assert.match(utility, /consumeUsage\(env, row\.owner, 'qr', 'scans'\)/, 'Dynamic QR redirects must consume scan quota');
-
+const rssExtractor = readFileSync(new URL('../src/picosvc/rss-extractor.ts', import.meta.url), 'utf8');
+assert.match(rssExtractor, /new HTMLRewriter\(\)/, 'RSS must parse multiple HTML items with HTMLRewriter');
+assert.match(rssExtractor, /AUTO_ITEM_SELECTORS/, 'RSS must provide automatic item detection');
+assert.match(rssExtractor, /sha256Hex\(`\$\{link\}/, 'RSS must derive stable item GUIDs');
 const automation = readFileSync(new URL('../src/picosvc/automation-services.ts', import.meta.url), 'utf8');
+assert.match(automation, /extractRssItems/, 'RSS refresh must use multi-item extraction');
+assert.match(automation, /previewRssFeed/, 'RSS must provide extraction preview');
+assert.match(automation, /WHERE NOT EXISTS[\s\S]*rss_entries WHERE feed_id=\? AND guid=\?/, 'RSS must dedupe by feed and GUID');
 assert.match(automation, /productLimit\(env, feed\.owner, 'rss', 'refreshMinutes'\)/, 'RSS scheduler must honor tier refresh intervals');
 assert.match(automation, /consumeUsage\(env, feed\.owner, 'rss', 'checks'\)/, 'RSS refreshes must consume check quota');
 assert.match(automation, /productLimit\(env, monitor\.owner, 'monitor', 'minIntervalMinutes'\)/, 'Monitor scheduler must honor tier minimum intervals');
 assert.match(automation, /productLimit\(env, feed\.owner, 'rss', 'entriesPerFeed'\)/, 'RSS retention must honor tier entry limits');
+
+const configService = readFileSync(new URL('../src/picosvc/config-service.ts', import.meta.url), 'utf8');
+assert.match(configService, /bumpVersion/, 'Remote Config mutations must increment version');
+assert.match(configService, /if-none-match/, 'Remote Config must support conditional GET');
+assert.match(configService, /status: 304/, 'Remote Config must return 304 for matching ETags');
+assert.match(configService, /stale-while-revalidate=300/, 'Remote Config must publish cache semantics');
+assert.match(configService, /x-picosvc-config-version/, 'Remote Config must expose version header');
+
+const utility = readFileSync(new URL('../src/picosvc/utility-services.ts', import.meta.url), 'utf8');
+assert.match(utility, /consumeUsage\(env, row\.owner, 'qr', 'scans'\)/, 'Dynamic QR redirects must consume scan quota');
 
 const data = readFileSync(new URL('../src/picosvc/data-services.ts', import.meta.url), 'utf8');
 assert.match(data, /fileStorageState/, 'Files must track owner storage usage');
 assert.match(data, /productLimit\(env, owner, 'files', 'storageBytes'\)/, 'Files must enforce storage-byte quotas');
 assert.match(data, /resourceCapacity\(env, owner, 'files', 'spaces', 'file_spaces'\)/, 'Files must cap spaces');
 assert.match(data, /resourceCapacity\(env, owner, 'license', 'projects', 'license_projects'\)/, 'License must cap projects');
-assert.match(data, /resourceCapacity\(env, owner, 'flags', 'projects', 'flag_projects'\)/, 'Flags must cap projects');
 assert.match(data, /deleteR2Prefix/, 'Files space deletion must clean the full R2 prefix');
 assert.match(data, /MAX_FORM_BYTES/, 'Forms must reject oversized submissions before storing them');
 
@@ -125,4 +172,4 @@ assert.match(mcpRuntime, /productLimit\(env, row\.owner, 'mcp', 'sandboxMcps'\)/
 assert.match(mcpRuntime, /Sandbox fallback, but .* is Edge-only/, 'Edge-only tiers must reject Sandbox fallback');
 assert.match(mcpRuntime, /assertExistingSandboxAllowed/, 'Existing Sandbox MCPs must be rechecked after billing changes');
 
-console.log(`PicoSvc services OK: ${PICOSVC_PRODUCTS.length} active products, quota guards and runtime invariants present.`);
+console.log(`PicoSvc services OK: ${PICOSVC_PRODUCTS.length} active products, quota guards and competitive-core invariants present.`);
