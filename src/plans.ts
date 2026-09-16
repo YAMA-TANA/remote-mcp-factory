@@ -1,9 +1,13 @@
 import { clerkClientFor } from './auth.js';
+import { resolveProductTier } from './picosvc/entitlements.js';
+import type { PicoSvcTier } from './picosvc/catalog.js';
 import type { AuthIdentity, Env, PlanId } from './types.js';
 
 export interface PlanLimits {
+  /** Legacy DB/cache identifier. Public UI must use publicTier/label instead. */
   id: PlanId;
-  label: string;
+  publicTier: 'free' | 'pico' | 'picoplus';
+  label: 'Free' | 'Pico' | 'PicoPlus';
   monthlyPrice: string;
   deployments: number;
   requestsPerMonth: number;
@@ -13,10 +17,13 @@ export interface PlanLimits {
   teamSeats: boolean;
 }
 
+// Keep legacy IDs because billing_cache has a CHECK constraint for hobby/pro/team.
+// Public plan names are Free/Pico/PicoPlus and prices are $0/$1/$5.
 export const PLANS: Record<PlanId, PlanLimits> = {
   hobby: {
     id: 'hobby',
-    label: 'Hobby',
+    publicTier: 'free',
+    label: 'Free',
     monthlyPrice: '$0',
     deployments: 1,
     requestsPerMonth: 5_000,
@@ -27,9 +34,10 @@ export const PLANS: Record<PlanId, PlanLimits> = {
   },
   pro: {
     id: 'pro',
-    label: 'Pro',
-    monthlyPrice: '$20 / month',
-    deployments: 10,
+    publicTier: 'pico',
+    label: 'Pico',
+    monthlyPrice: '$1 / month',
+    deployments: 5,
     requestsPerMonth: 250_000,
     buildsPerMonth: 200,
     allowTokenVisibility: true,
@@ -38,9 +46,10 @@ export const PLANS: Record<PlanId, PlanLimits> = {
   },
   team: {
     id: 'team',
-    label: 'Team',
-    monthlyPrice: '$20 / seat / month',
-    deployments: 50,
+    publicTier: 'picoplus',
+    label: 'PicoPlus',
+    monthlyPrice: '$5 / month',
+    deployments: 25,
     requestsPerMonth: 1_000_000,
     buildsPerMonth: 1_000,
     allowTokenVisibility: true,
@@ -57,15 +66,61 @@ function activePlanSlug(subscription: any): string | null {
   return item?.plan?.slug ?? null;
 }
 
+function planForProductTier(tier: PicoSvcTier): PlanLimits {
+  if (tier === 'pro') return PLANS.team;
+  if (tier === 'tiny') return PLANS.pro;
+  return PLANS.hobby;
+}
+
+function productTierForPlan(plan: PlanId): PicoSvcTier {
+  if (plan === 'team') return 'pro';
+  if (plan === 'pro') return 'tiny';
+  return 'free';
+}
+
+async function cachePlan(env: Env, owner: string, selected: PlanId): Promise<void> {
+  await env.DB.prepare(`
+    INSERT INTO billing_cache (owner, plan_id, checked_at) VALUES (?, ?, ?)
+    ON CONFLICT(owner) DO UPDATE SET plan_id=excluded.plan_id, checked_at=excluded.checked_at
+  `).bind(owner, selected, new Date().toISOString()).run();
+}
+
+async function syncMcpEntitlement(env: Env, owner: string, selected: PlanId): Promise<void> {
+  const tier = productTierForPlan(selected);
+  try {
+    await env.DB.prepare(`
+      INSERT INTO product_entitlements (owner, product, tier, source, active, updated_at)
+      VALUES (?, 'mcp', ?, 'clerk:mcp', 1, ?)
+      ON CONFLICT(owner, product) DO UPDATE SET
+        tier=excluded.tier,
+        source=excluded.source,
+        active=1,
+        updated_at=excluded.updated_at
+    `).bind(owner, tier, new Date().toISOString()).run();
+  } catch {
+    // Rolling-deploy compatibility before PicoSvc core migrations exist.
+  }
+}
+
 export async function resolvePlan(env: Env, identity: AuthIdentity, forceRefresh = false): Promise<PlanLimits> {
+  // PicoSvc standalone and bundle entitlements are authoritative when they grant a paid MCP tier.
+  try {
+    const productTier = await resolveProductTier(env, identity.ownerId, 'mcp');
+    if (productTier !== 'free') return planForProductTier(productTier);
+  } catch {
+    // Preserve legacy operation while migrations roll out.
+  }
+
   if (!forceRefresh) {
     const cached = await env.DB.prepare('SELECT plan_id, checked_at FROM billing_cache WHERE owner=?').bind(identity.ownerId).first<{ plan_id: PlanId; checked_at: string }>();
     if (cached && Date.now() - Date.parse(cached.checked_at) < 5 * 60_000 && PLANS[cached.plan_id]) return PLANS[cached.plan_id];
   }
+
   if (env.ALLOW_DEV_AUTH === 'true') {
     const forced = identity.userId.match(/^dev:(hobby|pro|team):/)?.[1] as PlanId | undefined;
     if (forced) return PLANS[forced];
   }
+
   if (!env.CLERK_SECRET_KEY || !env.CLERK_PUBLISHABLE_KEY) return PLANS.hobby;
 
   let selected: PlanId = 'hobby';
@@ -75,15 +130,28 @@ export async function resolvePlan(env: Env, identity: AuthIdentity, forceRefresh
       ? await client.billing.getOrganizationBillingSubscription(identity.orgId)
       : await client.billing.getUserBillingSubscription(identity.userId);
     const slug = activePlanSlug(subscription);
-    if (slug === (env.CLERK_TEAM_PLAN_SLUG || 'team')) selected = 'team';
-    else if (slug === (env.CLERK_PRO_PLAN_SLUG || 'pro')) selected = 'pro';
+
+    const picoPlusSlugs = new Set([
+      env.CLERK_PICOPLUS_PLAN_SLUG || 'picoplus',
+      env.CLERK_TEAM_PLAN_SLUG || 'team',
+      'picoplus',
+      'team',
+    ]);
+    const picoSlugs = new Set([
+      env.CLERK_PICO_PLAN_SLUG || 'pico',
+      env.CLERK_PRO_PLAN_SLUG || 'pro',
+      'pico',
+      'pro',
+    ]);
+
+    if (slug && picoPlusSlugs.has(slug)) selected = 'team';
+    else if (slug && picoSlugs.has(slug)) selected = 'pro';
   } catch {
-    // Billing lookup failure is fail-closed to Hobby limits, not an auth bypass.
+    // Billing lookup failure is fail-closed to Free limits, not an auth bypass.
   }
-  await env.DB.prepare(`
-    INSERT INTO billing_cache (owner, plan_id, checked_at) VALUES (?, ?, ?)
-    ON CONFLICT(owner) DO UPDATE SET plan_id=excluded.plan_id, checked_at=excluded.checked_at
-  `).bind(identity.ownerId, selected, new Date().toISOString()).run();
+
+  await cachePlan(env, identity.ownerId, selected);
+  await syncMcpEntitlement(env, identity.ownerId, selected);
   return PLANS[selected];
 }
 
