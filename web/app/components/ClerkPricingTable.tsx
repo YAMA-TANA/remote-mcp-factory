@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { ui } from '@clerk/ui';
 import { useI18n } from '../i18n';
 
 const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
@@ -24,7 +25,7 @@ export default function ClerkPricingTable() {
     let active = true;
     import('@clerk/clerk-js').then(async ({ Clerk }) => {
       const clerk = new Clerk(CLERK_KEY);
-      await clerk.load();
+      await clerk.load({ ui });
       if (!active) return;
       clerkRef.current = clerk;
       setReady(true);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
+import { ui } from '@clerk/ui';
 import { LanguageSwitcher, useI18n } from './i18n';
 import { PICOSVC_PRICING } from './pricing-data';
 
@@ -110,7 +111,7 @@ export default function Home() {
     let removeListener: (() => void) | undefined;
     import('@clerk/clerk-js').then(async ({ Clerk }) => {
       const instance = new Clerk(CLERK_KEY);
-      await instance.load();
+      await instance.load({ ui });
       if (!active) return;
       setClerk(instance);
       setSignedIn(Boolean(instance.isSignedIn));

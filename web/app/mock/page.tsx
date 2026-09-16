@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
+import { ui } from '@clerk/ui';
 import { LanguageSwitcher, useI18n } from '../i18n';
 import { PICOSVC_PRICING, tierLabel, type BillingTierId } from '../pricing-data';
 
@@ -24,7 +25,7 @@ export default function MockPage() {
   const [name, setName] = useState('Hello API'); const [method, setMethod] = useState('GET'); const [path, setPath] = useState('hello'); const [statusCode, setStatusCode] = useState('200'); const [body, setBody] = useState('{\n  "hello": "world"\n}');
   const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false); const userButtonRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { if (!CLERK_KEY) return; let active = true; let removeListener: (() => void) | undefined; import('@clerk/clerk-js').then(async ({ Clerk }) => { const instance = new Clerk(CLERK_KEY); await instance.load(); if (!active) return; setClerk(instance); setSignedIn(Boolean(instance.isSignedIn)); removeListener = instance.addListener(() => setSignedIn(Boolean(instance.isSignedIn))); }).catch((error) => setMessage(error instanceof Error ? error.message : String(error))); return () => { active = false; removeListener?.(); }; }, []);
+  useEffect(() => { if (!CLERK_KEY) return; let active = true; let removeListener: (() => void) | undefined; import('@clerk/clerk-js').then(async ({ Clerk }) => { const instance = new Clerk(CLERK_KEY); await instance.load({ ui }); if (!active) return; setClerk(instance); setSignedIn(Boolean(instance.isSignedIn)); removeListener = instance.addListener(() => setSignedIn(Boolean(instance.isSignedIn))); }).catch((error) => setMessage(error instanceof Error ? error.message : String(error))); return () => { active = false; removeListener?.(); }; }, []);
   useEffect(() => { if (!clerk || !signedIn || !userButtonRef.current) return; clerk.mountUserButton(userButtonRef.current); return () => { if (userButtonRef.current) clerk.unmountUserButton(userButtonRef.current); }; }, [clerk, signedIn]);
 
   async function api<T>(route: string, init: RequestInit = {}): Promise<T> { if (!API_URL) throw new Error('NEXT_PUBLIC_FACTORY_API_URL is not configured.'); const token = await clerk?.session?.getToken(); if (!token) throw new Error(c.signIn); const response = await fetch(`${API_URL}${route}`, { ...init, headers: { ...Object.fromEntries(new Headers(init.headers).entries()), Authorization: `Bearer ${token}` } }); const payload = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`); return payload as T; }

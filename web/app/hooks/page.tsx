@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
+import { ui } from '@clerk/ui';
 import { LanguageSwitcher, useI18n } from '../i18n';
 import { PICOSVC_PRICING, tierLabel, type BillingTierId } from '../pricing-data';
 
@@ -101,7 +102,7 @@ export default function HooksPage() {
     if (!CLERK_KEY) return;
     let active = true; let removeListener: (() => void) | undefined;
     import('@clerk/clerk-js').then(async ({ Clerk }) => {
-      const instance = new Clerk(CLERK_KEY); await instance.load(); if (!active) return;
+      const instance = new Clerk(CLERK_KEY); await instance.load({ ui }); if (!active) return;
       setClerk(instance); setSignedIn(Boolean(instance.isSignedIn));
       removeListener = instance.addListener(() => setSignedIn(Boolean(instance.isSignedIn)));
     }).catch((error) => setMessage(error instanceof Error ? error.message : String(error)));
