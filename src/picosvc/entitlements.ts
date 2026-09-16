@@ -1,4 +1,5 @@
 import type { Env } from '../types.js';
+import { syncClerkBillingEntitlements } from './billing-sync.js';
 import { PICOSVC_PRODUCT_MAP, type PicoSvcProductSlug, type PicoSvcTier } from './catalog.js';
 
 const TIER_RANK: Record<PicoSvcTier, number> = { free: 0, tiny: 1, pro: 2 };
@@ -12,6 +13,8 @@ function higherTier(a: PicoSvcTier, b: PicoSvcTier): PicoSvcTier {
 }
 
 export async function resolveProductTier(env: Env, owner: string, product: PicoSvcProductSlug): Promise<PicoSvcTier> {
+  await syncClerkBillingEntitlements(env, owner).catch(() => undefined);
+
   const direct = await env.DB.prepare(`
     SELECT tier
     FROM product_entitlements
@@ -20,9 +23,6 @@ export async function resolveProductTier(env: Env, owner: string, product: PicoS
 
   let tier = normalizeTier(direct?.tier);
 
-  // Bundle grants are additive to standalone subscriptions. Keep this query tolerant
-  // during a rolling deploy so an older database without migration 0008 still falls
-  // back to the standalone entitlement instead of breaking the product.
   try {
     const bundleRows = await env.DB.prepare(`
       SELECT tier
