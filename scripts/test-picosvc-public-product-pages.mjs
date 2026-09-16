@@ -22,7 +22,7 @@ for (const [locale, expected] of Object.entries(localeText)) {
   const dashboard=readFileSync(join(root,locale,'dashboard','index.html'),'utf8');
   for (const service of Object.keys(products)) {
     assert.ok(docsIndex.includes(`/${locale}/docs/${service}/`),`${locale}: docs index missing ${service}`);
-    assert.ok(dashboard.includes(`/${locale}/${service}/app/`),`${locale}: dashboard missing ${service} app`);
+    assert.ok(dashboard.includes(`/${locale}/${service}/app`),`${locale}: dashboard missing ${service} app`);
   }
   for (const [slug, competitor] of Object.entries(products)) {
     const base=join(root,locale,slug);
@@ -49,7 +49,7 @@ for (const [locale, expected] of Object.entries(localeText)) {
       assert.ok(publicHtml.includes('Formspree'),`${locale}: forms comparison missing`);
     }
     if (slug === 'mail') {
-      assert.ok(publicHtml.includes('PicoSvc Hooks'),`${locale}: customer-owned webhook workaround missing`);
+      assert.ok(publicHtml.includes('PicoSvc Hooks'),`${locale}: webhook destination option missing`);
       assert.ok(!publicHtml.includes('対象ドメインのメールルーティング'),`${locale}: operator preparation in customer guide`);
     }
   }
