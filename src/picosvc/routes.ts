@@ -8,6 +8,7 @@ import {
   type PicoSvcProductSlug,
 } from './catalog.js';
 import { automationManagementRoutes } from './automation-services.js';
+import { cronManagementRoutes } from './cron-service.js';
 import { dataManagementRoutes } from './data-services.js';
 import { functionManagementRoutes } from './functions-service.js';
 import { hooksManagementRoutes } from './hooks.js';
@@ -32,6 +33,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     utilityManagementRoutes,
     dataManagementRoutes,
     functionManagementRoutes,
+    cronManagementRoutes,
     automationManagementRoutes,
     mailManagementRoutes,
   ]) {
