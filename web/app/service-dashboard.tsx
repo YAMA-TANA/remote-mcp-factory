@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Clerk } from '@clerk/clerk-js';
 import { LanguageSwitcher, useI18n } from './i18n';
 import { SERVICE_INFO, type GenericServiceSlug } from './service-data';
@@ -11,6 +11,10 @@ const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
 type ActionDef = { label: string; method: string; path: string; body?: unknown };
 
 const ACTIONS: Record<GenericServiceSlug, ActionDef[]> = {
+  mcp: [
+    { label: 'List MCPs', method: 'GET', path: '/api/servers' },
+    { label: 'Deploy MCP', method: 'POST', path: '/api/servers', body: { repoUrl: 'https://github.com/modelcontextprotocol/servers', branch: 'main', visibility: 'token' } },
+  ],
   rss: [
     { label: 'List feeds', method: 'GET', path: '/api/picosvc/rss/feeds' },
     { label: 'Create feed', method: 'POST', path: '/api/picosvc/rss/feeds', body: { name: 'Example feed', sourceUrl: 'https://example.com/' } },
@@ -108,7 +112,6 @@ export default function ServiceDashboard({ service }: { service: GenericServiceS
   const userButtonRef = useRef<HTMLDivElement>(null);
 
   const configured = Boolean(API_URL && CLERK_KEY);
-  const current = useMemo(() => actions[selected] || actions[0], [actions, selected]);
 
   useEffect(() => {
     if (!CLERK_KEY) return;
