@@ -104,19 +104,19 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     { endpoints: 100, requests: 250_000 },
   ) }),
   product({ slug: 'hooks', name: 'PicoSvc Hooks', role: 'Webhook inbox / replay', status: 'active', endpointHost: 'hooks.picosvc.com', tiers: tiers(
-    { inboxes: 1, events: 500, history: 100 },
-    { inboxes: 5, events: 10_000, history: 1_000 },
-    { inboxes: 25, events: 100_000, history: 10_000 },
+    { inboxes: 1, events: 500, replays: 50, history: 100, bodyBytes: 64 * 1024 },
+    { inboxes: 5, events: 10_000, replays: 1_000, history: 1_000, bodyBytes: 128 * 1024 },
+    { inboxes: 25, events: 100_000, replays: 10_000, history: 10_000, bodyBytes: 256 * 1024 },
   ) }),
   product({ slug: 'rss', name: 'PicoSvc RSS', role: 'Web to RSS', status: 'active', endpointHost: 'rss.picosvc.com', tiers: tiers(
-    { feeds: 3, checks: 150, refreshMinutes: 1_440, entriesPerFeed: 5 },
-    { feeds: 20, checks: 6_000, refreshMinutes: 180, entriesPerFeed: 15 },
-    { feeds: 100, checks: 160_000, refreshMinutes: 30, entriesPerFeed: 20 },
+    { feeds: 3, checks: 150, requests: 10_000, refreshMinutes: 1_440, entriesPerFeed: 5 },
+    { feeds: 20, checks: 6_000, requests: 100_000, refreshMinutes: 180, entriesPerFeed: 15 },
+    { feeds: 100, checks: 160_000, requests: 1_000_000, refreshMinutes: 30, entriesPerFeed: 20 },
   ) }),
   product({ slug: 'mail', name: 'PicoSvc Mail', role: 'Email to Webhook', status: 'active', endpointHost: 'picosvc.com', tiers: tiers(
-    { routes: 1, mails: 100 },
-    { routes: 5, mails: 2_000 },
-    { routes: 25, mails: 20_000 },
+    { routes: 1, mails: 100, history: 100 },
+    { routes: 5, mails: 2_000, history: 1_000 },
+    { routes: 25, mails: 20_000, history: 5_000 },
   ) }),
   product({ slug: 'shot', name: 'PicoSvc Shot', role: 'Screenshot / PDF', status: 'active', endpointHost: 'api.picosvc.com', tiers: tiers(
     { shots: 50 },
@@ -134,9 +134,9 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     { qrs: 300, scans: 150_000 },
   ) }),
   product({ slug: 'cron', name: 'PicoSvc Cron', role: 'Cron execution / monitoring', status: 'active', endpointHost: 'api.picosvc.com', tiers: tiers(
-    { jobs: 1, runs: 2_000 },
-    { jobs: 10, runs: 30_000 },
-    { jobs: 50, runs: 250_000 },
+    { jobs: 1, runs: 2_000, history: 100 },
+    { jobs: 10, runs: 30_000, history: 1_000 },
+    { jobs: 50, runs: 250_000, history: 10_000 },
   ) }),
   product({ slug: 'functions', name: 'PicoSvc Functions', role: 'Tiny serverless functions', status: 'active', endpointHost: 'fn.picosvc.com', tiers: tiers(
     { functions: 1, invocations: 10_000 },
@@ -144,14 +144,14 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     { functions: 20, invocations: 1_000_000 },
   ) }),
   product({ slug: 'json', name: 'PicoSvc JSON', role: 'JSON API / tiny database', status: 'active', endpointHost: 'json.picosvc.com', tiers: tiers(
-    { stores: 1, requests: 10_000 },
-    { stores: 10, requests: 100_000 },
-    { stores: 50, requests: 1_000_000 },
+    { stores: 1, documents: 100, storageBytes: 10 * 1024 * 1024, requests: 10_000 },
+    { stores: 10, documents: 1_000, storageBytes: 50 * 1024 * 1024, requests: 100_000 },
+    { stores: 50, documents: 10_000, storageBytes: 500 * 1024 * 1024, requests: 1_000_000 },
   ) }),
   product({ slug: 'files', name: 'PicoSvc Files', role: 'R2-backed file delivery', status: 'active', endpointHost: 'files.picosvc.com', tiers: tiers(
-    { spaces: 1, files: 20, storageBytes: 100 * 1024 * 1024 },
-    { spaces: 5, files: 1_000, storageBytes: 1024 * 1024 * 1024 },
-    { spaces: 25, files: 10_000, storageBytes: 10 * 1024 * 1024 * 1024 },
+    { spaces: 1, files: 20, storageBytes: 100 * 1024 * 1024, downloads: 10_000 },
+    { spaces: 5, files: 1_000, storageBytes: 1024 * 1024 * 1024, downloads: 100_000 },
+    { spaces: 25, files: 10_000, storageBytes: 10 * 1024 * 1024 * 1024, downloads: 1_000_000 },
   ) }),
   product({ slug: 'license', name: 'PicoSvc License', role: 'License key validation', status: 'active', endpointHost: 'api.picosvc.com', tiers: tiers(
     { projects: 1, keys: 10, validations: 1_000 },
@@ -169,9 +169,9 @@ export const PICOSVC_PRODUCTS: PicoSvcProduct[] = [
     { monitors: 100, checks: 100_000, minIntervalMinutes: 5 },
   ) }),
   product({ slug: 'forms', name: 'PicoSvc Forms', role: 'Form backend', status: 'active', endpointHost: 'forms.picosvc.com', tiers: tiers(
-    { forms: 3, submissions: 100 },
-    { forms: 20, submissions: 2_000 },
-    { forms: 100, submissions: 20_000 },
+    { forms: 3, submissions: 100, history: 100 },
+    { forms: 20, submissions: 2_000, history: 1_000 },
+    { forms: 100, submissions: 20_000, history: 5_000 },
   ) }),
 ];
 
