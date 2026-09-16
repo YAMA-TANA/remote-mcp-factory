@@ -5,6 +5,7 @@ import QuickNavigator from '../components/QuickNavigator';
 import { LOCALE_SLUGS, slugToLocale } from '../i18n-data';
 import '../product-intro.css';
 import '../customer-mobile.css';
+import '../customer-workspace-compact.css';
 
 export const dynamicParams = false;
 
