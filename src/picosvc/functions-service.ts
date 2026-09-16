@@ -3,6 +3,7 @@ import { cleanName, consumeUsage, json, requireIdentity, resourceCapacity } from
 import { randomPublicId } from './security.js';
 
 const MAX_CODE_BYTES = 64 * 1024;
+const MAX_FUNCTION_CPU_MS = 10;
 const MAX_FUNCTION_WALL_MS = 5_000;
 
 function publicFunctionUrl(origin: string, publicId: string): string {
@@ -82,7 +83,7 @@ export async function functionRuntimeRoute(request: Request, env: Env): Promise<
     mainModule: 'index.js',
     modules: { 'index.js': { js: app.code } },
     env: { PICOSVC_FUNCTION_ID: app.id, PICOSVC_FUNCTION_NAME: app.name },
-    limits: { cpuMs: 500, subRequests: 32 },
+    limits: { cpuMs: MAX_FUNCTION_CPU_MS, subRequests: 32 },
   }));
 
   const target = new URL(request.url);
