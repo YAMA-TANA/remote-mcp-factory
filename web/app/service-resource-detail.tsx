@@ -1,6 +1,7 @@
 'use client';
 
 import type { GenericServiceSlug } from './service-data';
+import FilesManagementDetail from './service-files-management';
 import FlagsManagementDetail from './service-flags-management';
 import FormsManagementDetail from './service-forms-management';
 import JsonManagementDetail from './service-json-management';
@@ -16,8 +17,9 @@ type Props = {
   copyValue: (value: string) => Promise<void>;
 };
 
-/** Route specialized management while preserving the existing Files workflow. */
+/** Route specialized management without changing other service workflows. */
 export default function ServiceResourceDetail(props: Props) {
+  if (props.service === 'files') return <FilesManagementDetail {...props} />;
   if (props.service === 'json') return <JsonManagementDetail {...props} />;
   if (props.service === 'forms') return <FormsManagementDetail {...props} />;
   if (props.service === 'license') return <LicenseManagementDetail {...props} />;
