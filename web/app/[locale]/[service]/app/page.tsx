@@ -2,7 +2,8 @@ import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ServiceDashboard from '../../../service-dashboard';
-import ShotWorkspace from '../../../shot-workspace';
+import FetchWorkspace from '../../../fetch-workspace';
+import ShotWorkspace from '../../../shot-workspace-v2';
 import MonitorDiagnostics from '../../../monitor-diagnostics';
 import CustomerWorkspaceHeader from '../../../customer-workspace-header';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
@@ -22,6 +23,6 @@ export default async function ServiceAppPage({ params }: { params: Promise<{ loc
   const iconStyle = { '--product-icon': `url('/icons/${service}.svg')` } as CSSProperties;
   return <div className="picoProductTheme" style={iconStyle}>
     <CustomerWorkspaceHeader service={service} locale={locale} />
-    {service === 'shot' ? <ShotWorkspace /> : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></> : <ServiceDashboard service={service} />}
+    {service === 'shot' ? <ShotWorkspace /> : service === 'fetch' ? <FetchWorkspace /> : service === 'monitor' ? <><ServiceDashboard service={service} /><MonitorDiagnostics /></> : <ServiceDashboard service={service} />}
   </div>;
 }
