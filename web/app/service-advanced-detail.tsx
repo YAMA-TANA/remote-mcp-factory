@@ -12,6 +12,7 @@ import { FunctionsManagementDetail, MonitorManagementDetail } from './service-ru
 import { FunctionOperations } from './service-function-operations';
 import { MonitorOperations } from './service-monitor-operations';
 import ServiceHistoryExport from './service-history-export';
+import ServiceOperationsInsights from './service-operations-insights';
 
 type Props = ManagementProps & { service: GenericServiceSlug };
 
@@ -19,6 +20,7 @@ function MailWorkspace(props: Props) {
   return <div className="advancedManagementStack">
     <MailManagementDetail {...props} />
     <MailOperations {...props} key={String(props.resource.id)} />
+    <ServiceOperationsInsights key={`mail:${String(props.resource.id)}`} service="mail" resource={props.resource} api={props.api} />
     <ServiceHistoryExport service="mail" resource={props.resource} api={props.api} />
   </div>;
 }
@@ -28,6 +30,7 @@ function FunctionWorkspace(props: Props) {
   return <div className="advancedManagementStack">
     <FunctionsManagementDetail {...props} key={`${String(props.resource.id)}:${revision}`} />
     <FunctionOperations {...props} onRollback={() => setRevision(previous => previous + 1)} />
+    <ServiceOperationsInsights key={`functions:${String(props.resource.id)}`} service="functions" resource={props.resource} api={props.api} />
     <ServiceHistoryExport service="functions" resource={props.resource} api={props.api} />
   </div>;
 }
@@ -37,6 +40,7 @@ function MonitorWorkspace(props: Props) {
   return <div className="advancedManagementStack">
     <MonitorManagementDetail {...props} key={`${String(props.resource.id)}:${revision}`} />
     <MonitorOperations {...props} onOptionsChanged={() => setRevision(previous => previous + 1)} />
+    <ServiceOperationsInsights key={`monitor:${String(props.resource.id)}`} service="monitor" resource={props.resource} api={props.api} />
     <ServiceHistoryExport service="monitor" resource={props.resource} api={props.api} />
   </div>;
 }
@@ -58,7 +62,7 @@ function withMcpEndpoint(resource: Props['resource']): Props['resource'] {
 export default function ServiceAdvancedDetail(props: Props) {
   if (props.service === 'mcp') return <McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} />;
   if (props.service === 'rss') return <div className="advancedManagementStack" key={String(props.resource.id)}><RssManagementDetail {...props} /><RssSettingsExport resource={props.resource} /></div>;
-  if (props.service === 'cron') return <div className="advancedManagementStack"><CronManagementDetail {...props} /><ServiceHistoryExport service="cron" resource={props.resource} api={props.api} /></div>;
+  if (props.service === 'cron') return <div className="advancedManagementStack"><CronManagementDetail {...props} /><ServiceOperationsInsights key={`cron:${String(props.resource.id)}`} service="cron" resource={props.resource} api={props.api} /><ServiceHistoryExport service="cron" resource={props.resource} api={props.api} /></div>;
   if (props.service === 'qr') return <div className="advancedManagementStack" key={String(props.resource.id)}><QrManagementDetail {...props} /><QrInsights resource={props.resource} api={props.api} /></div>;
   if (props.service === 'mail') return <MailWorkspace {...props} />;
   if (props.service === 'functions') return <FunctionWorkspace {...props} />;
