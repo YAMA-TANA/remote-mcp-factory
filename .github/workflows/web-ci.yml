@@ -107,6 +107,7 @@ jobs:
             test -f "out/$locale/docs/index.html"
             for service in mcp mock hooks rss mail shot fetch qr cron functions json files license flags monitor forms; do
               test -f "out/$locale/$service/index.html"
+              test -f "out/$locale/$service/app/index.html"
               test -f "out/$locale/docs/$service/index.html"
             done
           done
