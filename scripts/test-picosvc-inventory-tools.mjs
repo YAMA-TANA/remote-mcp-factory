@@ -5,7 +5,7 @@ import { collectJsonBackup, FILE_INVENTORY_LIMIT, MAX_BACKUP_BYTES, MAX_BACKUP_P
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const id = '00000000-0000-4000-8000-000000000001';
 const row = (key, value = null) => ({ key, value, updatedAt: '2026-09-17T00:00:00Z', bearerToken: 'DO_NOT_EXPORT' });
-let calls = [];
+const calls = [];
 const complete = await collectJsonBackup(id, async path => {
   calls.push(path);
   return { payload: path.includes('?after=') ? { storeId: id, documents: [row('b', { result: true })], nextCursor: null } : { storeId: id, documents: [row('a')], nextCursor: 'a' } };
@@ -31,8 +31,9 @@ const empty = await collectJsonBackup(id, async () => ({ payload: { storeId: id,
 assert.equal(empty.count, 0);
 assert.equal(empty.complete, true);
 await assert.rejects(collectJsonBackup(id, async () => ({ payload: { storeId: id, documents: [row('a')], nextCursor: 'wrong' } })), /cursor/);
-await assert.rejects(collectJsonBackup(id, async () => ({ payload: { storeId: id, documents: [row('a')], nextCursor: 'a', bearerToken: 'hidden' } })), /Invalid JSON export/).catch(() => {});
+await assert.rejects(collectJsonBackup(id, async () => ({ payload: { storeId: 'another-store', documents: [row('a')], nextCursor: null } })), /Invalid JSON export page/);
 await assert.rejects(collectJsonBackup(id, async () => ({ payload: { storeId: id, documents: [row('a'), row('a')], nextCursor: null } })), /repeated/);
+await assert.rejects(collectJsonBackup(id, async () => ({ payload: { storeId: id, documents: [], nextCursor: 'a' } })), /cursor/);
 await assert.rejects(collectJsonBackup('not-a-store', async () => ({ payload: {} })), /store ID/);
 await assert.rejects(collectJsonBackup(id, async () => ({ payload: { storeId: id, documents: [row('a', 'x'.repeat(MAX_BACKUP_BYTES))], nextCursor: null } })), /8 MiB/);
 const inventory = readFileInventory({ objects: [
