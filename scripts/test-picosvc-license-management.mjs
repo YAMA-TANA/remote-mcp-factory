@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+const consoleUi = read('web/app/service-license-management.tsx');
+const dispatcher = read('web/app/service-resource-detail.tsx');
+const legacy = read('web/app/service-resource-detail-legacy.tsx');
+const styles = read('web/app/service-license-management.css');
+const backend = read('src/picosvc/data-services.ts');
+
+assert.match(dispatcher, /service === 'license'\) return <LicenseManagementDetail/, 'License must open its dedicated manager');
+assert.match(dispatcher, /service === 'forms'\) return <FormsManagementDetail/, 'Forms must retain their specialized manager');
+assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'JSON, Files and Flags must keep their existing manager');
+assert.match(legacy, /async function uploadFile\(/, 'Existing file uploads must be preserved');
+assert.match(legacy, /async function saveDocument\(/, 'Existing JSON edits must be preserved');
+assert.match(legacy, /async function saveFlag\(/, 'Existing flag edits must be preserved');
+assert.match(consoleUi, /api\(`\$\{base\}\/keys`\)/, 'License keys must load from owner-authenticated API');
+assert.match(consoleUi, /method: 'POST'.*JSON\.stringify\(\{ label: label\.trim\(\), expiresAt, metadata: parsed \}\)/, 'Key creation must include labels, expiry and metadata');
+assert.match(consoleUi, /!object\(parsed\)/, 'Metadata must be an object, never an array or scalar');
+assert.match(consoleUi, /Date\.parse\(expires\) <= Date\.now\(\)/, 'Expiry must be in the future');
+assert.match(consoleUi, /result\.licenseKey/, 'Display the key only from the issuance response');
+assert.doesNotMatch(consoleUi, /key\.licenseKey|key\.key_hash|key\.keyHash/, 'Never expose stored key hashes or claim the key can be read later');
+assert.match(consoleUi, /oneTimeKey && !window\.confirm\(t\.discard\)/, 'Issuing another key must warn about discarding the visible secret');
+assert.match(consoleUi, /setOneTimeKey\(''\)/, 'One-time secret must have a clear action');
+assert.match(consoleUi, /method: 'PATCH'.*JSON\.stringify\(\{ revoked: next \}\)/, 'Revocation and restoration must use the existing API');
+assert.match(consoleUi, /!window\.confirm\(next \? t\.confirmRevoke : t\.confirmRestore\)/, 'Changing a key status requires confirmation');
+assert.match(consoleUi, /if \(revoked\(key\)\) return 'revoked'/, 'Revoked state takes precedence over expiration');
+assert.match(consoleUi, /Date\.parse\(expiry\) <= Date\.now\(\)/, 'Expired keys need an explicit state');
+assert.match(consoleUi, /<pre>\{extra\}<\/pre>/, 'Metadata must be displayed as escaped text');
+assert.match(backend, /SELECT id,label,metadata_json,expires_at,revoked,created_at,updated_at FROM license_keys/, 'Backend must not return key hashes');
+assert.match(backend, /licenseKey, label: body\?\.label/, 'Backend must return the one-time issuance secret');
+assert.match(backend, /const revoked = body\?\.revoked === undefined/, 'Backend must support status updates');
+assert.match(styles, /@media\(max-width:800px\)/, 'Manager must be responsive');
+console.log('PicoSvc License console: one-time issuance, expiry, metadata, revocation, restoration and legacy managers OK.');
