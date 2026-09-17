@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import MockPage from '../../../mock/page';
+import MockAppWorkspace from '../../../mock-app-workspace';
 import CustomerWorkspaceHeader from '../../../customer-workspace-header';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 export function generateStaticParams() { return LOCALE_SLUGS.map(locale => ({ locale })); }
@@ -9,5 +9,5 @@ export default async function MockApp({ params }: { params: Promise<{ locale: st
   const { locale: slug } = await params;
   const locale = slugToLocale(slug);
   if (!locale) notFound();
-  return <><CustomerWorkspaceHeader service="mock" locale={locale}/><MockPage/></>;
+  return <><CustomerWorkspaceHeader service="mock" locale={locale}/><MockAppWorkspace/></>;
 }
