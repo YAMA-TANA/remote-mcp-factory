@@ -5,11 +5,19 @@ import type { GenericServiceSlug } from './service-data';
 import LegacyServiceAdvancedDetail from './service-advanced-detail-legacy';
 import { CronManagementDetail, RssManagementDetail, type ManagementProps } from './service-management-detail';
 import { MailManagementDetail, QrManagementDetail } from './service-link-management';
+import { MailOperations } from './service-mail-operations';
 import { FunctionsManagementDetail, MonitorManagementDetail } from './service-runtime-management';
 import { FunctionOperations } from './service-function-operations';
 import { MonitorOperations } from './service-monitor-operations';
 
 type Props = ManagementProps & { service: GenericServiceSlug };
+
+function MailWorkspace(props: Props) {
+  return <div className="advancedManagementStack">
+    <MailManagementDetail {...props} />
+    <MailOperations {...props} key={String(props.resource.id)} />
+  </div>;
+}
 
 function FunctionWorkspace(props: Props) {
   const [revision, setRevision] = useState(0);
@@ -32,7 +40,7 @@ export default function ServiceAdvancedDetail(props: Props) {
   if (props.service === 'rss') return <RssManagementDetail {...props} />;
   if (props.service === 'cron') return <CronManagementDetail {...props} />;
   if (props.service === 'qr') return <QrManagementDetail {...props} />;
-  if (props.service === 'mail') return <MailManagementDetail {...props} />;
+  if (props.service === 'mail') return <MailWorkspace {...props} />;
   if (props.service === 'functions') return <FunctionWorkspace {...props} />;
   if (props.service === 'monitor') return <MonitorWorkspace {...props} />;
   return <LegacyServiceAdvancedDetail {...props} />;
