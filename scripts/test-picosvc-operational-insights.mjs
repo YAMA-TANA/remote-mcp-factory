@@ -7,11 +7,11 @@ const now = new Date('2026-09-17T12:00:00Z');
 const cron = summarizeRecentHistory('cron', [
   { ran_at: '2026-09-17T10:00:00Z', response_status: 302, duration_ms: 120, error: null },
   { ran_at: '2026-09-16T10:00:00Z', response_status: 500, duration_ms: 80, error: 'unexpected response' },
-  { ran_at: '2026-09-16T08:00:00Z', response_status: null, duration_ms: null, error: null },
+  { ran_at: '2026-09-16T08:00:00Z', response_status: null, duration_ms: 0, error: null },
 ], now);
 assert.equal(cron.total, 3);
 assert.deepEqual([cron.positive, cron.negative, cron.other], [1, 1, 1], 'Cron honors configured non-2xx expected statuses and avoids claiming pending success');
-assert.equal(cron.meanDurationMs, 100);
+assert.equal(cron.meanDurationMs, 100, 'an in-flight zero-duration placeholder must not dilute the average');
 assert.equal(cron.measuredDurations, 2);
 assert.equal(cron.latestAt, '2026-09-17T10:00:00.000Z');
 assert.deepEqual(cron.daily.slice(-2).map(day => day.count), [2, 1]);
