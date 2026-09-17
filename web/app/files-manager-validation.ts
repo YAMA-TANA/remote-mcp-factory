@@ -10,6 +10,11 @@ export function validExpirySeconds(value: number): boolean {
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
+/** Existing signing API decodes its JSON path exactly once. Encode it first. */
+export function signedBodyPath(path: string): string { return encodeURIComponent(path); }
+/** URLSearchParams decodes the query once, then the metadata API decodes it again. */
+export function metadataQueryPath(path: string): string { return encodeURIComponent(encodeURIComponent(path)); }
+
 export function fileUrl(origin: string, publicId: string, path: string): string | null {
   if (!/^[a-f0-9]{32}$/i.test(publicId) || !validFilePath(path)) return null;
   try {
