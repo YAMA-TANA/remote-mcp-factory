@@ -6,6 +6,7 @@ import LegacyServiceAdvancedDetail from './service-advanced-detail-legacy';
 import McpManagementDetail from './service-mcp-management';
 import { CronManagementDetail, RssManagementDetail, type ManagementProps } from './service-management-detail';
 import { MailManagementDetail, QrManagementDetail } from './service-link-management';
+import { QrInsights, RssSettingsExport } from './service-link-insights';
 import { MailOperations } from './service-mail-operations';
 import { FunctionsManagementDetail, MonitorManagementDetail } from './service-runtime-management';
 import { FunctionOperations } from './service-function-operations';
@@ -56,9 +57,9 @@ function withMcpEndpoint(resource: Props['resource']): Props['resource'] {
 /** Preserve existing management actions while exposing the advanced APIs for each product. */
 export default function ServiceAdvancedDetail(props: Props) {
   if (props.service === 'mcp') return <McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} />;
-  if (props.service === 'rss') return <RssManagementDetail {...props} />;
+  if (props.service === 'rss') return <div className="advancedManagementStack" key={String(props.resource.id)}><RssManagementDetail {...props} /><RssSettingsExport resource={props.resource} /></div>;
   if (props.service === 'cron') return <div className="advancedManagementStack"><CronManagementDetail {...props} /><ServiceHistoryExport service="cron" resource={props.resource} api={props.api} /></div>;
-  if (props.service === 'qr') return <QrManagementDetail {...props} />;
+  if (props.service === 'qr') return <div className="advancedManagementStack" key={String(props.resource.id)}><QrManagementDetail {...props} /><QrInsights resource={props.resource} api={props.api} /></div>;
   if (props.service === 'mail') return <MailWorkspace {...props} />;
   if (props.service === 'functions') return <FunctionWorkspace {...props} />;
   if (props.service === 'monitor') return <MonitorWorkspace {...props} />;
