@@ -96,7 +96,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
       bundleEntitlements = rows.results || [];
     } catch { // Rolling deploy compatibility before migration 0008.
     }
-    const usage = await env.DB.prepare(`SELECT product, metric, quantity, updated_at FROM product_usage_monthly WHERE owner=? AND month=?`).bind(identity.ownerId, monthKey()).all();
+    const usage = await env.DB.prepare(`SELECT product, metric, quantity, updated_at FROM product_usage_monthly WHERE owner=? AND month=? ORDER BY product`).bind(identity.ownerId, monthKey()).all();
     return json({ userId: identity.userId, orgId: identity.orgId, ownerId: identity.ownerId, month: monthKey(), billing: PICOSVC_BILLING_MODEL, entitlements: entitlements.results, bundleEntitlements, usage: usage.results });
   }
   return null;
