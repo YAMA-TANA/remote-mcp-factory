@@ -28,7 +28,8 @@ assert.equal(parseFlagDraft('checkout', '"' + 'a'.repeat(100) + '"').key, 'check
 
 assert.match(router, /function FlagsWorkspace[\s\S]*?<FlagsManagementDetail/, 'Flags must retain dedicated management');
 assert.match(router, /service === 'flags'\) return <FlagsWorkspace/, 'Flags must open composed management');
-assert.match(router, /service === 'forms'\) return <FormsManagementDetail/, 'Forms must remain specialized');
+assert.match(router, /function FormsWorkspace[\s\S]*?<FormsManagementDetail/, 'Forms must remain specialized');
+assert.match(router, /service === 'forms'\) return <FormsWorkspace/, 'Forms must open composed management');
 assert.match(router, /function LicenseWorkspace[\s\S]*?<LicenseManagementDetail/, 'License must remain specialized');
 assert.match(router, /<LegacyServiceResourceDetail/, 'JSON and Files must retain existing tools');
 assert.match(legacy, /async function uploadFile\(/, 'File upload must remain accessible');
