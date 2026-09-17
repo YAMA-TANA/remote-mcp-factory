@@ -10,6 +10,7 @@ on:
       - 'scripts/test-picosvc-service-studios.mjs'
       - 'scripts/test-picosvc-mcp-management-ui.mjs'
       - 'scripts/test-picosvc-safe-diagnostics.mjs'
+      - 'scripts/test-picosvc-management-guidance.mjs'
       - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-operational-insights.mjs'
       - 'scripts/test-picosvc-fetch-shot-results.mjs'
@@ -39,6 +40,7 @@ on:
       - 'scripts/test-picosvc-service-studios.mjs'
       - 'scripts/test-picosvc-mcp-management-ui.mjs'
       - 'scripts/test-picosvc-safe-diagnostics.mjs'
+      - 'scripts/test-picosvc-management-guidance.mjs'
       - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-operational-insights.mjs'
       - 'scripts/test-picosvc-fetch-shot-results.mjs'
@@ -80,6 +82,7 @@ jobs:
       - run: node ../scripts/test-picosvc-service-studios.mjs
       - run: node ../scripts/test-picosvc-mcp-management-ui.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-safe-diagnostics.mjs
+      - run: node --experimental-strip-types ../scripts/test-picosvc-management-guidance.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-history-exports.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-operational-insights.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-fetch-shot-results.mjs
