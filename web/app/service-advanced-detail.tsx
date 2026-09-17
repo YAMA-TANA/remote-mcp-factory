@@ -13,6 +13,7 @@ import { FunctionOperations } from './service-function-operations';
 import { MonitorOperations } from './service-monitor-operations';
 import ServiceHistoryExport from './service-history-export';
 import ServiceOperationsInsights from './service-operations-insights';
+import { McpEventsDownload } from './service-management-portability';
 
 type Props = ManagementProps & { service: GenericServiceSlug };
 
@@ -60,7 +61,7 @@ function withMcpEndpoint(resource: Props['resource']): Props['resource'] {
 
 /** Preserve existing management actions while exposing the advanced APIs for each product. */
 export default function ServiceAdvancedDetail(props: Props) {
-  if (props.service === 'mcp') return <McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} />;
+  if (props.service === 'mcp') return <div className="advancedManagementStack" key={String(props.resource.id)}><McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} /><McpEventsDownload resource={props.resource} api={props.api} /></div>;
   if (props.service === 'rss') return <div className="advancedManagementStack" key={String(props.resource.id)}><RssManagementDetail {...props} /><RssSettingsExport resource={props.resource} /></div>;
   if (props.service === 'cron') return <div className="advancedManagementStack"><CronManagementDetail {...props} /><ServiceOperationsInsights key={`cron:${String(props.resource.id)}`} service="cron" resource={props.resource} api={props.api} /><ServiceHistoryExport service="cron" resource={props.resource} api={props.api} /></div>;
   if (props.service === 'qr') return <div className="advancedManagementStack" key={String(props.resource.id)}><QrManagementDetail {...props} /><QrInsights resource={props.resource} api={props.api} /></div>;
