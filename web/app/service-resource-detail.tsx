@@ -1,6 +1,7 @@
 'use client';
 
 import type { GenericServiceSlug } from './service-data';
+import FlagsManagementDetail from './service-flags-management';
 import FormsManagementDetail from './service-forms-management';
 import LicenseManagementDetail from './service-license-management';
 import LegacyServiceResourceDetail from './service-resource-detail-legacy';
@@ -14,9 +15,10 @@ type Props = {
   copyValue: (value: string) => Promise<void>;
 };
 
-/** Route specialized management without changing JSON, Files or Flags workflows. */
+/** Route specialized management without changing JSON and Files workflows. */
 export default function ServiceResourceDetail(props: Props) {
   if (props.service === 'forms') return <FormsManagementDetail {...props} />;
   if (props.service === 'license') return <LicenseManagementDetail {...props} />;
+  if (props.service === 'flags') return <FlagsManagementDetail {...props} />;
   return <LegacyServiceResourceDetail {...props} />;
 }
