@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileUrl, MAX_FILE_BYTES, validExpirySeconds, validFilePath } from '../web/app/files-manager-validation.ts';
+import { fileUrl, MAX_FILE_BYTES, metadataQueryPath, signedBodyPath, validExpirySeconds, validFilePath } from '../web/app/files-manager-validation.ts';
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const ui = read('web/app/service-files-management.tsx');
 const router = read('web/app/service-resource-detail.tsx');
@@ -8,7 +8,11 @@ const css = read('web/app/service-files-management.css');
 const backend = read('src/picosvc/files-access.ts');
 const legacy = read('src/picosvc/data-services.ts');
 assert.equal(MAX_FILE_BYTES, 10 * 1024 * 1024);
-for (const path of ['images/logo.png', 'hello world.txt', '日本語/画像.png', 'folder/a%20b.txt']) assert.equal(validFilePath(path), true, `valid path: ${path}`);
+for (const path of ['images/logo.png', 'hello world.txt', '日本語/画像.png', 'folder/a%20b.txt']) {
+  assert.equal(validFilePath(path), true, `valid path: ${path}`);
+  assert.equal(decodeURIComponent(signedBodyPath(path)), path, `sign must preserve literal path: ${path}`);
+  assert.equal(decodeURIComponent(new URLSearchParams(`path=${metadataQueryPath(path)}`).get('path')), path, `metadata must preserve literal path: ${path}`);
+}
 for (const path of ['', '/root', '../secret', 'folder/../secret', 'folder\\secret', 'x'.repeat(513), 'bad\npath', 'bad\0path']) assert.equal(validFilePath(path), false, `reject path: ${path}`);
 for (const duration of [1, 300, 900]) assert.equal(validExpirySeconds(duration), true);
 for (const duration of [0, 901, 1.5, NaN, Infinity]) assert.equal(validExpirySeconds(duration), false);
@@ -29,14 +33,15 @@ assert.match(ui, /files\.some\(row => row\.path === target\) && !window\.confirm
 assert.match(ui, /\/object\?path=\$\{encodeURIComponent\(target\)\}/, 'Upload only through authenticated management API');
 assert.match(ui, /validExpirySeconds\(duration\)/, 'Constrain signature lifetime to 900 seconds');
 assert.match(ui, /\/sign`, \{ method: 'POST'/, 'Generate signed links from authenticated API');
+assert.match(ui, /path: signedBodyPath\(target\)/, 'Encode signed JSON body for existing decoder');
 assert.match(ui, /setSigned\(null\)/, 'Signed links can be cleared from the view');
 assert.match(ui, /signed\.method === 'PUT'/, 'Explain manual PUT for signed uploads');
 assert.doesNotMatch(ui, /fetch\(signed\.url|href=\{signed\.url\}/, 'Never automatically transmit signed credentials');
-assert.match(ui, /\/metadata\?path=\$\{encodeURIComponent\(selectedPath\)\}/, 'Cache options use authenticated metadata API');
+assert.match(ui, /\/metadata\?path=\$\{metadataQueryPath\(selectedPath\)\}/, 'Cache options use percent-safe authenticated metadata API');
 assert.match(ui, /!window\.confirm\(t\.deleteConfirm\)/, 'Confirm object deletion');
 assert.match(ui, /!window\.confirm\(t\.deleteSpaceConfirm\)/, 'Confirm permanent space deletion');
 assert.match(backend, /space\.access_mode === 'private' \? 'private, no-store'/, 'Private responses must disable caching');
 assert.match(backend, /validSignature\(request, env, space, upload \? 'upload' : 'download', path\)/, 'Signed URLs validated at runtime');
 assert.match(legacy, /ORDER BY updated_at DESC LIMIT 500/, 'Show real list bound');
 assert.match(css, /@media\(max-width:800px\)/, 'Files manager supports mobile');
-console.log('PicoSvc Files console: path and TTL validation, private-link protection, signed actions, quota and regression contracts OK.');
+console.log('PicoSvc Files console: path and TTL validation, percent-safe signed URLs, private links and regression contracts OK.');
