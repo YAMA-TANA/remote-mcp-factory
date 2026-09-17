@@ -11,8 +11,12 @@ const routing = read('web/app/service-advanced-detail.tsx');
 const legacy = read('web/app/service-advanced-detail-legacy.tsx');
 const links = read('web/app/service-link-management.tsx');
 const linkStyle = read('web/app/service-link-management.css');
+const runtime = read('web/app/service-runtime-management.tsx');
+const runtimeStyle = read('web/app/service-runtime-management.css');
 const qrApi = read('src/picosvc/utility-services.ts');
 const mailApi = read('src/picosvc/mail-service.ts');
+const functionsApi = read('src/picosvc/functions-service.ts');
+const monitorApi = read('src/picosvc/automation-services.ts');
 const routes = ['mcp', 'rss', 'mail', 'qr', 'cron', 'functions', 'json', 'files', 'license', 'flags', 'monitor', 'forms'];
 for (const slug of routes) {
   assert.match(studio, new RegExp(`\\b${slug}: \\{`), `Missing ${slug} service description`);
@@ -28,10 +32,9 @@ assert.match(studio, /<ServiceAdvancedDetail/, 'Preserve advanced resource opera
 assert.match(studio, /role="alert"/, 'Expose API errors to assistive technology');
 assert.match(studio, /aria-pressed=\{filter === key\}/, 'Expose filter selection');
 assert.match(style, /@media/, 'Provide responsive layout');
-assert.match(routing, /props\.service === 'rss'.*<RssManagementDetail/, 'RSS must open its own management screen');
-assert.match(routing, /props\.service === 'cron'.*<CronManagementDetail/, 'Cron must open its own management screen');
-assert.match(routing, /props\.service === 'qr'.*<QrManagementDetail/, 'QR must open its own management screen');
-assert.match(routing, /props\.service === 'mail'.*<MailManagementDetail/, 'Mail must open its own management screen');
+for (const [service, component] of [['rss', 'RssManagementDetail'], ['cron', 'CronManagementDetail'], ['qr', 'QrManagementDetail'], ['mail', 'MailManagementDetail'], ['functions', 'FunctionsManagementDetail'], ['monitor', 'MonitorManagementDetail']]) {
+  assert.match(routing, new RegExp(`props\\.service === '${service}'.*<${component}`), `${service} must open dedicated management`);
+}
 assert.match(routing, /<LegacyServiceAdvancedDetail/, 'Unmigrated services must retain management actions');
 assert.match(legacy, /async function rotate\(/, 'Retain MCP secret and token management');
 assert.match(management, /\/preview.*method: 'POST'/, 'RSS must use its existing metered extraction endpoint');
@@ -58,4 +61,19 @@ assert.doesNotMatch(links, /rawBase64|bodyBase64/, 'Do not expose raw mail bodie
 assert.match(qrApi, /svgMatch/, 'QR public SVG must exist server-side');
 assert.match(mailApi, /routeMatch\[2\] === 'events'/, 'Mail event endpoint must exist server-side');
 assert.match(linkStyle, /@media/, 'QR and Mail screens must work on mobile');
-console.log('PicoSvc service studios and dedicated RSS/Cron/QR/Mail management: routing, API contracts, safe URLs and responsive UI OK.');
+assert.match(runtime, /export function FunctionsManagementDetail/, 'Functions must have a dedicated editor');
+assert.match(runtime, /api\(base\)/, 'Functions editor must fetch the full source before editing');
+assert.match(runtime, /new TextEncoder\(\)\.encode\(draft\.code\)\.byteLength/, 'Validate function code using UTF-8 size');
+assert.match(runtime, /64 \* 1024/, 'Enforce function source size limit');
+assert.match(runtime, /setSaved\(next\)/, 'Track saved state without discarding draft');
+assert.match(runtime, /export function MonitorManagementDetail/, 'Monitor must have a dedicated status view');
+assert.match(runtime, /api\('\/api\/picosvc\/monitor'\)/, 'Monitor must fetch real persisted check timestamps');
+assert.match(runtime, /last_checked_at/, 'Monitor must display the latest check attempt');
+assert.match(runtime, /last_changed_at/, 'Monitor must display recorded changes');
+assert.match(runtime, /minIntervalMinutes/, 'Monitor must respect plan minimum intervals');
+assert.match(runtime, /Number\.isSafeInteger/, 'Monitor must reject invalid check intervals');
+assert.match(runtime, /window\.confirm\(t\.confirm\)/, 'Require confirmation before deletion');
+assert.match(functionsApi, /const MAX_CODE_BYTES = 64 \* 1024/, 'Functions code size must match backend');
+assert.match(monitorApi, /minIntervalMinutes/, 'Monitor tier minimum must exist server-side');
+assert.match(runtimeStyle, /@media/, 'Functions and Monitor screens must work on mobile');
+console.log('PicoSvc six dedicated management flows: routing, API contracts, size/interval guards and responsive UI OK.');
