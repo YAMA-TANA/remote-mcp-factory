@@ -10,6 +10,7 @@ import LegacyServiceResourceDetail from './service-resource-detail-legacy';
 import ServiceResourceExport from './service-resource-export-panel';
 import { FilesInventoryTools, JsonBackupTools } from './service-inventory-tools';
 import { FlagsGovernanceTools, FormsGovernanceTools, LicenseGovernanceTools } from './service-governance-tools';
+import ServiceManagementGuide from './service-management-guide';
 
 type Props = {
   service: GenericServiceSlug;
@@ -37,11 +38,15 @@ function FlagsWorkspace(props: Props) {
 }
 
 /** Route specialized management without changing other service workflows. */
-export default function ServiceResourceDetail(props: Props) {
+function ServiceResourceDetailContent(props: Props) {
   if (props.service === 'files') return <FilesWorkspace {...props} />;
   if (props.service === 'json') return <JsonWorkspace {...props} />;
   if (props.service === 'forms') return <FormsWorkspace {...props} />;
   if (props.service === 'license') return <LicenseWorkspace {...props} />;
   if (props.service === 'flags') return <FlagsWorkspace {...props} />;
   return <LegacyServiceResourceDetail {...props} />;
+}
+
+export default function ServiceResourceDetail(props: Props) {
+  return <div className="advancedManagementStack"><ServiceManagementGuide service={props.service} /><ServiceResourceDetailContent {...props} /></div>;
 }
