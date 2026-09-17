@@ -8,7 +8,7 @@ const styles = source('web/app/service-mcp-management.css');
 const backend = source('src/picosvc/mcp-observability.ts');
 
 assert.match(dispatcher, /import McpManagementDetail from '\.\/service-mcp-management'/, 'MCP has a dedicated management component');
-assert.match(dispatcher, /props\.service === 'mcp'\) return <McpManagementDetail/, 'MCP resources use the dedicated console');
+assert.match(dispatcher, /props\.service === 'mcp'\) return <div[\s\S]*?<McpManagementDetail/, 'MCP resources retain their dedicated console in a composed workspace');
 assert.ok(dispatcher.includes('withMcpEndpoint(props.resource)'), 'MCP list entries must have a Worker endpoint fallback');
 assert.ok(dispatcher.includes('new URL(configured)'), 'The fallback endpoint must validate the Worker origin');
 assert.ok(dispatcher.includes('/mcp/${encodeURIComponent(id)}'), 'The fallback endpoint must encode the server ID');
