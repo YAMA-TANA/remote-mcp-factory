@@ -38,7 +38,7 @@ assert.equal((component.match(/https:\/\//g) || []).length, Object.keys(verified
 assert.match(component, /<details className="serviceManagementGuide"/, 'Guidance must be opt-in and keyboard-accessible');
 for (const field of ['summary', 'prerequisite', 'limitation', 'steps', 'example', 'input', 'output']) assert.ok(component.includes(`guide.${field}`), `Show ${field} in manager`);
 for (const locale of locales) assert.ok(component.includes(locale === 'zh-CN' ? "'zh-CN': { title:" : `${locale}: { title:`), `${locale} localized panel`);
-assert.match(component, /type ProductSlug/, 'Support the standalone Mock service type');
+assert.match(component, /import type \{ ProductSlug \}/, 'Support the standalone Mock service type');
 assert.match(component, /target="_blank" rel="noopener noreferrer"/, 'Vendor links must use safe rel attributes');
 assert.match(component, /const overview = `\/\$\{lang\}\/\$\{service\}\//, 'Link to localized full comparison');
 assert.match(component, /const docs = `\/\$\{lang\}\/docs\/\$\{service\}\//, 'Link to localized API help');
