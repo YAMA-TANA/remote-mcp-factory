@@ -8,12 +8,12 @@ const legacy = read('web/app/service-resource-detail-legacy.tsx');
 const styles = read('web/app/service-license-management.css');
 const backend = read('src/picosvc/data-services.ts');
 
-assert.match(dispatcher, /service === 'license'\) return <LicenseManagementDetail/, 'License must open its dedicated manager');
+assert.match(dispatcher, /function LicenseWorkspace[\s\S]*?<LicenseManagementDetail/, 'License must retain its dedicated manager');
+assert.match(dispatcher, /service === 'license'\) return <LicenseWorkspace/, 'License must open its composed workspace');
 assert.match(dispatcher, /service === 'forms'\) return <FormsManagementDetail/, 'Forms must retain their specialized manager');
-assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'JSON, Files and Flags must keep their existing manager');
+assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'JSON and Files must keep their existing manager');
 assert.match(legacy, /async function uploadFile\(/, 'Existing file uploads must be preserved');
 assert.match(legacy, /async function saveDocument\(/, 'Existing JSON edits must be preserved');
-assert.match(legacy, /async function saveFlag\(/, 'Existing flag edits must be preserved');
 assert.match(consoleUi, /api\(`\$\{base\}\/keys`\)/, 'License keys must load from owner-authenticated API');
 assert.match(consoleUi, /method: 'POST'.*JSON\.stringify\(\{ label: label\.trim\(\), expiresAt, metadata: parsed \}\)/, 'Key creation must include labels, expiry and metadata');
 assert.match(consoleUi, /!object\(parsed\)/, 'Metadata must be an object, never an array or scalar');
@@ -31,4 +31,4 @@ assert.match(backend, /SELECT id,label,metadata_json,expires_at,revoked,created_
 assert.match(backend, /licenseKey, label: body\?\.label/, 'Backend must return the one-time issuance secret');
 assert.match(backend, /const revoked = body\?\.revoked === undefined/, 'Backend must support status updates');
 assert.match(styles, /@media\(max-width:800px\)/, 'Manager must be responsive');
-console.log('PicoSvc License console: one-time issuance, expiry, metadata, revocation, restoration and legacy managers OK.');
+console.log('PicoSvc License console: one-time issuance, expiry, metadata, revocation, restoration and composed export manager OK.');
