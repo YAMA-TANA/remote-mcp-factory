@@ -11,6 +11,7 @@ on:
       - 'scripts/test-picosvc-mcp-management-ui.mjs'
       - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-operational-insights.mjs'
+      - 'scripts/test-picosvc-fetch-shot-results.mjs'
       - 'scripts/test-picosvc-resource-exports.mjs'
       - 'scripts/test-picosvc-inventory-tools.mjs'
       - 'scripts/test-picosvc-standalone-management.mjs'
@@ -37,6 +38,7 @@ on:
       - 'scripts/test-picosvc-mcp-management-ui.mjs'
       - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-operational-insights.mjs'
+      - 'scripts/test-picosvc-fetch-shot-results.mjs'
       - 'scripts/test-picosvc-resource-exports.mjs'
       - 'scripts/test-picosvc-inventory-tools.mjs'
       - 'scripts/test-picosvc-standalone-management.mjs'
@@ -75,6 +77,7 @@ jobs:
       - run: node ../scripts/test-picosvc-mcp-management-ui.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-history-exports.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-operational-insights.mjs
+      - run: node --experimental-strip-types ../scripts/test-picosvc-fetch-shot-results.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-resource-exports.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-inventory-tools.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-standalone-management.mjs
