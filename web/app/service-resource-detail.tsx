@@ -2,6 +2,7 @@
 
 import type { GenericServiceSlug } from './service-data';
 import FormsManagementDetail from './service-forms-management';
+import LicenseManagementDetail from './service-license-management';
 import LegacyServiceResourceDetail from './service-resource-detail-legacy';
 
 type Props = {
@@ -13,8 +14,9 @@ type Props = {
   copyValue: (value: string) => Promise<void>;
 };
 
-/** Keep JSON, Files, License and Flags workflows unchanged while specializing Forms. */
+/** Route specialized management without changing JSON, Files or Flags workflows. */
 export default function ServiceResourceDetail(props: Props) {
   if (props.service === 'forms') return <FormsManagementDetail {...props} />;
+  if (props.service === 'license') return <LicenseManagementDetail {...props} />;
   return <LegacyServiceResourceDetail {...props} />;
 }
