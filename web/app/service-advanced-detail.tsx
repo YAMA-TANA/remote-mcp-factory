@@ -14,6 +14,7 @@ import { MonitorOperations } from './service-monitor-operations';
 import ServiceHistoryExport from './service-history-export';
 import ServiceOperationsInsights from './service-operations-insights';
 import ServiceSafeDiagnostics from './service-safe-diagnostics';
+import ServiceManagementGuide from './service-management-guide';
 
 type Props = ManagementProps & { service: GenericServiceSlug };
 
@@ -61,7 +62,7 @@ function withMcpEndpoint(resource: Props['resource']): Props['resource'] {
 }
 
 /** Preserve existing management actions while exposing the advanced APIs for each product. */
-export default function ServiceAdvancedDetail(props: Props) {
+function ServiceAdvancedDetailContent(props: Props) {
   if (props.service === 'mcp') return <div className="advancedManagementStack" key={String(props.resource.id)}><McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} /><ServiceSafeDiagnostics service="mcp" resource={props.resource} api={props.api} /></div>;
   if (props.service === 'rss') return <div className="advancedManagementStack" key={String(props.resource.id)}><RssManagementDetail {...props} /><RssSettingsExport resource={props.resource} /></div>;
   if (props.service === 'cron') return <div className="advancedManagementStack"><CronManagementDetail {...props} /><ServiceOperationsInsights key={`cron:${String(props.resource.id)}`} service="cron" resource={props.resource} api={props.api} /><ServiceHistoryExport service="cron" resource={props.resource} api={props.api} /></div>;
@@ -70,4 +71,8 @@ export default function ServiceAdvancedDetail(props: Props) {
   if (props.service === 'functions') return <FunctionWorkspace {...props} />;
   if (props.service === 'monitor') return <MonitorWorkspace {...props} />;
   return <LegacyServiceAdvancedDetail {...props} />;
+}
+
+export default function ServiceAdvancedDetail(props: Props) {
+  return <div className="advancedManagementStack"><ServiceManagementGuide service={props.service} /><ServiceAdvancedDetailContent {...props} /></div>;
 }
