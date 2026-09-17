@@ -10,6 +10,7 @@ import { MailOperations } from './service-mail-operations';
 import { FunctionsManagementDetail, MonitorManagementDetail } from './service-runtime-management';
 import { FunctionOperations } from './service-function-operations';
 import { MonitorOperations } from './service-monitor-operations';
+import ServiceHistoryExport from './service-history-export';
 
 type Props = ManagementProps & { service: GenericServiceSlug };
 
@@ -17,6 +18,7 @@ function MailWorkspace(props: Props) {
   return <div className="advancedManagementStack">
     <MailManagementDetail {...props} />
     <MailOperations {...props} key={String(props.resource.id)} />
+    <ServiceHistoryExport service="mail" resource={props.resource} api={props.api} />
   </div>;
 }
 
@@ -25,6 +27,7 @@ function FunctionWorkspace(props: Props) {
   return <div className="advancedManagementStack">
     <FunctionsManagementDetail {...props} key={`${String(props.resource.id)}:${revision}`} />
     <FunctionOperations {...props} onRollback={() => setRevision(previous => previous + 1)} />
+    <ServiceHistoryExport service="functions" resource={props.resource} api={props.api} />
   </div>;
 }
 
@@ -33,6 +36,7 @@ function MonitorWorkspace(props: Props) {
   return <div className="advancedManagementStack">
     <MonitorManagementDetail {...props} key={`${String(props.resource.id)}:${revision}`} />
     <MonitorOperations {...props} onOptionsChanged={() => setRevision(previous => previous + 1)} />
+    <ServiceHistoryExport service="monitor" resource={props.resource} api={props.api} />
   </div>;
 }
 
@@ -53,7 +57,7 @@ function withMcpEndpoint(resource: Props['resource']): Props['resource'] {
 export default function ServiceAdvancedDetail(props: Props) {
   if (props.service === 'mcp') return <McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} />;
   if (props.service === 'rss') return <RssManagementDetail {...props} />;
-  if (props.service === 'cron') return <CronManagementDetail {...props} />;
+  if (props.service === 'cron') return <div className="advancedManagementStack"><CronManagementDetail {...props} /><ServiceHistoryExport service="cron" resource={props.resource} api={props.api} /></div>;
   if (props.service === 'qr') return <QrManagementDetail {...props} />;
   if (props.service === 'mail') return <MailWorkspace {...props} />;
   if (props.service === 'functions') return <FunctionWorkspace {...props} />;
