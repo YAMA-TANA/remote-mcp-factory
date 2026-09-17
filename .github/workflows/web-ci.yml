@@ -12,6 +12,7 @@ on:
       - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-resource-exports.mjs'
       - 'scripts/test-picosvc-inventory-tools.mjs'
+      - 'scripts/test-picosvc-standalone-management.mjs'
       - 'scripts/test-picosvc-advanced-operations.mjs'
       - 'scripts/test-picosvc-forms-management.mjs'
       - 'scripts/test-picosvc-license-management.mjs'
@@ -35,6 +36,7 @@ on:
       - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-resource-exports.mjs'
       - 'scripts/test-picosvc-inventory-tools.mjs'
+      - 'scripts/test-picosvc-standalone-management.mjs'
       - 'scripts/test-picosvc-advanced-operations.mjs'
       - 'scripts/test-picosvc-forms-management.mjs'
       - 'scripts/test-picosvc-license-management.mjs'
@@ -70,6 +72,7 @@ jobs:
       - run: node --experimental-strip-types ../scripts/test-picosvc-history-exports.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-resource-exports.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-inventory-tools.mjs
+      - run: node --experimental-strip-types ../scripts/test-picosvc-standalone-management.mjs
       - run: node ../scripts/test-picosvc-advanced-operations.mjs
       - run: node ../scripts/test-picosvc-forms-management.mjs
       - run: node ../scripts/test-picosvc-license-management.mjs
