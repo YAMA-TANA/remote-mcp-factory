@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { GenericServiceSlug } from './service-data';
 import LegacyServiceAdvancedDetail from './service-advanced-detail-legacy';
+import McpManagementDetail from './service-mcp-management';
 import { CronManagementDetail, RssManagementDetail, type ManagementProps } from './service-management-detail';
 import { MailManagementDetail, QrManagementDetail } from './service-link-management';
 import { MailOperations } from './service-mail-operations';
@@ -35,8 +36,22 @@ function MonitorWorkspace(props: Props) {
   </div>;
 }
 
+/** The deployment listing omits endpoint, but the same Worker exposes /mcp/:id. */
+function withMcpEndpoint(resource: Props['resource']): Props['resource'] {
+  if (typeof resource.endpoint === 'string' && resource.endpoint) return resource;
+  const id = resource.id;
+  const configured = process.env.NEXT_PUBLIC_FACTORY_API_URL;
+  if (typeof id !== 'string' || !/^[a-z0-9][a-z0-9-]{5,40}$/.test(id) || !configured) return resource;
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.hostname === 'localhost')) return resource;
+    return { ...resource, endpoint: `${url.origin}/mcp/${encodeURIComponent(id)}` };
+  } catch { return resource; }
+}
+
 /** Preserve existing management actions while exposing the advanced APIs for each product. */
 export default function ServiceAdvancedDetail(props: Props) {
+  if (props.service === 'mcp') return <McpManagementDetail {...props} resource={withMcpEndpoint(props.resource)} />;
   if (props.service === 'rss') return <RssManagementDetail {...props} />;
   if (props.service === 'cron') return <CronManagementDetail {...props} />;
   if (props.service === 'qr') return <QrManagementDetail {...props} />;
