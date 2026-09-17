@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { escapeFormSearch, formCursor, parseFormCursor } from '../src/picosvc/forms-search.ts';
+import { escapeFormSearch, formCursor, parseFormCursor } from '../src/picosvc/forms-pagination.ts';
 
 const source = readFileSync(new URL('../src/picosvc/forms-search.ts', import.meta.url), 'utf8');
 const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url), 'utf8');
@@ -12,6 +12,7 @@ assert.match(source, /WHERE id=\? AND owner=\?/, 'Form must belong to requesting
 assert.match(source, /WHERE form_id=\? AND owner=\?/, 'Submission query must enforce tenant isolation');
 assert.match(source, /LIMIT \?/, 'Search and export queries must have a SQL limit');
 assert.match(source, /ESCAPE '\\\\'/, 'LIKE must have an explicit single-character escape');
+assert.match(source, /from '\.\/forms-pagination\.js'/, 'Runtime must consume the tested cursor helpers');
 assert.match(ui, /result\.nextBefore/, 'Existing UI must forward the opaque cursor');
 assert.match(ui, /\{ before \}/, 'Client must URL-encode the cursor via URLSearchParams');
 
@@ -68,6 +69,6 @@ insert.run(identity(218), 'form-a', 'owner-a', JSON.stringify({ text: 'has \\ li
 assert.deepEqual(page(null, '%').rows.map(row => row.id), [identity(216)], 'Percent is not a wildcard');
 assert.deepEqual(page(null, '_').rows.map(row => row.id), [identity(217)], 'Underscore is not a wildcard');
 assert.deepEqual(page(null, '\\').rows.map(row => row.id), [identity(218)], 'Backslash is matched literally');
-assert.deepEqual(db.prepare('PRAGMA integrity_check').all(), [{ integrity_check: 'ok' }]);
+assert.equal(db.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
 db.close();
 console.log('Forms lossless pagination: 3 pages without drops/duplicates, tenant filtering, literal %, _ and backslash, legacy cursors OK.');
