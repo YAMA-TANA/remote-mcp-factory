@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { GenericServiceSlug } from './service-data';
 import LegacyServiceAdvancedDetail from './service-advanced-detail-legacy';
+import McpManagementDetail from './service-mcp-management';
 import { CronManagementDetail, RssManagementDetail, type ManagementProps } from './service-management-detail';
 import { MailManagementDetail, QrManagementDetail } from './service-link-management';
 import { MailOperations } from './service-mail-operations';
@@ -37,6 +38,7 @@ function MonitorWorkspace(props: Props) {
 
 /** Preserve existing management actions while exposing the advanced APIs for each product. */
 export default function ServiceAdvancedDetail(props: Props) {
+  if (props.service === 'mcp') return <McpManagementDetail {...props} />;
   if (props.service === 'rss') return <RssManagementDetail {...props} />;
   if (props.service === 'cron') return <CronManagementDetail {...props} />;
   if (props.service === 'qr') return <QrManagementDetail {...props} />;
