@@ -32,9 +32,15 @@ assert.match(studio, /<ServiceAdvancedDetail/, 'Preserve advanced resource opera
 assert.match(studio, /role="alert"/, 'Expose API errors to assistive technology');
 assert.match(studio, /aria-pressed=\{filter === key\}/, 'Expose filter selection');
 assert.match(style, /@media/, 'Provide responsive layout');
-for (const [service, component] of [['rss', 'RssManagementDetail'], ['cron', 'CronManagementDetail'], ['qr', 'QrManagementDetail'], ['mail', 'MailManagementDetail'], ['functions', 'FunctionsManagementDetail'], ['monitor', 'MonitorManagementDetail']]) {
+for (const [service, component] of [['rss', 'RssManagementDetail'], ['cron', 'CronManagementDetail'], ['qr', 'QrManagementDetail'], ['mail', 'MailManagementDetail']]) {
   assert.match(routing, new RegExp(`props\\.service === '${service}'.*<${component}`), `${service} must open dedicated management`);
 }
+assert.match(routing, /props\.service === 'functions'.*<FunctionWorkspace/, 'Functions must open their composed management view');
+assert.match(routing, /function FunctionWorkspace[\s\S]*?<FunctionsManagementDetail/, 'Functions must retain their source editor');
+assert.match(routing, /function FunctionWorkspace[\s\S]*?<FunctionOperations/, 'Functions must expose advanced operations');
+assert.match(routing, /props\.service === 'monitor'.*<MonitorWorkspace/, 'Monitor must open its composed management view');
+assert.match(routing, /function MonitorWorkspace[\s\S]*?<MonitorManagementDetail/, 'Monitor must retain its status view');
+assert.match(routing, /function MonitorWorkspace[\s\S]*?<MonitorOperations/, 'Monitor must expose advanced diagnostics');
 assert.match(routing, /<LegacyServiceAdvancedDetail/, 'Unmigrated services must retain management actions');
 assert.match(legacy, /async function rotate\(/, 'Retain MCP secret and token management');
 assert.match(management, /\/preview.*method: 'POST'/, 'RSS must use its existing metered extraction endpoint');
