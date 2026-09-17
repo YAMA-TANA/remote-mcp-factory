@@ -72,14 +72,17 @@ export function summarizeRecentHistory(service: HistoryService, rows: readonly E
   const counts = new Map(days.map(day => [day, 0]));
   let durationSum = 0;
   for (const row of rows) {
-    summary[outcome(service, row)] += 1;
+    const classification = outcome(service, row);
+    summary[classification] += 1;
     const at = timestamp(service, row);
     if (at) {
       if (!summary.latestAt || at > summary.latestAt) summary.latestAt = at;
       const day = at.slice(0, 10);
       if (counts.has(day)) counts.set(day, (counts.get(day) || 0) + 1);
     }
-    if (service === 'cron' || service === 'functions') {
+    // Pending Cron rows are created with duration_ms=0 before execution completes.
+    // Do not let those placeholder zeros dilute the measured duration average.
+    if ((service === 'cron' || service === 'functions') && (classification === 'positive' || classification === 'negative')) {
       const raw = row.duration_ms;
       const duration = raw === null || raw === undefined || raw === '' ? NaN : Number(raw);
       if (Number.isFinite(duration) && duration >= 0 && duration <= 3_600_000) {
