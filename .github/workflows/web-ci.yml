@@ -9,6 +9,7 @@ on:
       - 'scripts/test-picosvc-workspace.mjs'
       - 'scripts/test-picosvc-service-studios.mjs'
       - 'scripts/test-picosvc-mcp-management-ui.mjs'
+      - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-advanced-operations.mjs'
       - 'scripts/test-picosvc-forms-management.mjs'
       - 'scripts/test-picosvc-license-management.mjs'
@@ -29,6 +30,7 @@ on:
       - 'scripts/test-picosvc-workspace.mjs'
       - 'scripts/test-picosvc-service-studios.mjs'
       - 'scripts/test-picosvc-mcp-management-ui.mjs'
+      - 'scripts/test-picosvc-history-exports.mjs'
       - 'scripts/test-picosvc-advanced-operations.mjs'
       - 'scripts/test-picosvc-forms-management.mjs'
       - 'scripts/test-picosvc-license-management.mjs'
@@ -61,6 +63,7 @@ jobs:
       - run: node --experimental-strip-types ../scripts/test-picosvc-workspace.mjs
       - run: node ../scripts/test-picosvc-service-studios.mjs
       - run: node ../scripts/test-picosvc-mcp-management-ui.mjs
+      - run: node --experimental-strip-types ../scripts/test-picosvc-history-exports.mjs
       - run: node ../scripts/test-picosvc-advanced-operations.mjs
       - run: node ../scripts/test-picosvc-forms-management.mjs
       - run: node ../scripts/test-picosvc-license-management.mjs
