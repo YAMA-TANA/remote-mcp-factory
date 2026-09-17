@@ -9,6 +9,7 @@ import LicenseManagementDetail from './service-license-management';
 import LegacyServiceResourceDetail from './service-resource-detail-legacy';
 import ServiceResourceExport from './service-resource-export-panel';
 import { FilesInventoryTools, JsonBackupTools } from './service-inventory-tools';
+import { FormsConfigurationDownload } from './service-management-portability';
 
 type Props = {
   service: GenericServiceSlug;
@@ -36,7 +37,7 @@ function FlagsWorkspace(props: Props) {
 export default function ServiceResourceDetail(props: Props) {
   if (props.service === 'files') return <FilesWorkspace {...props} />;
   if (props.service === 'json') return <JsonWorkspace {...props} />;
-  if (props.service === 'forms') return <FormsManagementDetail {...props} />;
+  if (props.service === 'forms') return <div className="advancedManagementStack" key={String(props.resource.id)}><FormsManagementDetail {...props} /><FormsConfigurationDownload resource={props.resource} api={props.api} /></div>;
   if (props.service === 'license') return <LicenseWorkspace {...props} />;
   if (props.service === 'flags') return <FlagsWorkspace {...props} />;
   return <LegacyServiceResourceDetail {...props} />;
