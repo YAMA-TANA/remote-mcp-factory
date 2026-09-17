@@ -80,8 +80,9 @@ export default function FilesManagementDetail({ resource, api, onClose, onChange
     try {
       // This API decodes JSON `path` once: encode it to preserve literal % sequences.
       const response = obj((await api(`${base}/sign`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: signedBodyPath(target), action: signAction, expiresInSeconds: duration }) })).payload);
-      if (!response || typeof response.url !== 'string' || typeof response.expiresAt !== 'string' || response.method !== (signAction === 'download' ? 'GET' : 'PUT')) throw new Error(t.failed);
-      setSigned({ url: response.url, method: response.method, expiresAt: response.expiresAt });
+      const expectedMethod = signAction === 'download' ? 'GET' : 'PUT';
+      if (!response || typeof response.url !== 'string' || typeof response.expiresAt !== 'string' || response.method !== expectedMethod) throw new Error(t.failed);
+      setSigned({ url: response.url, method: expectedMethod, expiresAt: response.expiresAt });
     } catch (reason) { setError(errorText(reason)); } finally { setBusy(''); }
   }
   function choose(pathValue: string) { setSelectedPath(pathValue); setSignPath(pathValue); setSignAction('download'); setSigned(null); setCacheChoice(''); setError(''); setNotice(''); }
