@@ -38,7 +38,7 @@ const route = source('web/app/service-advanced-detail.tsx');
 const css = source('web/app/service-safe-diagnostics.css');
 assert.match(route, /<McpManagementDetail[\s\S]*?<ServiceSafeDiagnostics service="mcp"/, 'MCP management retains existing console and diagnostics');
 assert.match(route, /<MailOperations[\s\S]*?<ServiceSafeDiagnostics service="mail"/, 'Mail operations and signing remain accessible');
-for (const path of ['`${base}/logs?limit=50`', '`${base}/metrics?days=30`', '`${base}/events`']) assert.ok(component.includes(path), `Diagnostics must use the existing authenticated route ${path}`);
+for (const path of ['`${base}/logs?limit=50`', '`${base}/metrics?days=30`', '/api/picosvc/mail/routes/${encodeURIComponent(id)}/events']) assert.ok(component.includes(path), `Diagnostics must use the existing authenticated route ${path}`);
 assert.match(component, /if \(sequence\.current === request\)/, 'Ignore superseded report requests');
 assert.match(component, /setSnapshot\(null\)/, 'Clear old snapshots before refresh');
 assert.match(component, /URL\.revokeObjectURL/, 'Revoke temporary download links');
