@@ -1,5 +1,3 @@
-import { csvCell } from './service-history-csv';
-
 export const MAX_BACKUP_PAGES = 10;
 export const MAX_BACKUP_BYTES = 8 * 1024 * 1024;
 export const FILE_INVENTORY_LIMIT = 500;
@@ -41,7 +39,7 @@ export async function collectJsonBackup(storeId: string, api: (path: string) => 
       const size = encoder.encode(serialized).byteLength + 1;
       if (bytes + size > MAX_DATA_BYTES) {
         if (!documents.length) throw new Error('JSON export exceeds the 8 MiB limit.');
-        return makeBackup(storeId, documents, pages, false, lastKey, bytes);
+        return makeBackup(storeId, documents, pages, false, lastKey);
       }
       documents.push(entry);
       seen.add(row.key);
@@ -53,13 +51,12 @@ export async function collectJsonBackup(storeId: string, api: (path: string) => 
     if (!rows.length || next !== lastKey || next <= cursor) throw new Error('Invalid or non-advancing JSON export cursor.');
     cursor = next;
   }
-  return makeBackup(storeId, documents, pages, complete, complete ? null : cursor, bytes);
+  return makeBackup(storeId, documents, pages, complete, complete ? null : cursor);
 }
 
-function makeBackup(storeId: string, documents: Array<{ key: string; value: unknown; updatedAt: string }>, pages: number, complete: boolean, nextCursor: string | null, bytes: number): Backup {
-  const content = JSON.stringify({ format: 'picosvc-json-backup-v1', storeId, exportedAt: new Date().toISOString(), complete, nextCursor, pages, documents }, null, 2);
+function makeBackup(storeId: string, documents: Array<{ key: string; value: unknown; updatedAt: string }>, pages: number, complete: boolean, nextCursor: string | null): Backup {
+  const content = JSON.stringify({ format: 'picosvc-json-backup-v1', storeId, exportedAt: new Date().toISOString(), complete, nextCursor, pages, documents });
   const actualBytes = encoder.encode(content).byteLength;
-  // Pretty printing expands the JSON. Never silently exceed the advertised byte limit.
   if (actualBytes > MAX_BACKUP_BYTES) throw new Error('JSON backup is too large. Download individual pages instead.');
   return { content, count: documents.length, pages, complete, nextCursor, bytes: actualBytes };
 }
@@ -79,6 +76,12 @@ export function filterFileInventory(rows: readonly FileEntry[], query: string, s
   const needle = query.trim().toLocaleLowerCase();
   const filtered = rows.filter(row => !needle || row.path.toLocaleLowerCase().includes(needle) || row.contentType.toLocaleLowerCase().includes(needle));
   return filtered.sort((a, b) => sort === 'path' ? a.path.localeCompare(b.path) : sort === 'size' ? b.sizeBytes - a.sizeBytes || a.path.localeCompare(b.path) : b.updatedAt.localeCompare(a.updatedAt) || a.path.localeCompare(b.path));
+}
+
+function csvCell(value: unknown): string {
+  const raw = value === null || value === undefined ? '' : String(value);
+  const safe = /^[\s\uFEFF]*[=+@-]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replace(/\0/g, '').replace(/"/g, '""')}"`;
 }
 
 export function fileInventoryCsv(rows: readonly FileEntry[]): string {
