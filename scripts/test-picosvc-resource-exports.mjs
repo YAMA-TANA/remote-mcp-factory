@@ -4,7 +4,7 @@ import { RESOURCE_EXPORTS, csvCell, readExportRows, serializeResourceExport } fr
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const routing = source('web/app/service-resource-detail.tsx');
-const component = source('web/app/service-resource-export.tsx');
+const component = source('web/app/service-resource-export-panel.tsx');
 const style = source('web/app/service-resource-export.css');
 
 assert.match(routing, /ServiceResourceExport service="license"/, 'License manager must expose metadata export');
