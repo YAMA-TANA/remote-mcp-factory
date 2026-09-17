@@ -10,9 +10,9 @@ const management = read('src/picosvc/data-services.ts');
 const styles = read('web/app/service-json-management.css');
 
 assert.match(dispatcher, /service === 'json'\) return <JsonManagementDetail/, 'JSON must open dedicated manager');
-for (const service of ['forms', 'license', 'flags']) assert.match(dispatcher, new RegExp(`service === '${service}'\\) return <`), `${service} keeps its dedicated manager`);
-assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'Files still uses legacy upload manager');
-assert.match(legacy, /async function uploadFile\(/, 'File upload remains available');
+for (const service of ['files', 'forms', 'license', 'flags']) assert.match(dispatcher, new RegExp(`service === '${service}'\\) return <`), `${service} keeps its dedicated manager`);
+assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'Legacy fallback remains available');
+assert.match(legacy, /async function uploadFile\(/, 'Original file upload code remains available during migration');
 assert.match(ui, /Object\.prototype\.hasOwnProperty\.call\(result, 'value'\)/, 'A null JSON value must not be mistaken for a missing document');
 assert.match(ui, /setDocValue\(JSON\.stringify\(result\.value, null, 2\)\)/, 'Read document values without null coalescing');
 assert.doesNotMatch(ui, /result\.value\s*\?\?/, 'Never replace a null document with its response envelope');
