@@ -1,8 +1,12 @@
-import { csvCell } from './service-history-csv';
-
 export type MockSummary = { id: string; name: string; method: string; path: string; statusCode: number; contentType: string; enabled: boolean; updatedAt: string };
 export type HookSummary = { id: string; method: string; path: string; contentType: string | null; sizeBytes: number; receivedAt: string };
 
+function csvCell(value: unknown): string {
+  const raw = value === null || value === undefined ? '' : String(value);
+  // Spreadsheet software can execute formulas even with leading whitespace.
+  const safe = /^[\s\uFEFF]*[=+@-]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replace(/\0/g, '').replace(/"/g, '""')}"`;
+}
 /** Export only operational metadata, never mock response bodies/headers or webhook request payloads. */
 function csv(columns: readonly string[], rows: readonly unknown[][]): string {
   return `\uFEFF${[columns.map(csvCell).join(','), ...rows.map(row => row.map(csvCell).join(','))].join('\r\n')}\r\n`;
