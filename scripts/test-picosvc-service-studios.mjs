@@ -5,6 +5,10 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const page = read('web/app/[locale]/[service]/app/page.tsx');
 const studio = read('web/app/service-studio.tsx');
 const style = read('web/app/service-studio.css');
+const management = read('web/app/service-management-detail.tsx');
+const managementStyle = read('web/app/service-management-detail.css');
+const routing = read('web/app/service-advanced-detail.tsx');
+const legacy = read('web/app/service-advanced-detail-legacy.tsx');
 const routes = ['mcp', 'rss', 'mail', 'qr', 'cron', 'functions', 'json', 'files', 'license', 'flags', 'monitor', 'forms'];
 for (const slug of routes) {
   assert.match(studio, new RegExp(`\\b${slug}: \\{`), `Missing ${slug} service description`);
@@ -20,4 +24,18 @@ assert.match(studio, /<ServiceAdvancedDetail/, 'Preserve advanced resource opera
 assert.match(studio, /role="alert"/, 'Expose API errors to assistive technology');
 assert.match(studio, /aria-pressed=\{filter === key\}/, 'Expose filter selection');
 assert.match(style, /@media/, 'Provide responsive layout');
-console.log('PicoSvc 12 service studios: routing, distinct composers, security and responsive UI OK.');
+assert.match(routing, /props\.service === 'rss'.*<RssManagementDetail/, 'RSS must open its own management screen');
+assert.match(routing, /props\.service === 'cron'.*<CronManagementDetail/, 'Cron must open its own management screen');
+assert.match(routing, /<LegacyServiceAdvancedDetail/, 'Unmigrated services must retain management actions');
+assert.match(legacy, /async function rotate\(/, 'Retain MCP secret and token management');
+assert.match(management, /\/preview.*method: 'POST'/, 'RSS must use its existing metered extraction endpoint');
+assert.match(management, /\/refresh.*method: 'POST'/, 'RSS must use its existing metered refresh endpoint');
+assert.match(management, /Array\.isArray\(result\.items\)/, 'RSS preview must verify an article list');
+assert.match(management, /<article key=/, 'RSS articles must be displayed as readable cards');
+assert.match(management, /api\(`\$\{base\}\/runs`\)/, 'Cron must load real run history');
+for (const property of ['timezone', 'expectedStatus', 'maxRetries', 'notificationUrl']) assert.match(management, new RegExp(`\\b${property}:`), `Cron must expose ${property}`);
+assert.match(management, /relatedAttempts = attempts\.filter/, 'Cron must associate retry attempts with each run');
+assert.match(management, /relatedNotices = notifications\.filter/, 'Cron must associate failure alerts with each run');
+assert.match(management, /safeUrl\(draft\.targetUrl\)/, 'Management URL validation must stay in place');
+assert.match(managementStyle, /@media/, 'Management screens must remain responsive');
+console.log('PicoSvc service studios and dedicated RSS/Cron management: routing, API contracts, safe URLs and responsive UI OK.');
