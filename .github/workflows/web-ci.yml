@@ -11,6 +11,7 @@ on:
       - 'scripts/test-picosvc-advanced-operations.mjs'
       - 'scripts/test-picosvc-forms-management.mjs'
       - 'scripts/test-picosvc-license-management.mjs'
+      - 'scripts/test-picosvc-flags-management.mjs'
       - 'scripts/test-picosvc-creation.mjs'
       - 'scripts/test-picosvc-icons.mjs'
       - 'scripts/test-picosvc-discovery.mjs'
@@ -27,6 +28,7 @@ on:
       - 'scripts/test-picosvc-advanced-operations.mjs'
       - 'scripts/test-picosvc-forms-management.mjs'
       - 'scripts/test-picosvc-license-management.mjs'
+      - 'scripts/test-picosvc-flags-management.mjs'
       - 'scripts/test-picosvc-creation.mjs'
       - 'scripts/test-picosvc-icons.mjs'
       - 'scripts/test-picosvc-discovery.mjs'
@@ -55,6 +57,7 @@ jobs:
       - run: node ../scripts/test-picosvc-advanced-operations.mjs
       - run: node ../scripts/test-picosvc-forms-management.mjs
       - run: node ../scripts/test-picosvc-license-management.mjs
+      - run: node --experimental-strip-types ../scripts/test-picosvc-flags-management.mjs
       - run: node ../scripts/test-picosvc-icons.mjs
       - run: node --experimental-strip-types ../scripts/test-picosvc-discovery.mjs
       - run: npm run build
