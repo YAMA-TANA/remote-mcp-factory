@@ -21,7 +21,9 @@ assert.equal(fileUrl('https://api.example.com/old', publicId, 'images/a b.png'),
 assert.equal(fileUrl('https://api.example.com', publicId, '../bad'), null);
 assert.equal(fileUrl('javascript:alert(1)', publicId, 'ok'), null);
 assert.equal(fileUrl('https://api.example.com', 'not-public-id', 'ok'), null);
-assert.match(router, /service === 'files'\) return <FilesManagementDetail/, 'Files has a dedicated console');
+assert.match(router, /service === 'files'\) return <FilesWorkspace/, 'Files opens composed console');
+assert.match(router, /function FilesWorkspace[\s\S]*?<FilesManagementDetail/, 'Files retains the original management console');
+assert.match(router, /function FilesWorkspace[\s\S]*?<FilesInventoryTools/, 'Files adds searchable inventory');
 for (const service of ['json','forms','license','flags']) assert.match(router, new RegExp(`service === '${service}'\\) return <`), `Keep ${service} manager`);
 assert.match(ui, /Promise\.all\(\[api\(`\$\{base\}\/access`\), api\(`\$\{base\}\/objects`\)\]\)/, 'Load saved access mode and file inventory');
 assert.match(ui, /mode === 'public' \? fileUrl\(/, 'Never display a public URL for private files');
@@ -44,4 +46,4 @@ assert.match(backend, /space\.access_mode === 'private' \? 'private, no-store'/,
 assert.match(backend, /validSignature\(request, env, space, upload \? 'upload' : 'download', path\)/, 'Signed URLs validated at runtime');
 assert.match(legacy, /ORDER BY updated_at DESC LIMIT 500/, 'Show real list bound');
 assert.match(css, /@media\(max-width:800px\)/, 'Files manager supports mobile');
-console.log('PicoSvc Files console: path and TTL validation, percent-safe signed URLs, private links and regression contracts OK.');
+console.log('PicoSvc Files console: upload, signed URLs, private links and inventory workspace regression contracts OK.');
