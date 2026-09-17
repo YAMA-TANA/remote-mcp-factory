@@ -7,6 +7,7 @@ const legacy = source('web/app/service-resource-detail-legacy.tsx');
 const ui = source('web/app/service-forms-management.tsx');
 const css = source('web/app/service-forms-management.css');
 const backend = source('src/picosvc/forms-advanced.ts');
+const search = source('src/picosvc/forms-search.ts');
 const basic = source('src/picosvc/data-services.ts');
 assert.match(wrapper, /props\.service === 'forms'.*<FormsManagementDetail/, 'Forms resources need their dedicated console');
 assert.match(wrapper, /<LegacyServiceResourceDetail/, 'Retain existing JSON, Files, License and Flags tools');
@@ -33,4 +34,16 @@ assert.match(ui, /window\.confirm\(t\.confirm\)/, 'Require confirmation for dest
 assert.match(backend, /MAX_EXPORT_ROWS = 500/, 'CSV cap must match UI copy');
 assert.match(basic, /const formMatch = url\.pathname\.match/, 'Form ownership and deletion routes exist');
 assert.match(css, /@media\(max-width:500px\)/, 'Forms console must adapt to mobile screens');
-console.log('PicoSvc Forms console checks OK: settings, validated origins/fields, search/pagination, delivery, CSV, legacy fallback and responsive layout.');
+
+// The initial-load callback must remain stable when form drafts or search queries change.
+assert.match(ui, /const refresh = useCallback\(async \(q = '', replaceSettings = true\) =>/, 'Initial load accepts explicit query and draft replacement');
+assert.match(ui, /Promise\.all\(\[loadSettings\(replaceSettings\), loadSubmissions\(q\), loadDeliveries\(\)\]\)/, 'Refresh uses explicit arguments');
+assert.match(ui, /\}, \[loadSettings, loadSubmissions, loadDeliveries\]\);\s*useEffect\(\(\) => \{ void refresh\(\); \}, \[refresh\]\);/, 'Draft and search state must not re-trigger the initial-load effect');
+assert.match(ui, /void refresh\(appliedSearch, !dirty\)/, 'Manual refresh retains applied search and unsaved draft');
+assert.match(ui, /busy \|\| \(dirty && !window\.confirm\(t\.discard\)\)/, 'Reload must confirm before replacing unsaved settings');
+assert.match(ui, /setBusy\('reload-settings'\)/, 'Settings reload must block competing edits');
+assert.match(ui, /nextBefore:|result\.nextBefore/, 'UI must accept the corrected opaque pagination cursor');
+assert.match(search, /received_at = \? AND id < \?/, 'Backend must paginate same-timestamp submissions by id');
+assert.doesNotMatch(ui, /同時刻の投稿はページ境界で省略される可能性|identical timestamps may be skipped|时间戳相同的记录可能在分页时跳过/, 'Remove outdated data-loss warnings in every language');
+for (const text of ['同時刻の投稿も投稿ID', 'share the same timestamp', '同一时间戳的记录']) assert.ok(ui.includes(text), `Corrected cursor copy missing: ${text}`);
+console.log('PicoSvc Forms console checks OK: safe draft refresh, corrected cursor guidance, protection settings, search, delivery and CSV.');
