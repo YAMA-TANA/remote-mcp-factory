@@ -12,6 +12,7 @@ import { configManagementRoutes } from './config-service.js';
 import { cronAdvancedManagementRoutes } from './cron-advanced.js';
 import { cronManagementRoutes } from './cron-service.js';
 import { dataManagementRoutes } from './data-services.js';
+import { flagsWriteGuard } from './flags-write-guard.js';
 import { reliableFetchRoute } from './fetch-reliable.js';
 import { filesAccessManagementRoutes } from './files-access.js';
 import { formsAdvancedManagementRoutes } from './forms-advanced.js';
@@ -67,6 +68,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     configManagementRoutes,
     jsonAdvancedManagementRoutes,
     licenseAdvancedManagementRoutes,
+    flagsWriteGuard,
     dataManagementRoutes,
     functionManagementRoutes,
     cronManagementRoutes,
@@ -94,7 +96,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
       bundleEntitlements = rows.results || [];
     } catch { // Rolling deploy compatibility before migration 0008.
     }
-    const usage = await env.DB.prepare(`SELECT product, metric, quantity, updated_at FROM product_usage_monthly WHERE owner=? AND month=? ORDER BY product, metric`).bind(identity.ownerId, monthKey()).all();
+    const usage = await env.DB.prepare(`SELECT product, metric, quantity, updated_at FROM product_usage_monthly WHERE owner=? AND month=?`).bind(identity.ownerId, monthKey()).all();
     return json({ userId: identity.userId, orgId: identity.orgId, ownerId: identity.ownerId, month: monthKey(), billing: PICOSVC_BILLING_MODEL, entitlements: entitlements.results, bundleEntitlements, usage: usage.results });
   }
   return null;
