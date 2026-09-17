@@ -26,9 +26,10 @@ assert.throws(() => parseFlagDraft('checkout', '"' + 'a'.repeat(MAX_FLAG_VALUE_B
 assert.throws(() => parseFlagDraft('checkout', '"' + '界'.repeat(22000) + '"'), /64 KiB/, 'Validate UTF-8 bytes, not just characters');
 assert.equal(parseFlagDraft('checkout', '"' + 'a'.repeat(100) + '"').key, 'checkout');
 
-assert.match(router, /service === 'flags'\) return <FlagsManagementDetail/, 'Flags must open dedicated management');
+assert.match(router, /function FlagsWorkspace[\s\S]*?<FlagsManagementDetail/, 'Flags must retain dedicated management');
+assert.match(router, /service === 'flags'\) return <FlagsWorkspace/, 'Flags must open composed management');
 assert.match(router, /service === 'forms'\) return <FormsManagementDetail/, 'Forms must remain specialized');
-assert.match(router, /service === 'license'\) return <LicenseManagementDetail/, 'License must remain specialized');
+assert.match(router, /function LicenseWorkspace[\s\S]*?<LicenseManagementDetail/, 'License must remain specialized');
 assert.match(router, /<LegacyServiceResourceDetail/, 'JSON and Files must retain existing tools');
 assert.match(legacy, /async function uploadFile\(/, 'File upload must remain accessible');
 assert.match(legacy, /async function saveDocument\(/, 'JSON document editing must remain accessible');
@@ -51,4 +52,4 @@ assert.match(guard, /productLimit\(env, owner, 'flags', 'flags'\)/, 'New null-va
 assert.match(guard, /\.bind\(project\.id, key, 'null', enabled, now\)/, 'Persist literal JSON null without false coercion');
 assert.match(dispatch, /flagsWriteGuard,[\s\S]*?dataManagementRoutes,/, 'Null guard must run before original data management');
 assert.match(style, /@media\(max-width:820px\)/, 'Flag console must fit mobile screens');
-console.log('PicoSvc Flags: JSON validation, editing, publish controls, null persistence guard and existing managers OK.');
+console.log('PicoSvc Flags: JSON validation, editing, publish controls, null persistence guard and composed export manager OK.');
