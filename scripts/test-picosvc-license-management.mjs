@@ -10,7 +10,8 @@ const backend = read('src/picosvc/data-services.ts');
 
 assert.match(dispatcher, /function LicenseWorkspace[\s\S]*?<LicenseManagementDetail/, 'License must retain its dedicated manager');
 assert.match(dispatcher, /service === 'license'\) return <LicenseWorkspace/, 'License must open its composed workspace');
-assert.match(dispatcher, /service === 'forms'\) return <FormsManagementDetail/, 'Forms must retain their specialized manager');
+assert.match(dispatcher, /function FormsWorkspace[\s\S]*?<FormsManagementDetail/, 'Forms must retain their specialized manager');
+assert.match(dispatcher, /service === 'forms'\) return <FormsWorkspace/, 'Forms must open their composed workspace');
 assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'JSON and Files must keep their existing manager');
 assert.match(legacy, /async function uploadFile\(/, 'Existing file uploads must be preserved');
 assert.match(legacy, /async function saveDocument\(/, 'Existing JSON edits must be preserved');

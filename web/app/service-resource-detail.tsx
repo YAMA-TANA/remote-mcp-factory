@@ -9,6 +9,7 @@ import LicenseManagementDetail from './service-license-management';
 import LegacyServiceResourceDetail from './service-resource-detail-legacy';
 import ServiceResourceExport from './service-resource-export-panel';
 import { FilesInventoryTools, JsonBackupTools } from './service-inventory-tools';
+import { FlagsGovernanceTools, FormsGovernanceTools, LicenseGovernanceTools } from './service-governance-tools';
 
 type Props = {
   service: GenericServiceSlug;
@@ -25,18 +26,21 @@ function FilesWorkspace(props: Props) {
 function JsonWorkspace(props: Props) {
   return <div className="advancedManagementStack" key={String(props.resource.id)}><JsonManagementDetail {...props} /><JsonBackupTools resource={props.resource} api={props.api} /></div>;
 }
+function FormsWorkspace(props: Props) {
+  return <div className="advancedManagementStack" key={String(props.resource.id)}><FormsManagementDetail {...props} /><FormsGovernanceTools resource={props.resource} api={props.api} /></div>;
+}
 function LicenseWorkspace(props: Props) {
-  return <div className="advancedManagementStack"><LicenseManagementDetail {...props} /><ServiceResourceExport service="license" resource={props.resource} api={props.api} /></div>;
+  return <div className="advancedManagementStack" key={String(props.resource.id)}><LicenseManagementDetail {...props} /><LicenseGovernanceTools resource={props.resource} api={props.api} /><ServiceResourceExport service="license" resource={props.resource} api={props.api} /></div>;
 }
 function FlagsWorkspace(props: Props) {
-  return <div className="advancedManagementStack"><FlagsManagementDetail {...props} /><ServiceResourceExport service="flags" resource={props.resource} api={props.api} /></div>;
+  return <div className="advancedManagementStack" key={String(props.resource.id)}><FlagsManagementDetail {...props} /><FlagsGovernanceTools resource={props.resource} api={props.api} /><ServiceResourceExport service="flags" resource={props.resource} api={props.api} /></div>;
 }
 
 /** Route specialized management without changing other service workflows. */
 export default function ServiceResourceDetail(props: Props) {
   if (props.service === 'files') return <FilesWorkspace {...props} />;
   if (props.service === 'json') return <JsonWorkspace {...props} />;
-  if (props.service === 'forms') return <FormsManagementDetail {...props} />;
+  if (props.service === 'forms') return <FormsWorkspace {...props} />;
   if (props.service === 'license') return <LicenseWorkspace {...props} />;
   if (props.service === 'flags') return <FlagsWorkspace {...props} />;
   return <LegacyServiceResourceDetail {...props} />;
