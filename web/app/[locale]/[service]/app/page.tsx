@@ -6,6 +6,7 @@ import FetchWorkspace from '../../../fetch-workspace';
 import ShotWorkspace from '../../../shot-workspace-v2';
 import MonitorDiagnostics from '../../../monitor-diagnostics';
 import CustomerWorkspaceHeader from '../../../customer-workspace-header';
+import ServiceManagementGuide from '../../../service-management-guide';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 import { GENERIC_SERVICE_SLUGS, SERVICE_INFO, isGenericServiceSlug } from '../../../service-data';
 import '../../../service-advanced.css';
@@ -23,6 +24,7 @@ export default async function ServiceAppPage({ params }: { params: Promise<{ loc
   const iconStyle = { '--product-icon': `url('/icons/${service}.svg')` } as CSSProperties;
   return <div className="picoProductTheme" style={iconStyle}>
     <CustomerWorkspaceHeader service={service} locale={locale} />
+    {(service === 'shot' || service === 'fetch') && <section className="shell serviceManagementGuideStandalone"><ServiceManagementGuide service={service} /></section>}
     {service === 'shot' ? <ShotWorkspace /> : service === 'fetch' ? <FetchWorkspace /> : service === 'monitor' ? <><ServiceStudio service={service} /><MonitorDiagnostics /></> : <ServiceStudio service={service} />}
   </div>;
 }
