@@ -3,7 +3,7 @@ export class ResponseLimitError extends Error {
 }
 
 /** Read at most maxBytes, even when upstream omits or lies about Content-Length. */
-export async function readBoundedResponse(response: Response, maxBytes: number, signal?: AbortSignal): Promise<Uint8Array> {
+export async function readBoundedResponse(response: Pick<Response, 'body' | 'headers'>, maxBytes: number, signal?: AbortSignal): Promise<Uint8Array> {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) throw new RangeError('maxBytes must be a positive integer');
   const declared = Number(response.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) {
