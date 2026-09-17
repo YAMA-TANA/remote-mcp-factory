@@ -16,6 +16,7 @@ import { flagsWriteGuard } from './flags-write-guard.js';
 import { reliableFetchRoute } from './fetch-reliable.js';
 import { filesAccessManagementRoutes } from './files-access.js';
 import { formsAdvancedManagementRoutes } from './forms-advanced.js';
+import { formsSearchManagementRoutes } from './forms-search.js';
 import { functionsAdvancedManagementRoutes } from './functions-advanced.js';
 import { functionManagementRoutes } from './functions-service.js';
 import { hooksAdvancedManagementRoutes } from './hooks-advanced.js';
@@ -50,6 +51,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     shotQualityManagementRoutes,
     mcpObservabilityManagementRoutes,
     filesAccessManagementRoutes,
+    formsSearchManagementRoutes,
     formsAdvancedManagementRoutes,
     reliableOnboardingRoutes,
     monitorDraftPreviewRoute,
