@@ -11,6 +11,10 @@ const routing = read('web/app/service-advanced-detail.tsx');
 const legacy = read('web/app/service-advanced-detail-legacy.tsx');
 const links = read('web/app/service-link-management.tsx');
 const linkStyle = read('web/app/service-link-management.css');
+const mailOperations = read('web/app/service-mail-operations.tsx');
+const mailOperationsStyle = read('web/app/service-mail-operations.css');
+const mailAdvanced = read('src/picosvc/mail-advanced.ts');
+const mailGuard = read('src/picosvc/mail-retry-guard.ts');
 const runtime = read('web/app/service-runtime-management.tsx');
 const runtimeStyle = read('web/app/service-runtime-management.css');
 const qrApi = read('src/picosvc/utility-services.ts');
@@ -32,9 +36,12 @@ assert.match(studio, /<ServiceAdvancedDetail/, 'Preserve advanced resource opera
 assert.match(studio, /role="alert"/, 'Expose API errors to assistive technology');
 assert.match(studio, /aria-pressed=\{filter === key\}/, 'Expose filter selection');
 assert.match(style, /@media/, 'Provide responsive layout');
-for (const [service, component] of [['rss', 'RssManagementDetail'], ['cron', 'CronManagementDetail'], ['qr', 'QrManagementDetail'], ['mail', 'MailManagementDetail']]) {
+for (const [service, component] of [['rss', 'RssManagementDetail'], ['cron', 'CronManagementDetail'], ['qr', 'QrManagementDetail']]) {
   assert.match(routing, new RegExp(`props\\.service === '${service}'.*<${component}`), `${service} must open dedicated management`);
 }
+assert.match(routing, /props\.service === 'mail'.*<MailWorkspace/, 'Mail must open its composed management view');
+assert.match(routing, /function MailWorkspace[\s\S]*?<MailManagementDetail/, 'Mail must retain its route settings and history');
+assert.match(routing, /function MailWorkspace[\s\S]*?<MailOperations/, 'Mail must expose advanced delivery operations');
 assert.match(routing, /props\.service === 'functions'.*<FunctionWorkspace/, 'Functions must open their composed management view');
 assert.match(routing, /function FunctionWorkspace[\s\S]*?<FunctionsManagementDetail/, 'Functions must retain their source editor');
 assert.match(routing, /function FunctionWorkspace[\s\S]*?<FunctionOperations/, 'Functions must expose advanced operations');
@@ -64,6 +71,22 @@ assert.match(links, /api\(`\$\{base\}\/events`\)/, 'Mail must load delivery even
 assert.match(links, /Array\.isArray\(result\.events\)/, 'Mail must validate event responses');
 assert.match(links, /delivery_status/, 'Mail must display actual delivery statuses');
 assert.doesNotMatch(links, /rawBase64|bodyBase64/, 'Do not expose raw mail bodies in management UI');
+assert.match(mailOperations, /export function MailOperations/, 'Mail advanced console must be wired');
+assert.match(mailOperations, /\$\{base\}\/signing-key/, 'Mail must rotate the real signing key');
+assert.match(mailOperations, /response\.signingSecret/, 'Only display a newly rotated signing secret');
+assert.match(mailOperations, /window\.confirm\(t\.rotateConfirm\)/, 'Warn before invalidating an existing signing secret');
+assert.match(mailOperations, /\/api\/picosvc\/mail\/events\//, 'Mail must load authenticated event details');
+assert.match(mailOperations, /response\.attachments/, 'Mail must verify attachment metadata');
+assert.match(mailOperations, /response\.blob/, 'Mail downloads must use authenticated binary responses');
+assert.match(mailOperations, /URL\.revokeObjectURL/, 'Mail downloads must release temporary blob URLs');
+assert.match(mailOperations, /attemptCount < 4/, 'Mail must not offer retry once capped');
+assert.match(mailOperations, /window\.confirm\(t\.retryConfirm\)/, 'Warn before potential duplicate webhook delivery');
+assert.doesNotMatch(mailOperations, /dangerouslySetInnerHTML|rawBase64/, 'Never execute mail HTML or expose raw MIME');
+assert.match(mailOperationsStyle, /@media/, 'Mail operations must be responsive');
+assert.match(mailAdvanced, /suffix === 'signing-key'|\/signing-key\$/, 'Signing API must be available');
+assert.match(mailAdvanced, /details\[2\] === 'retry'/, 'Retry API must be available');
+assert.match(mailAdvanced, /details\[2\]\?\.startsWith\('attachments\/'\)/, 'Authenticated attachment API must be available');
+assert.match(mailGuard, /attempts >= MAX_MAIL_ATTEMPTS/, 'Server must cap manual attempts');
 assert.match(qrApi, /svgMatch/, 'QR public SVG must exist server-side');
 assert.match(mailApi, /routeMatch\[2\] === 'events'/, 'Mail event endpoint must exist server-side');
 assert.match(linkStyle, /@media/, 'QR and Mail screens must work on mobile');
@@ -82,4 +105,4 @@ assert.match(runtime, /window\.confirm\(t\.confirm\)/, 'Require confirmation bef
 assert.match(functionsApi, /const MAX_CODE_BYTES = 64 \* 1024/, 'Functions code size must match backend');
 assert.match(monitorApi, /minIntervalMinutes/, 'Monitor tier minimum must exist server-side');
 assert.match(runtimeStyle, /@media/, 'Functions and Monitor screens must work on mobile');
-console.log('PicoSvc six dedicated management flows: routing, API contracts, size/interval guards and responsive UI OK.');
+console.log('PicoSvc dedicated management: Mail signing, message details, authenticated attachments and bounded retry; other six flows retained.');
