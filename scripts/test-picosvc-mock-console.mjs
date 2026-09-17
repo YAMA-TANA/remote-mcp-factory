@@ -20,6 +20,6 @@ assert.doesNotMatch(consoleSource, /dangerouslySetInnerHTML|entry\.headers|entry
 assert.match(mockApi, /WHERE id=\? AND owner=\?/, 'Mock management must scope endpoints to owner');
 assert.match(advancedApi, /WHERE endpoint_id=\? AND owner=\?/, 'Rules and request history must be owner scoped');
 assert.match(css, /@media\(max-width:760px\)/, 'Support small screens');
-assert.throws(() => mockRequestBody({ name:'x',method:'GET',path:'/',statusCode:'200',contentType:'text/plain',body:'',enabled:true }), /Path/);
+assert.throws(() => mockRequestBody({ name:'x',method:'GET',path:'/bad path/',statusCode:'200',contentType:'text/plain',body:'',enabled:true }), /Path/);
 assert.equal(mockRequestBody({ name:'x',method:'POST',path:'/api/test/',statusCode:'201',contentType:'application/json',body:'{}',enabled:true }).path, 'api/test');
 console.log('PicoSvc Mock app: per-endpoint management, safety and backend contracts OK.');
