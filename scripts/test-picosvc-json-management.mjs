@@ -9,7 +9,9 @@ const backend = read('src/picosvc/json-advanced.ts');
 const management = read('src/picosvc/data-services.ts');
 const styles = read('web/app/service-json-management.css');
 
-assert.match(dispatcher, /service === 'json'\) return <JsonManagementDetail/, 'JSON must open dedicated manager');
+assert.match(dispatcher, /service === 'json'\) return <JsonWorkspace/, 'JSON opens its composed manager');
+assert.match(dispatcher, /function JsonWorkspace[\s\S]*?<JsonManagementDetail/, 'JSON retains its original dedicated editor');
+assert.match(dispatcher, /function JsonWorkspace[\s\S]*?<JsonBackupTools/, 'JSON exposes bounded multi-page backup');
 for (const service of ['files', 'forms', 'license', 'flags']) assert.match(dispatcher, new RegExp(`service === '${service}'\\) return <`), `${service} keeps its dedicated manager`);
 assert.match(dispatcher, /<LegacyServiceResourceDetail/, 'Legacy fallback remains available');
 assert.match(legacy, /async function uploadFile\(/, 'Original file upload code remains available during migration');
@@ -36,4 +38,4 @@ assert.match(backend, /key\.startsWith\(scoped\.key_prefix\)/, 'Scoped key prefi
 assert.match(backend, /WHERE store_id=\? AND key>\? ORDER BY key LIMIT 101/, 'Export is paginated and bounded');
 assert.match(management, /suffix === 'token\/rotate' && request\.method === 'POST'/, 'Master token can rotate without exposing stored hashes');
 assert.match(styles, /@media\(max-width:540px\)/, 'JSON manager supports narrow screens');
-console.log('PicoSvc JSON console contracts OK: null document reads, scoped secrets, public-read controls and bounded export.');
+console.log('PicoSvc JSON console contracts OK: null document reads, scoped secrets, public-read controls, paginated export and backup workspace.');
