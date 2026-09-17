@@ -7,7 +7,7 @@ import FormsManagementDetail from './service-forms-management';
 import JsonManagementDetail from './service-json-management';
 import LicenseManagementDetail from './service-license-management';
 import LegacyServiceResourceDetail from './service-resource-detail-legacy';
-import ServiceResourceExport from './service-resource-export';
+import ServiceResourceExport from './service-resource-export-panel';
 
 type Props = {
   service: GenericServiceSlug;
