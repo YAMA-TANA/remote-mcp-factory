@@ -1,6 +1,6 @@
 import type { Env } from '../types.js';
-import { readBoundedResponse, ResponseLimitError } from './bounded-response.js';
-import { appearsBinary, readFetchJson } from './fetch-safety.js';
+import { readBoundedResponse, readFetchJson, ResponseLimitError } from './bounded-response.js';
+import { appearsBinary } from './fetch-safety.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
 import { fetchPublic, safePublicUrl } from './security.js';
 
