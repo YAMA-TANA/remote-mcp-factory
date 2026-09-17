@@ -40,6 +40,7 @@ jobs:
       - run: node --experimental-sqlite --experimental-strip-types scripts/test-picosvc-cron-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-functions-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-forms-advanced.mjs
+      - run: node --experimental-sqlite --experimental-strip-types scripts/test-picosvc-forms-pagination.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-monitor-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-mcp-observability.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-migrations.mjs
