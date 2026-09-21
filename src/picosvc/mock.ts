@@ -142,6 +142,7 @@ export async function mockManagementRoutes(request: Request, env: Env): Promise<
       : 'application/json; charset=utf-8';
     const responseBody = typeof body.body === 'string' ? body.body : JSON.stringify(body.body ?? {});
     const headers = safeHeaders(body.headers);
+    const enabled = body.enabled === false ? 0 : 1;
 
     if (!name) return json({ error: 'name is required' }, 400);
     if (!METHODS.has(method)) return json({ error: 'Unsupported HTTP method' }, 400);
@@ -155,8 +156,8 @@ export async function mockManagementRoutes(request: Request, env: Env): Promise<
     await env.DB.prepare(`
       INSERT INTO mock_endpoints
         (id, owner, public_id, name, method, path, status_code, content_type, headers_json, body, enabled, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-    `).bind(id, owner, publicId, name, method, path, statusCode, contentType, JSON.stringify(headers), responseBody, now, now).run();
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(id, owner, publicId, name, method, path, statusCode, contentType, JSON.stringify(headers), responseBody, enabled, now, now).run();
 
     const row = await ownedEndpoint(env, owner, id);
     return json({ tier, limit, endpoint: row ? serialize(row, origin) : null }, 201);
