@@ -26,6 +26,7 @@ jobs:
       - run: node --experimental-strip-types scripts/test-picosvc-resource-desks.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-operations-desks.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-customer-desks.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-flags-files-desks.mjs
       - run: node --experimental-strip-types scripts/test-github-app-crypto.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-pricing.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-margin.mjs
