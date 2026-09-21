@@ -12,13 +12,18 @@ const COPY = {
 export default function CustomerWorkspaceHeader({ service, locale }: { service: ProductSlug; locale: Locale }) {
   const lang = locale === 'zh-CN' ? 'zh-cn' : locale;
   const c = COPY[locale];
+  // Match the explicit static management routes. New products must add a manager before gaining this link.
+  const hasManagement = service === 'mcp' || service === 'mock' || service === 'cron' || service === 'mail'
+    || service === 'qr' || service === 'rss' || service === 'functions' || service === 'monitor'
+    || service === 'forms' || service === 'license' || service === 'flags' || service === 'files'
+    || service === 'json' || service === 'hooks' || service === 'fetch' || service === 'shot';
   return <header className="customerWorkspaceShell">
     <nav className="customerNav shell" aria-label="PicoSvc">
       <a className="customerBrand" href={`/${lang}/dashboard/`}><img src="/icons/picosvc.svg" width="34" height="34" alt=""/>PicoSvc</a>
       <div className="customerNavLinks">
         <a href={`/${lang}/dashboard/`}>{c.all}</a>
         <a href={`/${lang}/usage/`}>{c.usage}</a>
-        <a href={`/${lang}/${service}/manage/`}>{c.fleet}</a>
+        {hasManagement && <a href={`/${lang}/${service}/manage/`}>{c.fleet}</a>}
         <a href={`/${lang}/${service}/`}>{SERVICE_INFO[service].name} · {c.overview}</a>
         <a href={`/${lang}/docs/${service}/`}>{c.docs}</a>
       </div>
