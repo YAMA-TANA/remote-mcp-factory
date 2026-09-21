@@ -3,12 +3,14 @@ import { notFound } from 'next/navigation';
 import ServiceFleetConsole from '../../../service-fleet-console';
 import McpFleetConsole from '../../../mcp-fleet-console';
 import ServiceResourceDesk from '../../../service-resource-desk';
+import ServiceOperationsDesk from '../../../service-operations-desk';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 import type { FleetService } from '../../../service-fleet-model';
 import type { DeskService } from '../../../service-resource-desk-model';
 import '../../../customer-pages.css';
+import '../../../service-operations-desk.css';
 
-const SERVICES = ['mcp', 'cron', 'mail', 'qr', 'rss'] as const;
+const SERVICES = ['mcp', 'cron', 'mail', 'qr', 'rss', 'functions', 'monitor'] as const;
 export const dynamicParams = false;
 export function generateStaticParams() {
   return LOCALE_SLUGS.flatMap(locale => SERVICES.map(service => ({ locale, service })));
@@ -22,5 +24,6 @@ export default async function ServiceManagementPage({ params }: { params: Promis
   if (!slugToLocale(locale) || !SERVICES.some(value => value === service)) notFound();
   if (service === 'mcp') return <McpFleetConsole />;
   if (service === 'qr' || service === 'rss') return <ServiceResourceDesk service={service as DeskService} />;
+  if (service === 'functions' || service === 'monitor') return <ServiceOperationsDesk service={service} />;
   return <ServiceFleetConsole service={service as FleetService} />;
 }
