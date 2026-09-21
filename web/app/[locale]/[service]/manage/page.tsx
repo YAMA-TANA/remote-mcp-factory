@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import ServiceFleetConsole from '../../../service-fleet-console';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 import type { FleetService } from '../../../service-fleet-model';
+import '../../../customer-pages.css';
 
 const SERVICES: readonly FleetService[] = ['cron', 'mail'];
 export const dynamicParams = false;
