@@ -49,6 +49,7 @@ export default function ServiceOnDemandConsole({ service }: { service: Service }
   const [copied, setCopied] = useState(false);
   const accountNode = useRef<HTMLDivElement>(null);
   const version = useRef(0);
+  const busyFor = useRef<Clerk | null>(null);
 
   useEffect(() => {
     if (!KEY) return;
@@ -62,6 +63,7 @@ export default function ServiceOnDemandConsole({ service }: { service: Service }
       stop = instance.addListener(() => {
         if (!mounted) return;
         version.current++;
+        busyFor.current = null; setBusy(false);
         setAccount(null); setKeys([]); setNewKey(''); setCopied(false); setNotice(''); setError('');
         setSignedIn(Boolean(instance.isSignedIn)); setAuthRevision(n => n + 1);
       });
@@ -103,14 +105,16 @@ export default function ServiceOnDemandConsole({ service }: { service: Service }
   }, [clerk, request, service, signedIn, t.error]);
   useEffect(() => {
     if (signedIn && clerk) void refresh();
-    else { version.current++; setAccount(null); setKeys([]); setNewKey(''); setLoading(false); }
+    else { version.current++; busyFor.current = null; setBusy(false); setAccount(null); setKeys([]); setNewKey(''); setLoading(false); }
     return () => { version.current++; };
   }, [clerk, signedIn, authRevision, refresh]);
 
   async function createKey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (service !== 'shot' || busy || !keyName.trim()) return;
+    if (service !== 'shot' || busy || !keyName.trim() || !clerk) return;
     const current = version.current;
+    const actor = clerk;
+    busyFor.current = actor;
     setBusy(true); setError(''); setNotice(''); setNewKey(''); setCopied(false);
     try {
       const payload = await request('/api/picosvc/shot/keys', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: keyName.trim() }) });
@@ -119,20 +123,22 @@ export default function ServiceOnDemandConsole({ service }: { service: Service }
       setNewKey(payload.token);
       setNotice(t.created);
       await refresh();
-    } catch (reason) { if (current === version.current) setError(reason instanceof Error ? reason.message : t.error); }
-    finally { if (current === version.current) setBusy(false); }
+    } catch (reason) { if (busyFor.current === actor) setError(reason instanceof Error ? reason.message : t.error); }
+    finally { if (busyFor.current === actor) { busyFor.current = null; setBusy(false); } }
   }
   async function revokeKey(key: ShotKey) {
-    if (service !== 'shot' || busy || !window.confirm(`${t.revokeConfirm}\n${key.name}`)) return;
+    if (service !== 'shot' || busy || !clerk || !window.confirm(`${t.revokeConfirm}\n${key.name}`)) return;
     const current = version.current;
+    const actor = clerk;
+    busyFor.current = actor;
     setBusy(true); setError(''); setNotice('');
     try {
       await request(`/api/picosvc/shot/keys/${encodeURIComponent(key.id)}`, { method: 'DELETE' });
       if (current !== version.current) return;
       await refresh();
-      setNotice(t.revoked);
-    } catch (reason) { if (current === version.current) setError(reason instanceof Error ? reason.message : t.error); }
-    finally { if (current === version.current) setBusy(false); }
+      if (busyFor.current === actor) setNotice(t.revoked);
+    } catch (reason) { if (busyFor.current === actor) setError(reason instanceof Error ? reason.message : t.error); }
+    finally { if (busyFor.current === actor) { busyFor.current = null; setBusy(false); } }
   }
   async function copyKey() {
     try { await navigator.clipboard.writeText(newKey); setCopied(true); }
