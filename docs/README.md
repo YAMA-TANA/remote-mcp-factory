@@ -14,6 +14,7 @@ PicoSvc is a suite of **16 developer services** sharing a Clerk account. This di
 | Current product catalog and architecture | [All services implementation](ALL_SERVICES_IMPLEMENTATION.md) |
 | Standalone and bundle subscriptions | [Billing model](BILLING_MODEL.md) |
 | Costs and pricing assumptions (not live prices) | [Pricing benchmarks](PRICING_BENCHMARKS.md) |
+| Official vendor feature comparisons, limitations and acceptance gaps | [Competitor capability gaps](COMPETITOR_CAPABILITY_GAPS.md) |
 | Future ideas, not necessarily released | [Roadmap](PICOSVC_ROADMAP.md) |
 
 For the original Remote MCP deployment architecture, see the [repository README](../README.md). For the Cloudflare Pages-specific setup, see [web/README.md](../web/README.md).
