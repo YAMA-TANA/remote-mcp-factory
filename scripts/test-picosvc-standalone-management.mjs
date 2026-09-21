@@ -45,4 +45,30 @@ assert.match(hooks, /MAX_LOADED_EVENTS = 500/, 'Cap loaded events');
 assert.match(hooks, /standaloneEventButton/, 'Event selection uses a keyboard-accessible button');
 assert.match(hooks, /role="alert"/, 'Errors must be announced');
 assert.match(styles, /@media\(max-width:620px\)/, 'Responsive search controls');
-console.log('PicoSvc standalone managers: safe CSV, filters, dirty editor, replay/deletion confirmation, stale-request and accessibility checks OK.');
+
+// The last three products must have actual managers, rather than only an app/workspace page.
+const route = read('web/app/[locale]/[service]/manage/page.tsx');
+const header = read('web/app/customer-workspace-header.tsx');
+const mockConsole = read('web/app/service-mock-console.tsx');
+const onDemandConsole = read('web/app/service-on-demand-console.tsx');
+const mockBackend = read('src/picosvc/mock.ts');
+for (const service of ['mcp','mock','cron','mail','qr','rss','functions','monitor','forms','license','flags','files','json','hooks','fetch','shot']) {
+  assert.match(route, new RegExp(`['"]${service}['"]`), `Missing manager route: ${service}`);
+}
+assert.match(route, /service === 'mock'\) return <ServiceMockConsole/, 'Mock must open its own console');
+assert.match(route, /service === 'fetch' \|\| service === 'shot'/, 'Fetch and Shot must have dedicated manager dispatch');
+assert.match(header, /\$\{service\}\/manage\//, 'Workspace navigation must expose the manager');
+assert.match(mockConsole, /filterMockInventory\(rows, query, method\)/, 'Mock inventory filters');
+assert.match(mockConsole, /mockInventoryCsv\(visible\)/, 'Mock exports only filtered metadata');
+assert.match(mockConsole, /confirmDiscard\(\)/, 'Mock checks unsaved changes before switching');
+assert.match(mockConsole, /method: 'DELETE'/, 'Mock allows deletion of owned endpoint');
+assert.match(mockConsole, /method: 'PATCH'/, 'Mock allows editing and pausing');
+assert.match(mockConsole, /mockRequestBody\(form\)/, 'Mock validates edit/create payload');
+assert.match(mockBackend, /const enabled = body\.enabled === false \? 0 : 1;/, 'Mock creates disabled endpoints without transiently exposing them');
+assert.match(mockBackend, /responseBody, enabled, now, now\)\.run\(\)/, 'Mock persists the requested initial enabled flag');
+assert.match(onDemandConsole, /\/api\/picosvc\/account/, 'Fetch and Shot expose account usage');
+assert.match(onDemandConsole, /\/api\/picosvc\/shot\/keys/, 'Shot manages owner-scoped credentials');
+assert.match(onDemandConsole, /finally \{ if \(busyFor\.current === actor\) \{ busyFor\.current = null; setBusy\(false\); \} \}/, 'Shot must release busy state after refresh');
+assert.match(onDemandConsole, /setNewKey\(payload\.token\)/, 'Shot displays the one-time credential');
+assert.match(onDemandConsole, /window\.confirm\(/, 'Shot revocation requires confirmation');
+console.log('PicoSvc standalone managers: safe CSV, filters, dirty editor, replay/deletion confirmation, stale-request, accessibility and all 16 service-manager routes OK.');
