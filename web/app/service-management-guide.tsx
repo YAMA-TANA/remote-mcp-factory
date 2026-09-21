@@ -6,17 +6,24 @@ import { useI18n } from './i18n';
 import './service-management-guide.css';
 
 // Inline comparisons only when the linked vendor's own documentation has been checked.
-// Other products retain a link to the existing full overview and its source.
+// Match CUSTOMER_GUIDES[service].competitor.url exactly; do not imply feature, price, or SLA parity.
 const CHECKED_COMPARISONS: Partial<Record<ProductSlug, string>> = {
+  mcp: 'https://smithery.ai/docs/build',
   mock: 'https://mockoon.com/docs/latest/api-endpoints/http-routes/',
   hooks: 'https://docs.webhook.site/api/requests.html',
   rss: 'https://politepol.com/about',
+  mail: 'https://resend.com/docs/dashboard/receiving/introduction',
   shot: 'https://docs.browserless.io/rest-apis/screenshot-api',
   fetch: 'https://docs.firecrawl.dev/api-reference/endpoint/scrape',
+  qr: 'https://bitly.com/pages/products/qr-codes',
+  cron: 'https://upstash.com/docs/qstash/features/schedules',
+  functions: 'https://vercel.com/docs/functions',
   json: 'https://jsonbin.io/api-reference',
   files: 'https://supabase.com/docs/guides/storage',
   license: 'https://keygen.sh/docs/validating-licenses/',
   flags: 'https://launchdarkly.com/docs/api/feature-flags',
+  monitor: 'https://uptimerobot.com/website-monitoring/',
+  forms: 'https://help.formspree.io/articles/the-forms-api/form-submissions-api',
 };
 const COPY = {
   ja: { title: 'このサービスの使い方と選び方', intro: '必要なもの・操作例・制約と競合との機能差を確認できます。', prepare: '用意するもの', steps: '次にすること', limit: '対応範囲・注意', example: '具体的な利用例', input: '入力するもの', output: '得られるもの', compare: '公式資料に基づく機能比較', ours: 'PicoSvc', other: '代替サービス', source: '競合の公式資料', overview: 'サービスの詳しい説明・比較', docs: 'API・手順を確認', note: '機能範囲の対照であり、品質・速度・料金・本番稼働の優劣や保証ではありません。競合の仕様・プランはリンク先で再確認してください。', noCompare: '機能比較は製品紹介ページで確認できます。' },
