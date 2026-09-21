@@ -10,6 +10,7 @@ PicoSvc is a suite of **16 developer services** sharing a Clerk account. This di
 | Manage quotas across all services, investigate threshold alerts and export metadata-only CSV | [利用量・上限の専用管理画面 / Usage console](PICOSVC_USAGE_CONSOLE.md) |
 | Manage multiple MCP deployments, inspect request metrics and runtime events | [MCP 専用運用室 / MCP fleet](PICOSVC_MCP_FLEET.md) |
 | Manage Cron jobs and Mail routes in dedicated consoles, inspect execution/delivery history | [Cron/Mail 専用管理画面 / Fleet consoles](PICOSVC_FLEET_CONSOLES.md) |
+| Edit QR links, inspect scan totals, preview/refresh RSS extraction in dedicated management | [QR/RSS 個別管理画面 / Resource desks](PICOSVC_RESOURCE_DESKS.md) |
 | All 16 services: management endpoints, required creation fields, and working request examples | [サービス・APIガイド / Service and API guide](PICOSVC_API_GUIDE.md) |
 | Deploy Pages and Worker, check D1 migrations, diagnose skipped builds | [運用・デプロイ / Deployment runbook](PICOSVC_DEPLOYMENT.md) |
 | Screenshot-specific API keys and acceptance testing | [Screenshot API](SCREENSHOT_API.md) |
