@@ -12,7 +12,7 @@ const TIERS = new Set<string>(['free','tiny','pro']);
 function record(value: unknown): Record<string, unknown> | null { return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null; }
 function count(value: unknown): number | null { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null; }
 export function thresholdFor(used: number, limit: number): 70 | 90 | 100 | null {
-  if (limit === 0) return 100;
+  if (limit === 0) return used > 0 ? 100 : null;
   const ratio = used / limit;
   return ratio >= 1 ? 100 : ratio >= 0.9 ? 90 : ratio >= 0.7 ? 70 : null;
 }
@@ -34,7 +34,7 @@ export function readUsageReport(raw: unknown): UsageReport {
       if (item.kind === 'policy') return { metric: item.metric, kind: 'policy', used: null, limit, remaining: null, percent: null, threshold: null };
       const used = count(item.used);
       if (used === null) throw new Error('Invalid usage count.');
-      const percent = limit === 0 ? 100 : Math.round((used / limit) * 10000) / 100;
+      const percent = limit === 0 ? (used > 0 ? 100 : 0) : Math.round((used / limit) * 10000) / 100;
       return { metric: item.metric, kind: item.kind as UsageKind, used, limit, remaining: Math.max(0, limit - used), percent, threshold: thresholdFor(used, limit) };
     });
     return { slug: product.slug as ProductSlug, name: product.name, tier: product.tier as UsageProduct['tier'], dimensions };
