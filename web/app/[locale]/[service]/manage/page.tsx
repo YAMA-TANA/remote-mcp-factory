@@ -7,13 +7,15 @@ import ServiceOperationsDesk from '../../../service-operations-desk';
 import ServiceCustomerDesk from '../../../service-customer-desk';
 import ServiceFlagsFilesDesk from '../../../service-flags-files-desk';
 import ServiceJsonHooksDesk from '../../../service-json-hooks-desk';
+import ServiceMockConsole from '../../../service-mock-console';
+import ServiceOnDemandConsole from '../../../service-on-demand-console';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 import type { FleetService } from '../../../service-fleet-model';
 import type { DeskService } from '../../../service-resource-desk-model';
 import '../../../customer-pages.css';
 import '../../../service-operations-desk.css';
 
-const SERVICES = ['mcp', 'cron', 'mail', 'qr', 'rss', 'functions', 'monitor', 'forms', 'license', 'flags', 'files', 'json', 'hooks'] as const;
+const SERVICES = ['mcp', 'mock', 'cron', 'mail', 'qr', 'rss', 'functions', 'monitor', 'forms', 'license', 'flags', 'files', 'json', 'hooks', 'fetch', 'shot'] as const;
 export const dynamicParams = false;
 export function generateStaticParams() {
   return LOCALE_SLUGS.flatMap(locale => SERVICES.map(service => ({ locale, service })));
@@ -25,6 +27,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function ServiceManagementPage({ params }: { params: Promise<{ locale: string; service: string }> }) {
   const { locale, service } = await params;
   if (!slugToLocale(locale) || !SERVICES.some(value => value === service)) notFound();
+  if (service === 'mock') return <ServiceMockConsole />;
+  if (service === 'fetch' || service === 'shot') return <ServiceOnDemandConsole service={service} />;
   if (service === 'mcp') return <McpFleetConsole />;
   if (service === 'qr' || service === 'rss') return <ServiceResourceDesk service={service as DeskService} />;
   if (service === 'functions' || service === 'monitor') return <ServiceOperationsDesk service={service} />;
