@@ -22,6 +22,7 @@ jobs:
       - run: node scripts/test-picosvc-docs.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-usage-console.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-fleet-consoles.mjs
+      - run: node --experimental-strip-types scripts/test-picosvc-mcp-fleet.mjs
       - run: node --experimental-strip-types scripts/test-github-app-crypto.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-pricing.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-margin.mjs
