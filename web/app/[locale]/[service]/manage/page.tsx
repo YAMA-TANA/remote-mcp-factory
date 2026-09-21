@@ -6,13 +6,14 @@ import ServiceResourceDesk from '../../../service-resource-desk';
 import ServiceOperationsDesk from '../../../service-operations-desk';
 import ServiceCustomerDesk from '../../../service-customer-desk';
 import ServiceFlagsFilesDesk from '../../../service-flags-files-desk';
+import ServiceJsonHooksDesk from '../../../service-json-hooks-desk';
 import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 import type { FleetService } from '../../../service-fleet-model';
 import type { DeskService } from '../../../service-resource-desk-model';
 import '../../../customer-pages.css';
 import '../../../service-operations-desk.css';
 
-const SERVICES = ['mcp', 'cron', 'mail', 'qr', 'rss', 'functions', 'monitor', 'forms', 'license', 'flags', 'files'] as const;
+const SERVICES = ['mcp', 'cron', 'mail', 'qr', 'rss', 'functions', 'monitor', 'forms', 'license', 'flags', 'files', 'json', 'hooks'] as const;
 export const dynamicParams = false;
 export function generateStaticParams() {
   return LOCALE_SLUGS.flatMap(locale => SERVICES.map(service => ({ locale, service })));
@@ -29,5 +30,6 @@ export default async function ServiceManagementPage({ params }: { params: Promis
   if (service === 'functions' || service === 'monitor') return <ServiceOperationsDesk service={service} />;
   if (service === 'forms' || service === 'license') return <ServiceCustomerDesk service={service} />;
   if (service === 'flags' || service === 'files') return <ServiceFlagsFilesDesk service={service} />;
+  if (service === 'json' || service === 'hooks') return <ServiceJsonHooksDesk service={service} />;
   return <ServiceFleetConsole service={service as FleetService} />;
 }
