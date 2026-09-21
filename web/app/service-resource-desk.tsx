@@ -52,6 +52,7 @@ function Editor({ service, clerk }: { service: DeskService; clerk: Clerk }) {
   const [refreshResult, setRefreshResult] = useState<FeedRefresh | null>(null);
   const [copied, setCopied] = useState(false);
   const version = useRef(0);
+  const previousResource = useRef('');
   const request = useCallback(async (path: string, init: RequestInit = {}): Promise<unknown> => {
     const token = await clerk.session?.getToken();
     if (!API || !clerk.isSignedIn || !token) throw new Error('Sign in again to manage resources.');
@@ -76,8 +77,11 @@ function Editor({ service, clerk }: { service: DeskService; clerk: Clerk }) {
   useEffect(() => { void reload(); return () => { version.current++; }; }, [reload]);
   const selected = items.find(item => item.id === selectedId) || null;
   useEffect(() => {
+    const changedResource = previousResource.current !== (selected?.id || '');
+    previousResource.current = selected?.id || '';
     setDraft(selected ? { name: selected.name, targetUrl: selected.targetUrl, selectors: { ...selected.selectors } } : null);
-    setPreview(null); setRefreshResult(null); setCopied(false); setNotice('');
+    // A refreshed feed changes updatedAt: retain the result of the refresh that caused it.
+    if (changedResource) { setPreview(null); setRefreshResult(null); setCopied(false); setNotice(''); }
   }, [selected?.id, selected?.updatedAt]);
   const visible = filterDeskResources(items, query, filter);
   const dirty = Boolean(selected && draft && (draft.name !== selected.name || draft.targetUrl !== selected.targetUrl || JSON.stringify(draft.selectors) !== JSON.stringify(selected.selectors)));
