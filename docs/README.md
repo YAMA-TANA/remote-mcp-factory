@@ -14,6 +14,7 @@ PicoSvc is a suite of **16 developer services** sharing a Clerk account. This di
 | Manage function versions, invocations and monitor change checks in separate control rooms | [Functions/Monitor 個別管理画面 / Operations desks](PICOSVC_OPERATIONS_DESKS.md) |
 | Review form intake controls and delivery history, manage license-key status and validation records | [Forms/License 個別管理画面 / Customer desks](PICOSVC_CUSTOMER_DESKS.md) |
 | Edit feature flags and manage file-space storage, uploads and deletions | [Flags/Files 個別管理画面 / Resource desks](PICOSVC_FLAGS_FILES_DESKS.md) |
+| Manage JSON store visibility and documents, inspect webhook inboxes and events without payloads | [JSON/Hooks 個別管理画面 / Data desks](PICOSVC_JSON_HOOKS_DESKS.md) |
 | All 16 services: management endpoints, required creation fields, and working request examples | [サービス・APIガイド / Service and API guide](PICOSVC_API_GUIDE.md) |
 | Deploy Pages and Worker, check D1 migrations, diagnose skipped builds | [運用・デプロイ / Deployment runbook](PICOSVC_DEPLOYMENT.md) |
 | Screenshot-specific API keys and acceptance testing | [Screenshot API](SCREENSHOT_API.md) |
