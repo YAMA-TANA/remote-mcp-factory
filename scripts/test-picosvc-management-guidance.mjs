@@ -9,27 +9,41 @@ const resource = source('web/app/service-resource-detail.tsx');
 const advanced = source('web/app/service-advanced-detail.tsx');
 const css = source('web/app/service-management-guide.css');
 const locales = ['ja', 'en', 'zh-CN'];
-for (const slug of [...GENERIC_SERVICE_SLUGS, 'hooks', 'mock']) {
+const services = [...GENERIC_SERVICE_SLUGS, 'hooks', 'mock'];
+for (const slug of services) {
   const guide = CUSTOMER_GUIDES[slug];
   assert.ok(guide, `Missing ${slug} guide`);
   assert.equal(guide.steps.length, 3, `${slug} must have three actionable steps`);
   for (const locale of locales) {
     for (const field of ['summary', 'prerequisite', 'limitation', 'example', 'input', 'output']) assert.ok(guide[field][locale]?.trim(), `${slug} ${locale} ${field}`);
     assert.ok(guide.steps.every(step => step[locale]?.trim()), `${slug} ${locale} steps`);
+    for (const field of ['axis', 'pico', 'other']) assert.ok(guide.competitor[field][locale]?.trim(), `${slug} ${locale} comparison ${field}`);
   }
+  assert.ok(guide.competitor.name.trim(), `${slug} must name the competitor`);
   assert.ok(guide.competitor.url.startsWith('https://'), `${slug} comparison must link to HTTPS vendor docs`);
 }
+// Each URL was checked against the vendor's own public documentation. Never promote an
+// unreviewed comparison to the signed-in UI by merely adding it to CUSTOMER_GUIDES.
 const verified = {
+  mcp: 'https://smithery.ai/docs/build',
   mock: 'https://mockoon.com/docs/latest/api-endpoints/http-routes/',
   hooks: 'https://docs.webhook.site/api/requests.html',
   rss: 'https://politepol.com/about',
+  mail: 'https://resend.com/docs/dashboard/receiving/introduction',
   shot: 'https://docs.browserless.io/rest-apis/screenshot-api',
   fetch: 'https://docs.firecrawl.dev/api-reference/endpoint/scrape',
+  qr: 'https://bitly.com/pages/products/qr-codes',
+  cron: 'https://upstash.com/docs/qstash/features/schedules',
+  functions: 'https://vercel.com/docs/functions',
   json: 'https://jsonbin.io/api-reference',
   files: 'https://supabase.com/docs/guides/storage',
   license: 'https://keygen.sh/docs/validating-licenses/',
   flags: 'https://launchdarkly.com/docs/api/feature-flags',
+  monitor: 'https://uptimerobot.com/website-monitoring/',
+  forms: 'https://help.formspree.io/articles/the-forms-api/form-submissions-api',
 };
+assert.equal(services.length, 16, 'Keep the full 16-product catalog under test');
+assert.deepEqual(Object.keys(verified).sort(), [...services].sort(), 'Every service needs an official-source comparison');
 for (const [slug, official] of Object.entries(verified)) {
   assert.equal(CUSTOMER_GUIDES[slug].competitor.url, official, `${slug} in-panel claim must match product-page source`);
   assert.ok(component.includes(`${slug}: '${official}'`), `${slug} must use reviewed vendor source`);
@@ -62,4 +76,4 @@ assert.match(genericRoute, /<ShotWorkspace \/>/, 'Shot capture and API-key opera
 assert.match(genericRoute, /<FetchWorkspace \/>/, 'Fetch extraction remains');
 assert.match(css, /@media\(max-width:650px\)/, 'Guide must fit narrow screens');
 assert.match(css, /serviceManagementGuideStandalone/, 'Standalone guides use responsive layout');
-console.log('PicoSvc management guidance: 16 localized guides, nine sourced comparisons, all 16 workspaces, original operations and mobile styling OK.');
+console.log('PicoSvc management guidance: 16 localized guides, 16 sourced comparisons, all workspaces, original operations and mobile styling OK.');
