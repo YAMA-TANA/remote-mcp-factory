@@ -18,7 +18,7 @@ export default function CustomerWorkspaceHeader({ service, locale }: { service: 
       <div className="customerNavLinks">
         <a href={`/${lang}/dashboard/`}>{c.all}</a>
         <a href={`/${lang}/usage/`}>{c.usage}</a>
-        {(service === 'cron' || service === 'mail') && <a href={`/${lang}/${service}/manage/`}>{c.fleet}</a>}
+        {(service === 'mcp' || service === 'cron' || service === 'mail') && <a href={`/${lang}/${service}/manage/`}>{c.fleet}</a>}
         <a href={`/${lang}/${service}/`}>{SERVICE_INFO[service].name} · {c.overview}</a>
         <a href={`/${lang}/docs/${service}/`}>{c.docs}</a>
       </div>
