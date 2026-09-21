@@ -5,10 +5,7 @@ import type { Clerk } from '@clerk/clerk-js';
 import { ui } from '@clerk/ui';
 import { LanguageSwitcher, useI18n } from './i18n';
 import { workspaceApiError } from './workspace-helpers';
-import {
-  filterFleet, fleetPaths, readFleetEvents, readFleetItems,
-  type FleetEvent, type FleetFilter, type FleetItem, type FleetService,
-} from './service-fleet-model';
+import { filterFleet, fleetPaths, readFleetEvents, readFleetItems, type FleetEvent, type FleetFilter, type FleetItem, type FleetService } from './service-fleet-model';
 import './service-fleet-console.css';
 
 const API = (process.env.NEXT_PUBLIC_FACTORY_API_URL || '').replace(/\/$/, '');
@@ -77,6 +74,11 @@ export default function ServiceFleetConsole({ service }: { service: FleetService
       setClerk(instance); setSignedIn(Boolean(instance.isSignedIn)); setReady(true);
       stop = instance.addListener(() => {
         if (!mounted) return;
+        // Clerk notifies on account/organization changes even while signed in.
+        // Clear the previous owner's addresses and history before loading the new scope.
+        requestVersion.current++;
+        setItems([]); setSelectedId(''); setHistory(null);
+        setHistoryError(''); setError(''); setNotice(''); setCopied(false); setChanging(false);
         setSignedIn(Boolean(instance.isSignedIn));
         setAuthRevision(old => old + 1);
       });
@@ -145,22 +147,25 @@ export default function ServiceFleetConsole({ service }: { service: FleetService
     }).catch(reason => { if (active) setHistoryError(reason instanceof Error ? reason.message : t.failure); })
       .finally(() => { if (active) setHistoryLoading(false); });
     return () => { active = false; };
-  }, [request, service, selectedResourceId, signedIn, historyRevision, t.failure]);
+  }, [request, service, selectedResourceId, signedIn, authRevision, historyRevision, t.failure]);
 
   async function toggle(item: FleetItem) {
     if (changing) return;
     if (item.enabled && !window.confirm(service === 'cron' ? t.confirmCron : t.confirmMail)) return;
+    const scope = requestVersion.current;
     setChanging(true); setError(''); setNotice('');
     try {
       const path = fleetPaths(service, item.id).toggle;
       if (!path) throw new Error('Missing resource route.');
       await request(path, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: !item.enabled }) });
+      if (scope !== requestVersion.current) return;
       // Refresh from the server: do not assume that the management PATCH succeeded locally.
       await refresh();
       setHistoryRevision(value => value + 1);
       setNotice(item.enabled ? t.pausedNotice : t.resumedNotice);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : t.failure); }
-    finally { setChanging(false); }
+    } catch (reason) {
+      if (scope === requestVersion.current) setError(reason instanceof Error ? reason.message : t.failure);
+    } finally { setChanging(false); }
   }
   async function copyAddress(address: string) {
     if (address === '—') return;
