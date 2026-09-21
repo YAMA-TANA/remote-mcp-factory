@@ -8,6 +8,7 @@ import { LOCALE_SLUGS, slugToLocale } from '../../../i18n-data';
 import type { FleetService } from '../../../service-fleet-model';
 import type { DeskService } from '../../../service-resource-desk-model';
 import '../../../customer-pages.css';
+import '../../../service-operations-desk.css';
 
 const SERVICES = ['mcp', 'cron', 'mail', 'qr', 'rss', 'functions', 'monitor'] as const;
 export const dynamicParams = false;
