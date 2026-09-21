@@ -76,15 +76,30 @@ export async function fetchPublic(
 ): Promise<Response> {
   let current = typeof input === 'string' ? safePublicUrl(input) : safePublicUrl(input.toString());
   if (!current) throw new Error('URL must be a public HTTP(S) URL on port 80 or 443');
+  let options = init;
 
   for (let redirects = 0; redirects <= maxRedirects; redirects += 1) {
-    const response = await fetch(current.toString(), { ...init, redirect: 'manual' });
-    if (response.status < 300 || response.status >= 400) return response;
+    const response = await fetch(current.toString(), { ...options, redirect: 'manual' });
+    if (![301, 302, 303, 307, 308].includes(response.status)) return response;
     const location = response.headers.get('location');
     if (!location) return response;
+    // A followed redirect's body is not consumed by the caller.
+    void response.body?.cancel().catch(() => undefined);
     if (redirects === maxRedirects) throw new Error('Too many redirects');
     const next = safePublicUrl(new URL(location, current).toString());
     if (!next) throw new Error('Redirect target is not a permitted public URL');
+    if (next.origin !== current.origin) {
+      const method = (options.method || 'GET').toUpperCase();
+      // Cron requests may carry arbitrary user-provided headers and POST bodies.
+      // Never forward either to a different origin chosen by a redirect response.
+      if ((method !== 'GET' && method !== 'HEAD') || options.body != null) {
+        throw new Error('Cross-origin redirect is not permitted for requests with a method or body');
+      }
+      // Strip ALL caller-supplied headers, not just Authorization: arbitrary
+      // x-api-key/custom headers may contain secrets. Keep them stripped on
+      // subsequent hops, even if a redirect returns to the original origin.
+      options = { ...options, headers: undefined, credentials: 'omit' };
+    }
     current = next;
   }
 
