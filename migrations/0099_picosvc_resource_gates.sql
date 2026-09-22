@@ -40,26 +40,28 @@ END;
 
 CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_document_insert_cap
 BEFORE INSERT ON json_documents
+WHEN EXISTS (
+  SELECT 1 FROM picosvc_json_totals t JOIN json_stores s ON s.owner = t.owner
+  WHERE s.id = NEW.store_id AND (
+    (t.document_limit IS NOT NULL AND t.documents + 1 > t.document_limit)
+    OR (t.byte_limit IS NOT NULL AND t.storage_bytes + LENGTH(CAST(NEW.value_json AS BLOB)) > t.byte_limit)
+  )
+)
 BEGIN
-  SELECT CASE WHEN EXISTS (
-    SELECT 1 FROM picosvc_json_totals t JOIN json_stores s ON s.owner = t.owner
-    WHERE s.id = NEW.store_id AND (
-      (t.document_limit IS NOT NULL AND t.documents + 1 > t.document_limit)
-      OR (t.byte_limit IS NOT NULL AND t.storage_bytes + LENGTH(CAST(NEW.value_json AS BLOB)) > t.byte_limit)
-    )
-  ) THEN RAISE(ABORT, 'json_quota_exceeded') END;
+  SELECT RAISE(ABORT, 'json_quota_exceeded');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_document_update_cap
 BEFORE UPDATE OF value_json ON json_documents
+WHEN EXISTS (
+  SELECT 1 FROM picosvc_json_totals t JOIN json_stores s ON s.owner = t.owner
+  WHERE s.id = OLD.store_id
+    AND t.byte_limit IS NOT NULL
+    AND LENGTH(CAST(NEW.value_json AS BLOB)) > LENGTH(CAST(OLD.value_json AS BLOB))
+    AND t.storage_bytes - LENGTH(CAST(OLD.value_json AS BLOB)) + LENGTH(CAST(NEW.value_json AS BLOB)) > t.byte_limit
+)
 BEGIN
-  SELECT CASE WHEN EXISTS (
-    SELECT 1 FROM picosvc_json_totals t JOIN json_stores s ON s.owner = t.owner
-    WHERE s.id = OLD.store_id
-      AND t.byte_limit IS NOT NULL
-      AND LENGTH(CAST(NEW.value_json AS BLOB)) > LENGTH(CAST(OLD.value_json AS BLOB))
-      AND t.storage_bytes - LENGTH(CAST(OLD.value_json AS BLOB)) + LENGTH(CAST(NEW.value_json AS BLOB)) > t.byte_limit
-  ) THEN RAISE(ABORT, 'json_quota_exceeded') END;
+  SELECT RAISE(ABORT, 'json_quota_exceeded');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_document_insert
@@ -105,3 +107,4 @@ BEGIN
     storage_bytes = storage_bytes - COALESCE((SELECT SUM(LENGTH(CAST(value_json AS BLOB))) FROM json_documents WHERE store_id = OLD.id), 0)
   WHERE owner = OLD.owner;
 END;
+
