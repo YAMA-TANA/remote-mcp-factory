@@ -2,6 +2,7 @@ import QRCode from 'qrcode';
 import type { Env } from '../types.js';
 import { consumeUsage, json, requireIdentity, resourceCapacity, cleanName } from './service-utils.js';
 import { randomPublicId, safePublicUrl, fetchPublic } from './security.js';
+import { runMeteredBrowserAction } from './browser-cost-gate.js';
 
 function htmlEntityDecode(value: string): string {
   return value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
@@ -33,13 +34,13 @@ export async function utilityManagementRoutes(request: Request, env: Env): Promi
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const target = safePublicUrl(body?.url);
     if (!target) return json({ error: 'url must be a public HTTP(S) URL on port 80 or 443' }, 400);
+    const format = body?.format === 'metadata' ? 'metadata' : 'markdown';
+    if (format === 'markdown' && !env.BROWSER) return json({ error: 'Browser Run binding is not configured' }, 503);
     const usage = await consumeUsage(env, identity.ownerId, 'fetch', 'requests');
     if (!usage.ok) return json({ error: 'Fetch quota reached', ...usage }, 429);
-    const format = body?.format === 'metadata' ? 'metadata' : 'markdown';
 
     if (format === 'markdown') {
-      if (!env.BROWSER) return json({ error: 'Browser Run binding is not configured' }, 503);
-      const response = await env.BROWSER.quickAction('markdown', { url: target.toString() });
+      const response = await runMeteredBrowserAction(env, identity.ownerId, 'fetch', 'markdown', { url: target.toString() });
       const headers = new Headers(response.headers);
       headers.set('x-picosvc-tier', usage.tier);
       headers.set('cache-control', 'no-store');
@@ -68,7 +69,7 @@ export async function utilityManagementRoutes(request: Request, env: Env): Promi
     const options = format === 'pdf'
       ? { url: target.toString(), pdfOptions: { printBackground: true } }
       : { url: target.toString(), screenshotOptions: { fullPage: body?.fullPage !== false } };
-    const response = await env.BROWSER.quickAction(format === 'pdf' ? 'pdf' : 'screenshot', options);
+    const response = await runMeteredBrowserAction(env, identity.ownerId, 'shot', format === 'pdf' ? 'pdf' : 'screenshot', options);
     const headers = new Headers(response.headers);
     headers.set('x-picosvc-tier', usage.tier);
     headers.set('cache-control', 'no-store');
