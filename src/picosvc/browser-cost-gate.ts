@@ -5,8 +5,10 @@ import { json } from './service-utils.js';
 export type BrowserProduct = 'fetch' | 'shot';
 
 // Independent browser-time budgets: existing published request limits are untouched.
-// Free: 2 minutes; Pico: 30 minutes; PicoPlus: 3 hours per service/month.
-const MONTHLY_MS = { free: 120_000, tiny: 1_800_000, pro: 10_800_000 } as const;
+// Free: 10 minutes; Pico: 2 hours; PicoPlus: 10 hours per service/month.
+// These budgets exceed the benchmark assumptions of 5s/Fetch and 10s/Shot
+// at the published tier request caps; they primarily block extreme slow pages.
+const MONTHLY_MS = { free: 600_000, tiny: 7_200_000, pro: 36_000_000 } as const;
 export const BROWSER_NAVIGATION_TIMEOUT_MS = 8_000;
 export const BROWSER_ACTION_TIMEOUT_MS = 8_000;
 const BROWSER_SELECTOR_TIMEOUT_MS = 2_000;
