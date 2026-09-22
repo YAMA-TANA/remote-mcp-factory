@@ -17,17 +17,50 @@ CREATE TABLE IF NOT EXISTS picosvc_browser_usage (
   PRIMARY KEY (owner, product, month)
 );
 
--- Backfill once. Subsequent JSON document mutations are accounted for by triggers,
--- so normal PUTs never have to COUNT/SUM every document belonging to an owner.
+-- Backfill once. Subsequent JSON document mutations are accounted for by triggers;
+-- concurrent PUTs are also checked atomically against the owner's current limits.
 CREATE TABLE IF NOT EXISTS picosvc_json_totals (
   owner TEXT PRIMARY KEY,
   documents INTEGER NOT NULL DEFAULT 0 CHECK (documents >= 0),
-  storage_bytes INTEGER NOT NULL DEFAULT 0 CHECK (storage_bytes >= 0)
+  storage_bytes INTEGER NOT NULL DEFAULT 0 CHECK (storage_bytes >= 0),
+  document_limit INTEGER,
+  byte_limit INTEGER
 );
 INSERT OR IGNORE INTO picosvc_json_totals (owner, documents, storage_bytes)
 SELECT s.owner, COUNT(d.key), COALESCE(SUM(LENGTH(CAST(d.value_json AS BLOB))), 0)
 FROM json_stores s LEFT JOIN json_documents d ON d.store_id = s.id
 GROUP BY s.owner;
+
+CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_store_insert
+AFTER INSERT ON json_stores
+BEGIN
+  INSERT OR IGNORE INTO picosvc_json_totals (owner, documents, storage_bytes)
+  VALUES (NEW.owner, 0, 0);
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_document_insert_cap
+BEFORE INSERT ON json_documents
+BEGIN
+  SELECT CASE WHEN EXISTS (
+    SELECT 1 FROM picosvc_json_totals t JOIN json_stores s ON s.owner = t.owner
+    WHERE s.id = NEW.store_id AND (
+      (t.document_limit IS NOT NULL AND t.documents + 1 > t.document_limit)
+      OR (t.byte_limit IS NOT NULL AND t.storage_bytes + LENGTH(CAST(NEW.value_json AS BLOB)) > t.byte_limit)
+    )
+  ) THEN RAISE(ABORT, 'json_quota_exceeded') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_document_update_cap
+BEFORE UPDATE OF value_json ON json_documents
+BEGIN
+  SELECT CASE WHEN EXISTS (
+    SELECT 1 FROM picosvc_json_totals t JOIN json_stores s ON s.owner = t.owner
+    WHERE s.id = OLD.store_id
+      AND t.byte_limit IS NOT NULL
+      AND LENGTH(CAST(NEW.value_json AS BLOB)) > LENGTH(CAST(OLD.value_json AS BLOB))
+      AND t.storage_bytes - LENGTH(CAST(OLD.value_json AS BLOB)) + LENGTH(CAST(NEW.value_json AS BLOB)) > t.byte_limit
+  ) THEN RAISE(ABORT, 'json_quota_exceeded') END;
+END;
 
 CREATE TRIGGER IF NOT EXISTS trg_picosvc_json_document_insert
 AFTER INSERT ON json_documents
