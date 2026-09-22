@@ -1,5 +1,6 @@
 import type { Env } from '../types.js';
-import { readBoundedResponse, ResponseLimitError } from './bounded-response.js';
+import { readBoundedResponse, readFetchJson, ResponseLimitError } from './bounded-response.js';
+import { appearsBinary } from './fetch-safety.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
 import { fetchPublic, safePublicUrl } from './security.js';
 import { runMeteredBrowserAction } from './browser-cost-gate.js';
@@ -53,7 +54,9 @@ export async function reliableFetchRoute(request: Request, env: Env): Promise<Re
   if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
   const identity = await requireIdentity(request, env);
   if (identity instanceof Response) return identity;
-  const input = await request.json().catch(() => null) as unknown;
+  const parsed = await readFetchJson(request);
+  if (!parsed.ok) return fail(parsed.code, parsed.message, parsed.status);
+  const input = parsed.value;
   const body = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : null;
   if (!body) return fail('invalid_request', 'A JSON request body is required.', 400);
   const target = safePublicUrl(body.url);
@@ -113,6 +116,7 @@ export async function reliableFetchRoute(request: Request, env: Env): Promise<Re
       }
       const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
       if (!bytes.byteLength) return fail('empty_content', 'Upstream returned an empty document.', 422);
+      if (appearsBinary(bytes, contentType)) return fail('unsupported_content_type', 'Metadata requires text, but upstream returned binary content.', 415);
       const html = decode(bytes, contentType);
       const actualUrl = safePublicUrl(response.url)?.toString() || target.toString();
       const details = metadata(html, actualUrl, readable);
