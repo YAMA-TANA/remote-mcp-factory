@@ -4,12 +4,14 @@ import { json } from './service-utils.js';
 
 export type BrowserProduct = 'fetch' | 'shot';
 
-// These limits supplement, rather than replace, the published request allowances.
-// Free: 2 minutes; Pico: 30 minutes; PicoPlus: 3 hours per browser service/month.
+// Independent browser-time budgets: existing published request limits are untouched.
+// Free: 2 minutes; Pico: 30 minutes; PicoPlus: 3 hours per service/month.
 const MONTHLY_MS = { free: 120_000, tiny: 1_800_000, pro: 10_800_000 } as const;
-export const BROWSER_NAVIGATION_TIMEOUT_MS = 10_000;
-export const BROWSER_ACTION_TIMEOUT_MS = 10_000;
-const RESERVED_MS = BROWSER_NAVIGATION_TIMEOUT_MS + BROWSER_ACTION_TIMEOUT_MS;
+export const BROWSER_NAVIGATION_TIMEOUT_MS = 8_000;
+export const BROWSER_ACTION_TIMEOUT_MS = 8_000;
+const BROWSER_SELECTOR_TIMEOUT_MS = 2_000;
+const BROWSER_WAIT_TIMEOUT_MS = 2_000;
+const RESERVED_MS = 20_000;
 const LEASE_MS = 45_000;
 const COOLDOWN_MS = 2_000;
 
@@ -39,14 +41,14 @@ async function acquireLease(env: Env, owner: string, product: BrowserProduct, no
 }
 
 async function releaseLease(env: Env, owner: string, product: BrowserProduct, token: string): Promise<void> {
-  // Compare-and-set: an old request must not unlock a replacement lease.
+  // Compare-and-set: an expired, replaced request cannot release another's lease.
   await env.DB.prepare(`
     UPDATE picosvc_browser_gates SET leased_until_ms=0, next_allowed_ms=?
     WHERE owner=? AND product=? AND token=?
   `).bind(Date.now() + COOLDOWN_MS, owner, product, token).run();
 }
 
-async function reserveBudget(env: Env, owner: string, product: BrowserProduct): Promise<{ ok: true; month: string } | Response> {
+async function reserveBudget(env: Env, owner: string, product: BrowserProduct): Promise<{ month: string } | Response> {
   const { tier } = await productLimit(env, owner, product, product === 'fetch' ? 'requests' : 'shots');
   const limit = MONTHLY_MS[tier];
   const month = monthKey();
@@ -57,7 +59,7 @@ async function reserveBudget(env: Env, owner: string, product: BrowserProduct): 
     WHERE picosvc_browser_usage.used_ms + excluded.used_ms <= ?
     RETURNING used_ms
   `).bind(owner, product, month, RESERVED_MS, limit).first<{ used_ms: number }>();
-  if (reserved) return { ok: true, month };
+  if (reserved) return { month };
   const used = await env.DB.prepare(`
     SELECT used_ms FROM picosvc_browser_usage WHERE owner=? AND product=? AND month=?
   `).bind(owner, product, month).first<{ used_ms: number }>();
@@ -74,10 +76,17 @@ async function settleBudget(env: Env, owner: string, product: BrowserProduct, mo
   `).bind(adjustment, owner, product, month).run();
 }
 
+function boundedMs(value: unknown, ceiling: number): number {
+  const amount = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? Math.min(ceiling, Math.floor(amount)) : ceiling;
+}
+
 /**
- * Browser Run owns the actual termination: its navigation/action/PDF timeouts stop
- * the operation. Do not Promise.race() a browser RPC: that abandons the response
- * without proving the underlying browser stopped, and can leak billable time.
+ * Browser Run itself stops navigation/action/PDF work at the configured timers.
+ * Do not Promise.race() the browser RPC: a timed-out outer promise cannot prove
+ * that the underlying browser stopped and may leak billable browser-time.
+ * The stage timers approximate a 20s total; provider/transport overhead is not
+ * covered by a guaranteed 20s wall-clock deadline.
  */
 export async function runMeteredBrowserAction(
   env: Env,
@@ -89,16 +98,23 @@ export async function runMeteredBrowserAction(
   if (!env.BROWSER) return json({ error: 'Browser Run binding is not configured' }, 503);
   const acquired = await acquireLease(env, owner, product, Date.now());
   if (acquired instanceof Response) return acquired;
-  let reservation: { ok: true; month: string } | null = null;
+  let reservation: { month: string } | null = null;
   let measuredMs = RESERVED_MS;
   try {
     const budget = await reserveBudget(env, owner, product);
     if (budget instanceof Response) return budget;
     reservation = budget;
+    const goto = (options.gotoOptions as Record<string, unknown> | undefined) || {};
+    const selector = options.waitForSelector as Record<string, unknown> | undefined;
     const response = await env.BROWSER.quickAction(action, {
       ...options,
-      gotoOptions: { waitUntil: 'domcontentloaded', timeout: BROWSER_NAVIGATION_TIMEOUT_MS },
-      actionTimeout: BROWSER_ACTION_TIMEOUT_MS,
+      gotoOptions: {
+        ...goto,
+        timeout: boundedMs(goto.timeout, BROWSER_NAVIGATION_TIMEOUT_MS),
+      },
+      actionTimeout: boundedMs(options.actionTimeout, BROWSER_ACTION_TIMEOUT_MS),
+      ...(options.waitForTimeout !== undefined ? { waitForTimeout: boundedMs(options.waitForTimeout, BROWSER_WAIT_TIMEOUT_MS) } : {}),
+      ...(selector ? { waitForSelector: { ...selector, timeout: boundedMs(selector.timeout, BROWSER_SELECTOR_TIMEOUT_MS) } } : {}),
       ...(action === 'pdf' ? {
         pdfOptions: { ...((options.pdfOptions as Record<string, unknown> | undefined) || {}), timeout: BROWSER_ACTION_TIMEOUT_MS },
       } : {}),
