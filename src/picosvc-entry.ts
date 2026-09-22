@@ -16,7 +16,8 @@ import { functionRuntimeRoute } from './picosvc/functions-service.js';
 import { hooksAdvancedRuntimeRoute } from './picosvc/hooks-advanced.js';
 import { hooksRuntimeRoute } from './picosvc/hooks.js';
 import { jsonAdvancedRuntimeRoute } from './picosvc/json-advanced.js';
-import { jsonScopedWriteGuard } from './picosvc/json-scoped-guard.js';
+import { jsonWriteQuotaGuard } from './picosvc/json-write-quota-guard.js';
+import { jsonExportQuotaGuard } from './picosvc/json-export-quota-guard.js';
 import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
 import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
 import { mcpObservedRuntimeRoute } from './picosvc/mcp-observability.js';
@@ -49,7 +50,7 @@ function withCors(response: Response, origin: string | null): Response {
   headers.set('access-control-allow-methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
   headers.set('access-control-allow-headers', 'authorization,content-type,if-match,if-none-match');
   // The Screenshot workspace reads image dimensions and tier from response headers.
-  headers.set('access-control-expose-headers', 'etag,x-request-id,x-picosvc-image-size,x-picosvc-tier,content-disposition');
+  headers.set('access-control-expose-headers', 'etag,x-request-id,x-picosvc-image-size,x-picosvc-tier,x-picosvc-browser-ms-used,retry-after,content-disposition');
   headers.set('access-control-max-age', '86400');
   headers.append('vary', 'Origin');
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -77,7 +78,12 @@ export default {
       }
       const filesResponse = await filesAccessRuntimeRoute(request, env);
       if (filesResponse) return send(filesResponse);
-      const guardrailResponse = await picoSvcRuntimeGuardrails(request, env) || await jsonScopedWriteGuard(request, env);
+      // The old JSON guard scans every owner document. Route all public/managed
+      // JSON PUTs through the indexed counter guard, including scoped tokens.
+      const jsonWrite = request.method === 'PUT'
+        && (url.pathname.startsWith('/json/') || /^\/api\/picosvc\/json\/stores\/[^/]+\/documents\//.test(url.pathname));
+      const guardrailResponse = await (jsonWrite ? jsonWriteQuotaGuard(request, env) : picoSvcRuntimeGuardrails(request, env))
+        || await jsonExportQuotaGuard(request, env);
       if (guardrailResponse) return send(guardrailResponse);
       const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
       if (sandboxMeterResponse) return send(sandboxMeterResponse);
@@ -112,6 +118,12 @@ export default {
       if (observedMcp) return observedMcp;
       return legacyEntry.fetch(request, env, ctx);
     } catch (error) {
+      // SQLite BEFORE triggers close concurrent PUT races that the optimistic
+      // application precheck cannot. Return a quota response rather than 500.
+      if ((url.pathname.startsWith('/json/') || url.pathname.startsWith('/api/picosvc/json/'))
+        && error instanceof Error && error.message.includes('json_quota_exceeded')) {
+        return send(Response.json({ error: 'JSON document or storage limit reached' }, { status: 402, headers: { 'cache-control': 'no-store' } }));
+      }
       if (!picoApi) throw error;
       // Do not expose exception details, credentials or provider internals in public responses.
       console.error('PicoSvc API request failed', requestId, url.pathname);
