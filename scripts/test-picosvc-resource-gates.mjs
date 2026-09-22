@@ -12,7 +12,7 @@ for (const filename of readdirSync(new URL('../migrations/', import.meta.url))
 const store = db.prepare('INSERT INTO json_stores (id,owner,public_id,name,token_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
 const insert = db.prepare('INSERT INTO json_documents (store_id,key,value_json,updated_at) VALUES (?,?,?,?)');
 const update = db.prepare('UPDATE json_documents SET value_json=? WHERE store_id=? AND key=?');
-const total = () => db.prepare('SELECT documents,storage_bytes FROM picosvc_json_totals WHERE owner=?').get('alice');
+const total = () => ({ ...db.prepare('SELECT documents,storage_bytes FROM picosvc_json_totals WHERE owner=?').get('alice') });
 store.run('store-a', 'alice', 'a'.repeat(32), 'A', 'token-a', 'now', 'now');
 store.run('store-b', 'alice', 'b'.repeat(32), 'B', 'token-b', 'now', 'now');
 assert.deepEqual(total(), { documents: 0, storage_bytes: 0 }, 'Store creation creates a zero counter');
