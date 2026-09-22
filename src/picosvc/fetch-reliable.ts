@@ -2,6 +2,7 @@ import type { Env } from '../types.js';
 import { readBoundedResponse, ResponseLimitError } from './bounded-response.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
 import { fetchPublic, safePublicUrl } from './security.js';
+import { runMeteredBrowserAction } from './browser-cost-gate.js';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const TEXT_TYPES = new Set(['text/html', 'application/xhtml+xml', 'text/plain']);
@@ -66,7 +67,32 @@ export async function reliableFetchRoute(request: Request, env: Env): Promise<Re
   const usage = await consumeUsage(env, identity.ownerId, 'fetch', 'requests');
   if (!usage.ok) return json({ error: { code: 'quota_reached', message: 'Fetch quota reached.' }, ...usage }, 429);
 
-  // The same deadline covers browser navigation, upstream redirects AND body streaming.
+  if (format === 'markdown') {
+    // Wait for Browser Run's own stage timeouts instead of racing and abandoning
+    // the browser RPC. The cost gate keeps the lease until the provider settles.
+    const waitUntil = body.waitUntil === 'networkidle0' ? 'networkidle0'
+      : body.waitUntil === 'networkidle2' ? 'networkidle2' : 'domcontentloaded';
+    const response = await runMeteredBrowserAction(env, identity.ownerId, 'fetch', 'markdown', {
+      url: target.toString(), gotoOptions: { timeout: timeoutMs, waitUntil }, actionTimeout: timeoutMs,
+    });
+    if (!response.ok) {
+      if (response.status === 429 || response.status === 504 || response.status === 503) return response;
+      return fail('browser_error', `Browser Run returned HTTP ${response.status}.`, 502);
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
+      const markdown = decode(bytes, response.headers.get('content-type'));
+      if (!markdown.trim()) return fail('empty_content', 'No readable markdown was returned. The page may require authentication or JavaScript.', 422);
+      return json({ schema: 'picosvc.fetch.v1', url: target.toString(), format, readable, markdown, bytes: bytes.byteLength, tier: usage.tier });
+    } catch (error) {
+      if (error instanceof ResponseLimitError) return fail('output_too_large', 'Fetch response exceeds the 2 MiB limit.', 413);
+      return fail(controller.signal.aborted ? 'timeout' : 'fetch_failed', 'Could not read the browser response.', controller.signal.aborted ? 504 : 502);
+    } finally { clearTimeout(timer); }
+  }
+
+  // Metadata extraction uses fetchPublic with an actual abort signal, not Browser Run.
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
@@ -74,19 +100,6 @@ export async function reliableFetchRoute(request: Request, env: Env): Promise<Re
   });
   try {
     const perform = async (): Promise<Response> => {
-      if (format === 'markdown') {
-        const waitUntil = body.waitUntil === 'networkidle0' ? 'networkidle0'
-          : body.waitUntil === 'networkidle2' ? 'networkidle2' : 'domcontentloaded';
-        const response = await env.BROWSER!.quickAction('markdown', {
-          url: target.toString(), gotoOptions: { timeout: timeoutMs, waitUntil },
-        });
-        if (!response.ok) return fail('browser_error', `Browser Run returned HTTP ${response.status}.`, 502);
-        const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
-        const markdown = decode(bytes, response.headers.get('content-type'));
-        if (!markdown.trim()) return fail('empty_content', 'No readable markdown was returned. The page may require authentication or JavaScript.', 422);
-        return json({ schema: 'picosvc.fetch.v1', url: target.toString(), format, readable, markdown, bytes: bytes.byteLength, tier: usage.tier });
-      }
-
       const response = await fetchPublic(target, {
         headers: { 'user-agent': 'PicoSvc-Fetch/2.0', accept: 'text/html,application/xhtml+xml,text/plain;q=0.8' },
         signal: controller.signal,
