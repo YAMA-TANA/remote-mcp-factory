@@ -22,6 +22,7 @@ import { functionManagementRoutes } from './functions-service.js';
 import { hooksAdvancedManagementRoutes } from './hooks-advanced.js';
 import { hooksManagementRoutes } from './hooks.js';
 import { jsonAdvancedManagementRoutes } from './json-advanced.js';
+import { jsonExportQuotaGate } from './json-export-gate.js';
 import { licenseAdvancedManagementRoutes } from './license-advanced.js';
 import { mailAdvancedManagementRoutes } from './mail-advanced.js';
 import { mailManualRetryGuard } from './mail-retry-guard.js';
@@ -48,6 +49,7 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
   for (const handler of [
     picoSvcHealthRoute,
     picoSvcUsageDashboard,
+    jsonExportQuotaGate,
     shotQualityManagementRoutes,
     mcpObservabilityManagementRoutes,
     filesAccessManagementRoutes,

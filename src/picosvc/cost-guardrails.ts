@@ -1,6 +1,7 @@
 import type { Env } from '../types.js';
 import { productLimit } from './entitlements.js';
 import { safeReplayUrl } from './hooks.js';
+import { readBoundedResponse, ResponseLimitError } from './bounded-response.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
 import { sha256Hex } from './security.js';
 
@@ -8,96 +9,82 @@ const MAX_JSON_BYTES = 256 * 1024;
 const MIN_RETAINED_HISTORY_LIMIT = 100;
 
 function decoded(value: string): string | null {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return null;
-  }
+  try { return decodeURIComponent(value); }
+  catch { return null; }
 }
-
 function safeObjectPath(value: string): string | null {
   const normalized = value.replace(/^\/+/, '').replace(/\/{2,}/g, '/');
   if (!normalized || normalized.length > 512 || normalized.includes('..') || /[\x00-\x1f]/.test(normalized)) return null;
   return normalized;
 }
-
 function safeJsonKey(value: string): string | null {
   const valueDecoded = decoded(value);
   return valueDecoded && valueDecoded.length <= 200 && /^[A-Za-z0-9._:@/-]+$/.test(valueDecoded) ? valueDecoded : null;
 }
-
 function bearerToken(request: Request): string {
   const auth = request.headers.get('authorization') || '';
   return auth.startsWith('Bearer ') ? auth.slice(7) : '';
 }
 
-async function jsonWriteGuard(
-  request: Request,
-  env: Env,
-  owner: string,
-  storeId: string,
-  key: string,
+/** Shared by master-token, scoped-token and authenticated management JSON writes. */
+export async function jsonWriteGuard(
+  request: Request, env: Env, owner: string, storeId: string, key: string,
 ): Promise<Response | null> {
-  let text: string;
-  try {
-    text = await request.clone().text();
-  } catch {
-    return null;
-  }
-
+  const declared = Number(request.headers.get('content-length') || '0');
+  if (Number.isFinite(declared) && declared > MAX_JSON_BYTES) return json({ error: 'JSON document is limited to 256 KiB' }, 413);
   let value: unknown;
   try {
-    value = JSON.parse(text);
-  } catch {
-    return null;
+    const bytes = await readBoundedResponse(new Response(request.clone().body), MAX_JSON_BYTES);
+    value = JSON.parse(new TextDecoder().decode(bytes));
+  } catch (error) {
+    if (error instanceof ResponseLimitError) return json({ error: 'JSON document is limited to 256 KiB' }, 413);
+    return null; // The JSON runtime returns the normal invalid-body error.
   }
-
-  const valueJson = JSON.stringify(value);
-  const valueBytes = new TextEncoder().encode(valueJson).byteLength;
+  const valueBytes = new TextEncoder().encode(JSON.stringify(value)).byteLength;
   if (valueBytes > MAX_JSON_BYTES) return json({ error: 'JSON document is limited to 256 KiB' }, 413);
 
+  // Only scan the owner's <=50 store usage rows. Triggers maintain these counts
+  // incrementally and atomically as documents are inserted, replaced or deleted.
   const [documentPlan, storagePlan, aggregate, existing] = await Promise.all([
     productLimit(env, owner, 'json', 'documents'),
     productLimit(env, owner, 'json', 'storageBytes'),
     env.DB.prepare(`
-      SELECT
-        COUNT(*) AS documents,
-        COALESCE(SUM(LENGTH(CAST(d.value_json AS BLOB))), 0) AS bytes
-      FROM json_documents d
-      JOIN json_stores s ON s.id=d.store_id
-      WHERE s.owner=?
+      SELECT COALESCE(SUM(u.documents),0) AS documents, COALESCE(SUM(u.bytes),0) AS bytes
+      FROM json_store_usage u JOIN json_stores s ON s.id=u.store_id WHERE s.owner=?
     `).bind(owner).first<{ documents: number; bytes: number }>(),
     env.DB.prepare('SELECT LENGTH(CAST(value_json AS BLOB)) AS bytes FROM json_documents WHERE store_id=? AND key=?')
       .bind(storeId, key).first<{ bytes: number }>(),
   ]);
-
   const documentsUsed = Number(aggregate?.documents || 0);
   const storageUsed = Number(aggregate?.bytes || 0);
   const existingBytes = Number(existing?.bytes || 0);
   const projectedDocuments = documentsUsed + (existing ? 0 : 1);
   const projectedStorageBytes = storageUsed - existingBytes + valueBytes;
-
   if (documentPlan.limit !== null && projectedDocuments > documentPlan.limit) {
-    return json({
-      error: 'JSON document limit reached',
-      tier: documentPlan.tier,
-      limit: documentPlan.limit,
-      used: documentsUsed,
-      projected: projectedDocuments,
-    }, 402);
+    return json({ error: 'JSON document limit reached', tier: documentPlan.tier,
+      limit: documentPlan.limit, used: documentsUsed, projected: projectedDocuments }, 402);
   }
-
   if (storagePlan.limit !== null && projectedStorageBytes > storagePlan.limit) {
-    return json({
-      error: 'JSON storage limit reached',
-      tier: storagePlan.tier,
-      limit: storagePlan.limit,
-      used: storageUsed,
-      projected: projectedStorageBytes,
-    }, 402);
+    return json({ error: 'JSON storage limit reached', tier: storagePlan.tier,
+      limit: storagePlan.limit, used: storageUsed, projected: projectedStorageBytes }, 402);
   }
-
   return null;
+}
+
+// The pre-authentication throttle is keyed by the presented credential (or IP for
+// public reads), not by the victim store's owner: invalid clients cannot exhaust
+// somebody else's account-level bucket. Monthly owner quotas still apply later.
+async function guardJsonBurst(request: Request, env: Env, url: URL): Promise<Response | null> {
+  if (request.method === 'OPTIONS') return null;
+  if (!/^\/json\/[a-f0-9]{32}\/.+/i.test(url.pathname)
+    && !/^\/api\/picosvc\/json\/stores\/[0-9a-f-]{36}\/(?:documents\/.+|export)$/i.test(url.pathname)) return null;
+  const credential = request.headers.get('authorization');
+  const key = credential ? `credential:${await sha256Hex(credential)}`
+    : `ip:${(request.headers.get('cf-connecting-ip') || 'unknown').slice(0, 100)}`;
+  const result = await env.MCP_SERVER_RATE_LIMITER.limit({ key: `picosvc:json:${key}` });
+  if (result.success) return null;
+  return Response.json({ error: { code: 'rate_limited', message: 'Too many JSON requests. Retry shortly.' } },
+    { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': '60' } });
 }
 
 async function guardPublicJsonWrite(request: Request, env: Env, url: URL): Promise<Response | null> {
@@ -124,8 +111,7 @@ async function guardManagedJsonWrite(request: Request, env: Env, url: URL): Prom
   if (identity instanceof Response) return identity;
   const store = await env.DB.prepare('SELECT id,owner FROM json_stores WHERE id=? AND owner=?')
     .bind(match[1], identity.ownerId).first<{ id: string; owner: string }>();
-  if (!store) return null;
-  return jsonWriteGuard(request, env, store.owner, store.id, key);
+  return store ? jsonWriteGuard(request, env, store.owner, store.id, key) : null;
 }
 
 async function guardFileDownload(request: Request, env: Env, url: URL): Promise<Response | null> {
@@ -172,14 +158,8 @@ async function guardManualRssRefresh(request: Request, env: Env, url: URL): Prom
   const remainingMs = last + limit * 60_000 - Date.now();
   if (remainingMs <= 0) return null;
   const retryAfterSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
-  return Response.json({
-    error: 'RSS refresh interval has not elapsed',
-    tier,
-    refreshMinutes: limit,
-    retryAfterSeconds,
-  }, {
-    status: 429,
-    headers: { 'cache-control': 'no-store', 'retry-after': String(retryAfterSeconds) },
+  return Response.json({ error: 'RSS refresh interval has not elapsed', tier, refreshMinutes: limit, retryAfterSeconds }, {
+    status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(retryAfterSeconds) },
   });
 }
 
@@ -192,13 +172,11 @@ async function guardHookBody(request: Request, env: Env, url: URL): Promise<Resp
   const { tier, limit } = await productLimit(env, inbox.owner, 'hooks', 'bodyBytes');
   if (limit === null) return null;
   const declared = Number(request.headers.get('content-length') || '0');
-  if (Number.isFinite(declared) && declared > limit) {
-    return json({ error: 'Webhook body exceeds the plan limit', tier, limitBytes: limit }, 413);
-  }
+  if (Number.isFinite(declared) && declared > limit) return json({ error: 'Webhook body exceeds the plan limit', tier, limitBytes: limit }, 413);
   try {
-    const bytes = await request.clone().arrayBuffer();
-    if (bytes.byteLength > limit) return json({ error: 'Webhook body exceeds the plan limit', tier, limitBytes: limit }, 413);
-  } catch {
+    await readBoundedResponse(new Response(request.clone().body), limit);
+  } catch (error) {
+    if (error instanceof ResponseLimitError) return json({ error: 'Webhook body exceeds the plan limit', tier, limitBytes: limit }, 413);
     return null;
   }
   return null;
@@ -220,37 +198,25 @@ async function guardHookReplay(request: Request, env: Env, url: URL): Promise<Re
 }
 
 async function pruneHistory(
-  env: Env,
-  owner: string,
-  product: 'mail' | 'cron' | 'forms',
-  table: 'mail_events' | 'cron_runs' | 'form_submissions',
-  orderColumn: 'received_at' | 'ran_at',
+  env: Env, owner: string, product: 'mail' | 'cron' | 'forms',
+  table: 'mail_events' | 'cron_runs' | 'form_submissions', orderColumn: 'received_at' | 'ran_at',
 ): Promise<void> {
   const { limit } = await productLimit(env, owner, product, 'history');
   if (limit === null) return;
   await env.DB.prepare(`
-    DELETE FROM ${table}
-    WHERE owner=? AND id IN (
-      SELECT id FROM ${table}
-      WHERE owner=?
-      ORDER BY ${orderColumn} DESC
-      LIMIT -1 OFFSET ?
+    DELETE FROM ${table} WHERE owner=? AND id IN (
+      SELECT id FROM ${table} WHERE owner=? ORDER BY ${orderColumn} DESC LIMIT -1 OFFSET ?
     )
   `).bind(owner, owner, Math.max(0, limit)).run();
 }
 
 async function pruneOwnersAboveMinimum(
-  env: Env,
-  product: 'mail' | 'cron' | 'forms',
-  table: 'mail_events' | 'cron_runs' | 'form_submissions',
-  orderColumn: 'received_at' | 'ran_at',
+  env: Env, product: 'mail' | 'cron' | 'forms',
+  table: 'mail_events' | 'cron_runs' | 'form_submissions', orderColumn: 'received_at' | 'ran_at',
 ): Promise<void> {
   const rows = await env.DB.prepare(`
-    SELECT owner, COUNT(*) AS count
-    FROM ${table}
-    GROUP BY owner
-    HAVING COUNT(*) > ?
-    LIMIT 500
+    SELECT owner, COUNT(*) AS count FROM ${table}
+    GROUP BY owner HAVING COUNT(*) > ? LIMIT 500
   `).bind(MIN_RETAINED_HISTORY_LIMIT).all<{ owner: string; count: number }>();
   for (const row of rows.results || []) await pruneHistory(env, row.owner, product, table, orderColumn);
 }
@@ -258,6 +224,7 @@ async function pruneOwnersAboveMinimum(
 export async function picoSvcRuntimeGuardrails(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
   for (const guard of [
+    guardJsonBurst,
     guardHookBody,
     guardHookReplay,
     guardRssDelivery,

@@ -1,5 +1,6 @@
 import type { Env } from '../types.js';
 import { readBoundedResponse, ResponseLimitError } from './bounded-response.js';
+import { acquireBrowserLease, releaseBrowserLease } from './browser-execution-gate.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
 import { fetchPublic, safePublicUrl } from './security.js';
 
@@ -36,7 +37,7 @@ function metadata(html: string, url: string, readable: boolean) {
     try {
       const candidate = new URL(htmlEntityDecode(canonicalValue), url);
       if ((candidate.protocol === 'https:' || candidate.protocol === 'http:') && !candidate.username && !candidate.password) canonical = candidate.toString();
-    } catch { /* Invalid canonical links must not turn successful fetches into 502 errors. */ }
+    } catch { /* Broken canonical links are not fatal. */ }
   }
   return {
     title: htmlEntityDecode(title.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()),
@@ -61,57 +62,65 @@ export async function reliableFetchRoute(request: Request, env: Env): Promise<Re
   const format = body.format === 'metadata' ? 'metadata' : 'markdown';
   if (format === 'markdown' && !env.BROWSER) return fail('browser_unavailable', 'Browser Run is not configured.', 503);
   const timeoutMs = typeof body.timeoutMs === 'number' && Number.isFinite(body.timeoutMs)
-    ? Math.max(1_000, Math.min(20_000, Math.trunc(body.timeoutMs))) : 15_000;
+    ? Math.max(2_000, Math.min(20_000, Math.trunc(body.timeoutMs))) : 15_000;
   const readable = body.readable === true;
-  const usage = await consumeUsage(env, identity.ownerId, 'fetch', 'requests');
-  if (!usage.ok) return json({ error: { code: 'quota_reached', message: 'Fetch quota reached.' }, ...usage }, 429);
-
-  // The same deadline covers browser navigation, upstream redirects AND body streaming.
+  // This account-scoped Cloudflare limiter also protects metadata-only requests.
+  const burst = await env.MCP_SERVER_RATE_LIMITER.limit({ key: `picosvc:fetch:${identity.ownerId}` });
+  if (!burst.success) return Response.json({ error: { code: 'rate_limited', message: 'Fetch is receiving too many requests. Retry shortly.' } },
+    { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': '60' } });
+  const lease = format === 'markdown' ? await acquireBrowserLease(env, identity.ownerId) : null;
+  if (lease instanceof Response) return lease;
+  let browserFailed = false;
   const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => { controller.abort(); reject(new Error('fetch_timeout')); }, timeoutMs + 2_000);
-  });
+  const start = Date.now();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const perform = async (): Promise<Response> => {
-      if (format === 'markdown') {
-        const waitUntil = body.waitUntil === 'networkidle0' ? 'networkidle0'
-          : body.waitUntil === 'networkidle2' ? 'networkidle2' : 'domcontentloaded';
-        const response = await env.BROWSER!.quickAction('markdown', {
-          url: target.toString(), gotoOptions: { timeout: timeoutMs, waitUntil },
-        });
-        if (!response.ok) return fail('browser_error', `Browser Run returned HTTP ${response.status}.`, 502);
-        const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
-        const markdown = decode(bytes, response.headers.get('content-type'));
-        if (!markdown.trim()) return fail('empty_content', 'No readable markdown was returned. The page may require authentication or JavaScript.', 422);
-        return json({ schema: 'picosvc.fetch.v1', url: target.toString(), format, readable, markdown, bytes: bytes.byteLength, tier: usage.tier });
-      }
-
-      const response = await fetchPublic(target, {
-        headers: { 'user-agent': 'PicoSvc-Fetch/2.0', accept: 'text/html,application/xhtml+xml,text/plain;q=0.8' },
-        signal: controller.signal,
+    const usage = await consumeUsage(env, identity.ownerId, 'fetch', 'requests');
+    if (!usage.ok) return json({ error: { code: 'quota_reached', message: 'Fetch quota reached.' }, ...usage }, 429);
+    if (format === 'markdown') {
+      const waitUntil = body.waitUntil === 'networkidle0' ? 'networkidle0'
+        : body.waitUntil === 'networkidle2' ? 'networkidle2' : 'domcontentloaded';
+      // Quick Actions do not expose a cancellation handle. Never race away and
+      // release the lease while a billable browser might still be running.
+      const navigationMs = Math.min(12_000, Math.max(1_000, timeoutMs - 7_000));
+      const actionMs = Math.max(1_000, timeoutMs - navigationMs);
+      const response = await env.BROWSER!.quickAction('markdown', {
+        url: target.toString(), gotoOptions: { timeout: navigationMs, waitUntil }, actionTimeout: actionMs,
       });
-      if (!response.ok) return fail('upstream_http', `Upstream returned HTTP ${response.status}.`, 502);
-      const contentType = response.headers.get('content-type');
-      const type = contentType?.split(';', 1)[0].trim().toLowerCase();
-      if (type && !TEXT_TYPES.has(type)) {
-        void response.body?.cancel().catch(() => undefined);
-        return fail('unsupported_content_type', `Metadata requires HTML or plain text, but upstream returned ${type}.`, 415);
-      }
+      const browserMs = Number(response.headers.get('x-browser-ms-used'));
+      if (Number.isFinite(browserMs) && browserMs >= 0) console.log('PicoSvc Browser Run', { product: 'fetch', browserMs });
+      if (controller.signal.aborted) { browserFailed = true; return fail('timeout', 'Browser rendering exceeded the requested deadline.', 504); }
+      if (!response.ok) { browserFailed = true; return fail('browser_error', `Browser Run returned HTTP ${response.status}.`, response.status === 429 ? 429 : 502); }
       const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
-      if (!bytes.byteLength) return fail('empty_content', 'Upstream returned an empty document.', 422);
-      const html = decode(bytes, contentType);
-      const actualUrl = safePublicUrl(response.url)?.toString() || target.toString();
-      const details = metadata(html, actualUrl, readable);
-      if (!details.title && !details.description && !details.textPreview) return fail('empty_content', 'No readable content was found in the document.', 422);
-      return json({ schema: 'picosvc.fetch.v1', url: actualUrl, format, readable, bytes: bytes.byteLength, contentType, ...details, tier: usage.tier });
-    };
-    return await Promise.race([perform(), deadline]);
+      const markdown = decode(bytes, response.headers.get('content-type'));
+      if (!markdown.trim()) return fail('empty_content', 'No readable markdown was returned. The page may require authentication or JavaScript.', 422);
+      return json({ schema: 'picosvc.fetch.v1', url: target.toString(), format, readable, markdown, bytes: bytes.byteLength, tier: usage.tier });
+    }
+    const response = await fetchPublic(target, {
+      headers: { 'user-agent': 'PicoSvc-Fetch/2.0', accept: 'text/html,application/xhtml+xml,text/plain;q=0.8' },
+      signal: controller.signal,
+    });
+    if (!response.ok) return fail('upstream_http', `Upstream returned HTTP ${response.status}.`, 502);
+    const contentType = response.headers.get('content-type');
+    const type = contentType?.split(';', 1)[0].trim().toLowerCase();
+    if (type && !TEXT_TYPES.has(type)) {
+      void response.body?.cancel().catch(() => undefined);
+      return fail('unsupported_content_type', `Metadata requires HTML or plain text, but upstream returned ${type}.`, 415);
+    }
+    const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
+    if (!bytes.byteLength) return fail('empty_content', 'Upstream returned an empty document.', 422);
+    const html = decode(bytes, contentType);
+    const actualUrl = safePublicUrl(response.url)?.toString() || target.toString();
+    const details = metadata(html, actualUrl, readable);
+    if (!details.title && !details.description && !details.textPreview) return fail('empty_content', 'No readable content was found in the document.', 422);
+    return json({ schema: 'picosvc.fetch.v1', url: actualUrl, format, readable, bytes: bytes.byteLength, contentType, ...details, tier: usage.tier });
   } catch (error) {
+    if (format === 'markdown') browserFailed = true;
     if (error instanceof ResponseLimitError) return fail('output_too_large', 'Fetch response exceeds the 2 MiB limit.', 413);
     if (controller.signal.aborted || (error instanceof Error && /timeout|abort/i.test(error.message))) return fail('timeout', 'Fetching or reading the response timed out.', 504);
     return fail('fetch_failed', 'Could not fetch this page. Confirm the URL is publicly accessible.', 502);
   } finally {
-    if (timer) clearTimeout(timer);
+    clearTimeout(timer);
+    if (lease) await releaseBrowserLease(env, lease, browserFailed || Date.now() - start > timeoutMs);
   }
 }

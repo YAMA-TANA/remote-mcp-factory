@@ -1,14 +1,16 @@
 import type { Env } from '../types.js';
 import { clerkIdentity } from '../auth.js';
+import { readBoundedResponse, ResponseLimitError } from './bounded-response.js';
+import { acquireBrowserLease, releaseBrowserLease } from './browser-execution-gate.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
 import { randomSecret, safePublicUrl, sha256Hex } from './security.js';
 import { inspectShot } from './shot-image-quality.js';
 
 const MAX_TIMEOUT = 20_000;
-const MAX_WAIT = 10_000;
+const MAX_WAIT = 1_000;
 const MAX_BYTES = 20 * 1024 * 1024;
+const MAX_VIEWPORT_PIXELS = 16_000_000;
 const KEY_PATTERN = /^pss_[A-Za-z0-9_-]{32}$/;
-const METHODS = 'GET,POST,DELETE';
 type ShotOwner = { ownerId: string };
 
 function fail(code: string, message: string, status: number): Response {
@@ -22,7 +24,6 @@ function bounded(value: unknown, fallback: number, min: number, max: number): nu
 function validSelector(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 300 ? value.trim() : null;
 }
-function month(): string { return new Date().toISOString().slice(0, 7); }
 
 async function resolveShotOwner(request: Request, env: Env): Promise<ShotOwner | Response> {
   const authorization = request.headers.get('authorization') || '';
@@ -49,7 +50,6 @@ async function keyRoutes(request: Request, env: Env, url: URL): Promise<Response
   const collection = url.pathname === '/api/picosvc/shot/keys';
   const keyMatch = url.pathname.match(/^\/api\/picosvc\/shot\/keys\/([0-9a-f-]{36})$/i);
   if (!collection && !keyMatch) return null;
-  // A Screenshot API key must never be allowed to mint or manage other keys.
   const identity = await requireIdentity(request, env);
   if (identity instanceof Response) return identity;
   try {
@@ -95,66 +95,81 @@ async function capture(request: Request, env: Env): Promise<Response> {
   const target = safePublicUrl(body?.url);
   if (!target) return fail('invalid_url', 'Provide a public HTTP(S) URL on port 80 or 443.', 400);
   const format = body?.format === 'pdf' ? 'pdf' : 'png';
-  const timeoutMs = bounded(body?.timeoutMs, MAX_TIMEOUT, 1000, MAX_TIMEOUT);
+  const timeoutMs = bounded(body?.timeoutMs, MAX_TIMEOUT, 2_000, MAX_TIMEOUT);
   const waitMs = bounded(body?.waitMs, 900, 0, MAX_WAIT);
   const width = bounded(body?.width, 1280, 320, 3840);
   const height = bounded(body?.height, 720, 200, 2160);
   const deviceScaleFactor = bounded(body?.deviceScaleFactor, 1, 1, 3);
+  if (width * height * deviceScaleFactor * deviceScaleFactor > MAX_VIEWPORT_PIXELS) {
+    return fail('viewport_too_large', 'Viewport resolution exceeds the 16-megapixel rendering safety limit.', 413);
+  }
   const selector = validSelector(body?.selector);
   if (body?.selector && !selector) return fail('invalid_selector', 'CSS selector must contain 1–300 characters.', 400);
   const waitUntil = ['networkidle0', 'networkidle2', 'load', 'domcontentloaded'].includes(String(body?.waitUntil))
     ? String(body?.waitUntil) : 'networkidle2';
   const fullPage = body?.fullPage === true;
-  const usage = await consumeUsage(env, owner.ownerId, 'shot', 'shots');
-  if (!usage.ok) return json({ error: { code: 'quota_reached', message: 'Screenshot monthly quota reached' }, tier: usage.tier, limit: usage.limit, used: usage.used }, 429);
-  const options: Record<string, unknown> = {
-    url: target.toString(),
-    viewport: { width, height, deviceScaleFactor },
-    gotoOptions: { timeout: timeoutMs, waitUntil },
-    actionTimeout: timeoutMs,
-    ...(waitMs ? { waitForTimeout: waitMs } : {}),
-    ...(selector && format === 'png' ? { selector, waitForSelector: { selector, visible: true, timeout: timeoutMs } } : {}),
-    ...(format === 'pdf' ? { pdfOptions: { printBackground: true, timeout: timeoutMs } } : { screenshotOptions: { fullPage } }),
-  };
-  const action = format === 'pdf' ? 'pdf' : 'screenshot';
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const response = await Promise.race([
-        env.BROWSER.quickAction(action, options),
-        new Promise<Response>((_, reject) => { timer = setTimeout(() => reject(new Error('capture_timeout')), timeoutMs * 2 + waitMs + 2500); }),
-      ]);
-      if (!response.ok) return fail('browser_error', `Browser renderer failed (HTTP ${response.status}). Check URL accessibility and try a longer timeout.`, response.status === 429 ? 429 : 502);
-      if (Number(response.headers.get('content-length') || '0') > MAX_BYTES) return fail('output_too_large', 'Rendered output exceeds 20 MiB.', 413);
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      const inspection = await inspectShot(bytes, format);
-      if (!inspection.ok) return fail('invalid_output', inspection.reason || 'Renderer did not return a valid image or PDF.', 502);
-      if (inspection.blank) {
-        if (attempt === 0) {
-          // Retry a blank PNG once with a stricter load condition. Never return a white image as success.
-          options.gotoOptions = { timeout: timeoutMs, waitUntil: 'networkidle0' };
-          options.waitForTimeout = Math.max(1800, waitMs);
-          continue;
-        }
-        return fail('blank_capture', 'Page rendered as an all-white image even after retry. Confirm the URL is public, or set waitMs / selector for dynamically loaded content.', 422);
-      }
-      const headers = new Headers({
-        'content-type': format === 'pdf' ? 'application/pdf' : 'image/png',
-        'content-disposition': `attachment; filename="picosvc-capture.${format}"`,
-        'cache-control': 'no-store',
-        'x-picosvc-tier': usage.tier,
-        'x-content-type-options': 'nosniff',
-      });
-      if (inspection.width && inspection.height) headers.set('x-picosvc-image-size', `${inspection.width}x${inspection.height}`);
-      return new Response(bytes, { status: 200, headers });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return fail(/timeout/i.test(message) ? 'capture_timeout' : 'capture_failed', /timeout/i.test(message)
-        ? 'Rendering timed out. Try a smaller viewport, shorter wait, or a page that loads faster.'
-        : 'Browser rendering failed. Confirm the target URL is reachable and try again.', /timeout/i.test(message) ? 504 : 502);
-    } finally { if (timer) clearTimeout(timer); }
+  const burst = await env.MCP_SERVER_RATE_LIMITER.limit({ key: `picosvc:shot:${owner.ownerId}` });
+  if (!burst.success) return Response.json({ error: { code: 'rate_limited', message: 'Too many captures. Retry shortly.' } },
+    { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': '60' } });
+  const lease = await acquireBrowserLease(env, owner.ownerId);
+  if (lease instanceof Response) return lease;
+  let browserFailed = false;
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const usage = await consumeUsage(env, owner.ownerId, 'shot', 'shots');
+    if (!usage.ok) return json({ error: { code: 'quota_reached', message: 'Screenshot monthly quota reached' }, tier: usage.tier, limit: usage.limit, used: usage.used }, 429);
+    const navigationMs = Math.min(10_000, Math.max(1_000, timeoutMs - 9_000));
+    const actionMs = Math.max(1_000, timeoutMs - navigationMs - waitMs);
+    const options: Record<string, unknown> = {
+      url: target.toString(),
+      viewport: { width, height, deviceScaleFactor },
+      gotoOptions: { timeout: navigationMs, waitUntil },
+      actionTimeout: actionMs,
+      ...(waitMs ? { waitForTimeout: waitMs } : {}),
+      ...(selector && format === 'png' ? { selector, waitForSelector: { selector, visible: true, timeout: Math.min(1_000, actionMs) } } : {}),
+      ...(format === 'pdf' ? { pdfOptions: { printBackground: true, timeout: actionMs } } : { screenshotOptions: { fullPage } }),
+    };
+    // Do not Promise.race() away from a billable Quick Action: it exposes no
+    // cancel handle. The provider's navigation/action timeouts terminate first.
+    const response = await env.BROWSER.quickAction(format === 'pdf' ? 'pdf' : 'screenshot', options);
+    const browserMs = Number(response.headers.get('x-browser-ms-used'));
+    if (Number.isFinite(browserMs) && browserMs >= 0) console.log('PicoSvc Browser Run', { product: 'shot', browserMs });
+    if (controller.signal.aborted) { browserFailed = true; return fail('capture_timeout', 'Rendering exceeded the 20-second request budget.', 504); }
+    if (!response.ok) {
+      browserFailed = true;
+      return fail('browser_error', `Browser renderer failed (HTTP ${response.status}). Check URL accessibility.`, response.status === 429 ? 429 : 502);
+    }
+    const bytes = await readBoundedResponse(response, MAX_BYTES, controller.signal);
+    const inspection = await inspectShot(bytes, format);
+    if (!inspection.ok) return fail('invalid_output', inspection.reason || 'Renderer did not return a valid image or PDF.', 502);
+    // Automatic retries make one billed API request perform two full browser runs.
+    // Return a clear failure instead; callers can retry after the cooldown.
+    if (inspection.blank) return fail('blank_capture', 'The rendered screenshot is blank. Try a different page, selector, or wait setting.', 422);
+    if (controller.signal.aborted) { browserFailed = true; return fail('capture_timeout', 'Rendering exceeded the 20-second request budget.', 504); }
+    const headers = new Headers({
+      'content-type': format === 'pdf' ? 'application/pdf' : 'image/png',
+      'content-disposition': `attachment; filename="picosvc-capture.${format}"`,
+      'cache-control': 'no-store',
+      'x-picosvc-tier': usage.tier,
+      'x-content-type-options': 'nosniff',
+    });
+    if (inspection.width && inspection.height) headers.set('x-picosvc-image-size', `${inspection.width}x${inspection.height}`);
+    return new Response(bytes, { status: 200, headers });
+  } catch (error) {
+    browserFailed = true;
+    if (error instanceof ResponseLimitError) return fail('output_too_large', 'Rendered output exceeds 20 MiB.', 413);
+    const message = error instanceof Error ? error.message : String(error);
+    return fail(controller.signal.aborted || /timeout|abort/i.test(message) ? 'capture_timeout' : 'capture_failed',
+      controller.signal.aborted || /timeout|abort/i.test(message)
+        ? 'Rendering timed out. Try a smaller viewport, shorter wait, or a faster page.'
+        : 'Browser rendering failed. Confirm the target URL is reachable and try again.',
+      controller.signal.aborted || /timeout|abort/i.test(message) ? 504 : 502);
+  } finally {
+    clearTimeout(timer);
+    await releaseBrowserLease(env, lease, browserFailed || Date.now() - startedAt > timeoutMs);
   }
-  return fail('capture_failed', 'Screenshot could not be captured.', 502);
 }
 
 export async function shotQualityManagementRoutes(request: Request, env: Env): Promise<Response | null> {

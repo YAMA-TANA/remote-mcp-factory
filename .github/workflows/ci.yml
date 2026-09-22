@@ -36,13 +36,14 @@ jobs:
       - run: node --experimental-strip-types scripts/test-picosvc-shot-quality.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-public-url.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-bounded-fetch.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-resource-gates.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-onboarding.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-monitor-draft.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-json-advanced.mjs
       - run: node --experimental-strip-types scripts/test-picosvc-license-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-flags-advanced.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-files-access.mjs
-      - run: node --experimental-strip-types scripts/test-picosvc-mail-mime.mjs
+      - run: node --experimental-sqlite scripts/test-picosvc-mail-mime.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-mail-delivery.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-mail-retry-cap.mjs
       - run: node --experimental-sqlite --experimental-strip-types scripts/test-picosvc-cron-advanced.mjs
