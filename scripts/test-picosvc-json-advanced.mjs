@@ -14,15 +14,20 @@ for (const invariant of [
   /WHERE store_id=\? AND key>\? ORDER BY key LIMIT 101/,
   /WHERE id=\? AND owner=\?/, /WHERE store_id=\? AND owner=\?/, /DELETE FROM json_store_tokens WHERE id=\? AND store_id=\? AND owner=\?/,
 ]) assert.match(jsonApi, invariant, `Missing JSON invariant: ${invariant}`);
-const scopedGuard = readFileSync(new URL('../src/picosvc/json-scoped-guard.ts', import.meta.url), 'utf8');
-assert.match(scopedGuard, /JSON document limit reached/, 'Scoped writers must honor document count caps');
-assert.match(scopedGuard, /JSON storage limit reached/, 'Scoped writers must honor storage caps');
-assert.match(scopedGuard, /key\.startsWith\(scoped\.key_prefix\)/, 'Scoped writer guard must enforce key prefix');
+const writeGuard = readFileSync(new URL('../src/picosvc/json-write-quota-guard.ts', import.meta.url), 'utf8');
+const capacity = readFileSync(new URL('../src/picosvc/json-capacity.ts', import.meta.url), 'utf8');
+assert.match(writeGuard, /key\.startsWith\(scoped\.key_prefix\)/, 'Scoped writer guard must enforce key prefix');
+assert.match(writeGuard, /checkJsonWriteCapacity\(request, env, store\.owner, store\.id, key\)/, 'Master, scoped and managed JSON writes must share one capacity guard');
+assert.match(capacity, /JSON document limit reached/, 'Scoped writers must honor document count caps');
+assert.match(capacity, /JSON storage limit reached/, 'Scoped writers must honor storage caps');
+assert.match(capacity, /SELECT documents, storage_bytes FROM picosvc_json_totals WHERE owner=\?/, 'JSON capacity must use indexed counters');
+assert.doesNotMatch(capacity, /COUNT\(\*\).*json_documents/s, 'JSON write guard must not count all documents');
 const entry = readFileSync(new URL('../src/picosvc-entry.ts', import.meta.url), 'utf8');
-assert.match(entry, /jsonScopedWriteGuard\(request, env\)/, 'Scoped quota guard must run before JSON public route');
+assert.match(entry, /jsonWriteQuotaGuard\(request, env\)/, 'Scoped quota guard must run before JSON public route');
+assert.match(entry, /jsonExportQuotaGuard\(request, env\)/, 'JSON export must consume request quota');
 assert.ok(entry.indexOf('jsonAdvancedRuntimeRoute,') < entry.indexOf('dataRuntimeRoute,'), 'Advanced JSON must precede legacy public handler');
 const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url), 'utf8');
 assert.ok(routes.indexOf('jsonAdvancedManagementRoutes,') < routes.indexOf('dataManagementRoutes,'), 'Advanced management must precede legacy routes');
 assert.match(entry, /if-match,if-none-match/, 'JSON conditional headers must be accepted via CORS');
 assert.match(entry, /access-control-expose-headers.*etag/, 'JSON ETag must be exposed via CORS');
-console.log('Advanced JSON OK: scoped/private access, ETag CAS, export, quota protection and route invariants.');
+console.log('Advanced JSON OK: scoped/private access, ETag CAS, export metering, indexed quotas and route invariants.');
