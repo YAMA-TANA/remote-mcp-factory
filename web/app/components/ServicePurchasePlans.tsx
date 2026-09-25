@@ -1,17 +1,18 @@
 'use client';
 
-import { ClerkProvider, Show, SignInButton } from '@clerk/react';
-import { CheckoutButton, usePlans } from '@clerk/react/experimental';
+import { ClerkProvider, Show, SignInButton, useClerk } from '@clerk/react';
+import { CheckoutButton } from '@clerk/react/experimental';
 import { enUS } from '@clerk/localizations/en-US';
 import { jaJP } from '@clerk/localizations/ja-JP';
 import { zhCN } from '@clerk/localizations/zh-CN';
 import { ui } from '@clerk/ui';
+import { useEffect, useState } from 'react';
 import type { Locale } from '../i18n-data';
 import type { ProductSlug } from '../customer-content';
 import './service-purchase.css';
 
 const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
-type BillingPlan = ReturnType<typeof usePlans>['data'][number];
+type BillingPlan = Awaited<ReturnType<ReturnType<typeof useClerk>['billing']['getPlans']>>['data'][number];
 
 const PRODUCT_NAMES: Record<ProductSlug, string> = {
   mcp: 'MCP', mock: 'Mock', hooks: 'Hooks', rss: 'Rss', mail: 'Mail', shot: 'Shot',
@@ -63,16 +64,35 @@ function ServicePurchaseUnavailable({ locale }: { locale: Locale }) {
 }
 
 function ServicePlansContent({ service, locale }: { service: ProductSlug; locale: Locale }) {
-  const { data, isLoading, isError } = usePlans({ for: 'user', pageSize: 100 });
+  const clerk = useClerk();
+  const [plans, setPlans] = useState<BillingPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const product = PRODUCT_NAMES[service];
   const lang = locale === 'zh-CN' ? 'zh-cn' : locale;
   const usageUrl = `/${lang}/usage/`;
   const serviceUrl = `/${lang}/${service}/`;
   const copy = COPY[locale];
-  const plans = (['Pico', 'PicoPlus'] as const).map((tier) => ({
+  const servicePlans = (['Pico', 'PicoPlus'] as const).map((tier) => ({
     tier,
-    plan: data.find((candidate) => candidate.name.trim().toLocaleLowerCase('en-US') === `picosvc ${product} ${tier}`.toLocaleLowerCase('en-US')),
+    plan: plans.find((candidate) => candidate.name.trim().toLocaleLowerCase('en-US') === `picosvc ${product} ${tier}`.toLocaleLowerCase('en-US')),
   })).filter((item): item is { tier: 'Pico' | 'PicoPlus'; plan: BillingPlan } => Boolean(item.plan));
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setIsError(false);
+    clerk.billing.getPlans({ for: 'user', pageSize: 100 }).then((result) => {
+      if (!active) return;
+      setPlans(result.data);
+      setIsLoading(false);
+    }).catch(() => {
+      if (!active) return;
+      setIsError(true);
+      setIsLoading(false);
+    });
+    return () => { active = false; };
+  }, [clerk]);
 
   return (
     <section className="customerSection servicePurchase" aria-labelledby="servicePurchaseTitle">
@@ -81,9 +101,9 @@ function ServicePlansContent({ service, locale }: { service: ProductSlug; locale
       <p>{copy.description}</p>
       {isLoading ? <p className="servicePurchaseNotice" role="status">{copy.loading}</p>
           : isError ? <p className="servicePurchaseNotice" role="status">{copy.unavailable}</p>
-            : plans.length === 0 ? <p className="servicePurchaseNotice" role="status">{copy.noPlans}</p>
+          : servicePlans.length === 0 ? <p className="servicePurchaseNotice" role="status">{copy.noPlans}</p>
               : <div className="servicePurchaseGrid">
-                {plans.map(({ tier, plan }) => (
+                {servicePlans.map(({ tier, plan }) => (
                   <article className="servicePurchaseCard" key={plan.id}>
                     <div className="servicePurchaseCardHead">
                       <h3>{tier === 'Pico' ? copy.pico : copy.picoPlus}</h3>
