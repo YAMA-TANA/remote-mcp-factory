@@ -53,3 +53,4 @@ jobs:
       - run: node --experimental-sqlite scripts/test-picosvc-mcp-observability.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-migrations.mjs
       - run: node --experimental-sqlite scripts/test-picosvc-resource-gates.mjs
+      - run: node scripts/test-picosvc-management-mcp.mjs
