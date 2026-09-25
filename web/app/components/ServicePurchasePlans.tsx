@@ -1,7 +1,7 @@
 'use client';
 
-import { ClerkProvider, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
-import { CheckoutButton, usePlans } from '@clerk/nextjs/experimental';
+import { ClerkProvider, Show, SignInButton } from '@clerk/react';
+import { CheckoutButton, usePlans } from '@clerk/react/experimental';
 import { enUS } from '@clerk/localizations/en-US';
 import { jaJP } from '@clerk/localizations/ja-JP';
 import { zhCN } from '@clerk/localizations/zh-CN';
@@ -93,16 +93,16 @@ function ServicePlansContent({ service, locale }: { service: ProductSlug; locale
                       {formatPrice(plan, locale) ?? copy.missing}
                       {plan.fee && <span>{copy.monthly}</span>}
                     </p>
-                    <SignedIn>
+                    <Show when="signed-in">
                       <CheckoutButton planId={plan.id} planPeriod="month" newSubscriptionRedirectUrl={usageUrl}>
                         <button className="servicePurchaseButton" type="button">{copy.purchase}</button>
                       </CheckoutButton>
-                    </SignedIn>
-                    <SignedOut>
+                    </Show>
+                    <Show when="signed-out">
                       <SignInButton mode="modal" forceRedirectUrl={serviceUrl}>
                         <button className="servicePurchaseButton" type="button">{copy.signIn}</button>
                       </SignInButton>
-                    </SignedOut>
+                    </Show>
                   </article>
                 ))}
               </div>}
