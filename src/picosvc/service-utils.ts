@@ -3,12 +3,20 @@ import type { AuthIdentity, Env } from '../types.js';
 import type { PicoSvcProductSlug } from './catalog.js';
 import { monthKey, productLimit } from './entitlements.js';
 
+const INTERNAL_IDENTITIES = new WeakMap<Request, AuthIdentity>();
+
+/** Attach an in-process identity to a Request. This cannot be forged over HTTP. */
+export function withInternalIdentity(request: Request, identity: AuthIdentity): Request {
+  INTERNAL_IDENTITIES.set(request, identity);
+  return request;
+}
+
 export function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
 export async function requireIdentity(request: Request, env: Env): Promise<AuthIdentity | Response> {
-  const identity = await clerkIdentity(request, env);
+  const identity = INTERNAL_IDENTITIES.get(request) || await clerkIdentity(request, env);
   return identity || json({ error: 'Authentication required', signInUrl: env.CLERK_SIGN_IN_URL || null }, 401);
 }
 

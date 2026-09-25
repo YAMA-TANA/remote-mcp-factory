@@ -22,11 +22,13 @@ import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
 import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
 import type { InternalPicoSvcDispatch } from './picosvc/internal-dispatch.js';
 import { mcpObservedRuntimeRoute } from './picosvc/mcp-observability.js';
+import { picoSvcManagementMcpRoute } from './picosvc/management-mcp.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
 import { runAdvancedMonitorChecks } from './picosvc/monitor-advanced.js';
 import { picoSvcRoutes } from './picosvc/routes.js';
+import { withInternalIdentity } from './picosvc/service-utils.js';
 import { utilityAdvancedRuntimeRoute } from './picosvc/utility-advanced.js';
 import { qrRuntimeRoute } from './picosvc/utility-services.js';
 import type { Env } from './types.js';
@@ -141,6 +143,22 @@ export default {
       const dispatchInternal: InternalPicoSvcDispatch = (internal) => dispatchPicoSvcInternal(internal, env);
       const runtimeResponse = await runPicoSvcRuntimeRoutes(request, env, dispatchInternal);
       if (runtimeResponse) return send(runtimeResponse);
+      const managementMcp = await picoSvcManagementMcpRoute(request, env, ctx, async (internalRequest, identity) => {
+        const internal = withInternalIdentity(internalRequest, identity);
+        const internalUrl = new URL(internal.url);
+        const jsonWrite = internal.method === 'PUT'
+          && (internalUrl.pathname.startsWith('/json/') || /^\/api\/picosvc\/json\/stores\/[^/]+\/documents\//.test(internalUrl.pathname));
+        const guardrailResponse = await (jsonWrite ? jsonWriteQuotaGuard(internal, env) : picoSvcRuntimeGuardrails(internal, env))
+          || await jsonExportQuotaGuard(internal, env);
+        if (guardrailResponse) return guardrailResponse;
+        const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(internal, env);
+        if (sandboxMeterResponse) return sandboxMeterResponse;
+        const runtime = await runPicoSvcRuntimeRoutes(internal, env, dispatchInternal);
+        if (runtime) return runtime;
+        const management = await picoSvcRoutes(internal, env, dispatchInternal);
+        return management || Response.json({ error: { code: 'not_found', message: 'PicoSvc route not found' } }, { status: 404 });
+      });
+      if (managementMcp) return send(managementMcp);
       if (picoApi) {
         const response = await picoSvcRoutes(request, env, dispatchInternal);
         if (response) return send(response);

@@ -15,7 +15,9 @@
     "@clerk/backend": "^3.17.2",
     "@cloudflare/sandbox": "0.12.9",
     "hono": "^4.9.0",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "@modelcontextprotocol/server": "^2.1.0",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260914.1",

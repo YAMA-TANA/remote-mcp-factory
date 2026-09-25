@@ -27,6 +27,7 @@ import { mailAdvancedManagementRoutes } from './mail-advanced.js';
 import { mailManualRetryGuard } from './mail-retry-guard.js';
 import { mailManagementRoutes } from './mail-service.js';
 import { mcpObservabilityManagementRoutes } from './mcp-observability.js';
+import { picoSvcManagementMcpKeyRoutes } from './management-mcp.js';
 import { mockAdvancedManagementRoutes } from './mock-advanced.js';
 import { mockManagementRoutes } from './mock.js';
 import { monitorAdvancedManagementRoutes } from './monitor-advanced.js';
@@ -48,6 +49,7 @@ export async function picoSvcRoutes(request: Request, env: Env, dispatchInternal
   const url = new URL(request.url);
   for (const handler of [
     picoSvcHealthRoute,
+    picoSvcManagementMcpKeyRoutes,
     picoSvcUsageDashboard,
     shotQualityManagementRoutes,
     mcpObservabilityManagementRoutes,
