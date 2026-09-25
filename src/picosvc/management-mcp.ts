@@ -50,6 +50,17 @@ function endpointFor(env: Env, requestUrl: string, id: string): string {
   }
 }
 
+function publicGithubRepoUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.hostname !== 'github.com') return false;
+    const parts = url.pathname.replace(/\.git$/, '').split('/').filter(Boolean);
+    return parts.length === 2 && parts.every((part) => /^[A-Za-z0-9_.-]+$/.test(part));
+  } catch {
+    return false;
+  }
+}
+
 function normalizeScopes(value: unknown): ManagementScope[] {
   const input = value === undefined ? ['read', 'mcp:manage'] : value;
   if (!Array.isArray(input) || input.length === 0) throw new Error('scopes must be a non-empty array');
@@ -158,7 +169,7 @@ export async function picoSvcManagementMcpKeyRoutes(request: Request, env: Env):
         scopes,
         token,
         created_at: now,
-        endpoint: `${new URL(request.url).origin}/mcp/picosvc`,
+        endpoint: endpointFor(env, request.url, 'picosvc'),
         note: 'This token is displayed only once. Store it securely.',
       }, 201);
     }
@@ -303,7 +314,7 @@ function createManagementServer(
     {
       description: 'Deploy a public GitHub MCP repository. A protected deployment returns its bearer token once. Use the dashboard/GitHub App flow for private repositories.',
       inputSchema: z.object({
-        repoUrl: z.string().url(),
+        repoUrl: z.string().url().refine(publicGithubRepoUrl, 'repoUrl must be a public https://github.com/<owner>/<repo> repository URL'),
         branch: z.string().min(1).max(200).default('main'),
         subdir: z.string().max(500).default(''),
         command: z.string().max(500).nullable().optional(),
