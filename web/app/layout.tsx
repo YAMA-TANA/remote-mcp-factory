@@ -4,6 +4,7 @@ import './ui-refresh.css';
 import './ui-finishing.css';
 import './icon-system.css';
 import './home-discovery.css';
+import './clerk-pricing.css';
 import { LocaleProvider } from './i18n';
 import SiteFooter from './components/SiteFooter';
 
