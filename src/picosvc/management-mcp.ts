@@ -7,7 +7,7 @@ import {
   listDeploymentSecretNames,
   putDeploymentSecrets,
 } from '../secrets.js';
-import type { Env, ServerRow, Visibility } from '../types.js';
+import type { AuthIdentity, Env, ServerRow, Visibility } from '../types.js';
 import {
   PICOSVC_BILLING_MODEL,
   PICOSVC_BUNDLES,
@@ -17,8 +17,8 @@ import { randomSecret, sha256Hex } from './security.js';
 import { json, requireIdentity } from './service-utils.js';
 
 const KEY_PATTERN = /^psm_[A-Za-z0-9_-]{32}$/;
-const VALID_SCOPES = new Set(['read', 'mcp:manage', 'secrets:write'] as const);
-type ManagementScope = 'read' | 'mcp:manage' | 'secrets:write';
+const VALID_SCOPES = new Set(['read', 'mcp:manage', 'services:manage', 'secrets:write'] as const);
+type ManagementScope = 'read' | 'mcp:manage' | 'services:manage' | 'secrets:write';
 
 interface ManagementPrincipal {
   keyId: string;
@@ -33,6 +33,33 @@ interface ManagementKeyRow {
   owner_org: string | null;
   scopes_json: string;
 }
+
+const SERVICE_SLUGS = [
+  'mock', 'hooks', 'rss', 'mail', 'shot', 'fetch', 'qr', 'cron',
+  'functions', 'json', 'files', 'license', 'flags', 'monitor', 'forms',
+] as const;
+type ManagedService = typeof SERVICE_SLUGS[number];
+
+const SERVICE_ENDPOINTS: Record<ManagedService, { prefix: string; entrypoints: string[] }> = {
+  mock: { prefix: '/api/picosvc/mock', entrypoints: ['/api/picosvc/mock/endpoints', '/api/picosvc/mock/import/openapi'] },
+  hooks: { prefix: '/api/picosvc/hooks', entrypoints: ['/api/picosvc/hooks/inboxes'] },
+  rss: { prefix: '/api/picosvc/rss', entrypoints: ['/api/picosvc/rss/feeds'] },
+  mail: { prefix: '/api/picosvc/mail', entrypoints: ['/api/picosvc/mail/routes'] },
+  shot: { prefix: '/api/picosvc/shot', entrypoints: ['/api/picosvc/shot', '/api/picosvc/shot/keys'] },
+  fetch: { prefix: '/api/picosvc/fetch', entrypoints: ['/api/picosvc/fetch'] },
+  qr: { prefix: '/api/picosvc/qr', entrypoints: ['/api/picosvc/qr/links'] },
+  cron: { prefix: '/api/picosvc/cron', entrypoints: ['/api/picosvc/cron/jobs'] },
+  functions: { prefix: '/api/picosvc/functions', entrypoints: ['/api/picosvc/functions/apps'] },
+  json: { prefix: '/api/picosvc/json', entrypoints: ['/api/picosvc/json/stores'] },
+  files: { prefix: '/api/picosvc/files', entrypoints: ['/api/picosvc/files/spaces'] },
+  license: { prefix: '/api/picosvc/license', entrypoints: ['/api/picosvc/license/projects'] },
+  flags: { prefix: '/api/picosvc/flags', entrypoints: ['/api/picosvc/flags/projects'] },
+  monitor: { prefix: '/api/picosvc/monitor', entrypoints: ['/api/picosvc/monitor'] },
+  forms: { prefix: '/api/picosvc/forms', entrypoints: ['/api/picosvc/forms'] },
+};
+
+export type PicoSvcManagementDispatch = (request: Request, identity: AuthIdentity) => Promise<Response>;
+const MAX_SERVICE_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 function fail(code: string, message: string, status: number): Response {
   return json({ error: { code, message } }, status);
@@ -62,7 +89,7 @@ function publicGithubRepoUrl(value: string): boolean {
 }
 
 function normalizeScopes(value: unknown): ManagementScope[] {
-  const input = value === undefined ? ['read', 'mcp:manage'] : value;
+  const input = value === undefined ? ['read', 'mcp:manage', 'services:manage'] : value;
   if (!Array.isArray(input) || input.length === 0) throw new Error('scopes must be a non-empty array');
   const scopes = [...new Set(input.map((scope) => String(scope)))] as string[];
   for (const scope of scopes) {
@@ -234,11 +261,75 @@ async function getDeployment(env: Env, owner: string, id: string, requestUrl: st
   };
 }
 
+
+function serviceRequestUrl(service: ManagedService, path: string, requestUrl: string): URL {
+  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\') || path.includes('://')) {
+    throw new Error('path must be an absolute-path reference such as /api/picosvc/mock/endpoints');
+  }
+  const base = new URL(requestUrl);
+  const target = new URL(path, base);
+  if (target.origin !== base.origin) throw new Error('Cross-origin service requests are not allowed');
+  let decodedPath: string;
+  try { decodedPath = decodeURIComponent(target.pathname); } catch { throw new Error('path contains invalid percent-encoding'); }
+  if (decodedPath.includes('..')) throw new Error('Path traversal is not allowed');
+  const prefix = SERVICE_ENDPOINTS[service].prefix;
+  if (decodedPath !== prefix && !decodedPath.startsWith(prefix + '/')) {
+    throw new Error(`Path is outside the ${service} management API namespace (${prefix})`);
+  }
+  return target;
+}
+
+function base64Bytes(bytes: Uint8Array): string {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(bytes.length, offset + 0x8000)));
+  }
+  return btoa(binary);
+}
+
+async function serviceResponseResult(response: Response) {
+  const contentType = response.headers.get('content-type') || 'application/octet-stream';
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const headers: Record<string, string> = {};
+  for (const name of ['content-type', 'content-disposition', 'etag', 'location', 'retry-after', 'x-request-id', 'x-picosvc-tier']) {
+    const value = response.headers.get(name);
+    if (value) headers[name] = value;
+  }
+  if (bytes.byteLength > MAX_SERVICE_RESPONSE_BYTES) {
+    return toolResult({
+      ok: response.ok,
+      status: response.status,
+      headers,
+      error: `Response body exceeds the management MCP ${MAX_SERVICE_RESPONSE_BYTES}-byte limit`,
+      bytes: bytes.byteLength,
+    });
+  }
+  if (!bytes.byteLength) return toolResult({ ok: response.ok, status: response.status, headers, body: null });
+
+  const text = new TextDecoder().decode(bytes);
+  if (/application\/(?:[^;]+\+)?json/i.test(contentType)) {
+    try { return toolResult({ ok: response.ok, status: response.status, headers, body: JSON.parse(text) }); }
+    catch { return toolResult({ ok: response.ok, status: response.status, headers, body: text }); }
+  }
+  if (/^(?:text\/|application\/(?:xml|javascript|x-www-form-urlencoded))/i.test(contentType)) {
+    return toolResult({ ok: response.ok, status: response.status, headers, body: text });
+  }
+  return toolResult({
+    ok: response.ok,
+    status: response.status,
+    headers,
+    bodyBase64: base64Bytes(bytes),
+    bytes: bytes.byteLength,
+    note: 'Binary response encoded as base64.',
+  });
+}
+
 function createManagementServer(
   env: Env,
   principal: ManagementPrincipal,
   ctx: ExecutionContext,
   requestUrl: string,
+  dispatchManagement?: PicoSvcManagementDispatch,
 ): McpServer {
   const server = new McpServer(
     { name: 'picosvc-management', version: '0.1.0' },
@@ -288,6 +379,63 @@ function createManagementServer(
         bundleEntitlements: bundles.results || [],
         productUsage: productUsage.results || [],
       });
+    },
+  );
+
+  server.registerTool(
+    'list_service_operations',
+    {
+      description: 'List management API namespaces for all PicoSvc services. MCP hosting uses dedicated first-class tools; the other 15 services use picosvc_service_request.',
+      inputSchema: z.object({}),
+    },
+    async () => toolResult({
+      mcp: {
+        mode: 'first-class-tools',
+        tools: [
+          'list_mcp_deployments', 'get_mcp_deployment', 'create_mcp_deployment',
+          'update_mcp_deployment', 'rebuild_mcp_deployment', 'rotate_mcp_bearer_token',
+          'list_mcp_secret_names', 'put_mcp_secrets', 'delete_mcp_secret',
+        ],
+      },
+      services: Object.fromEntries(SERVICE_SLUGS.map((slug) => [slug, {
+        namespace: SERVICE_ENDPOINTS[slug].prefix,
+        entrypoints: SERVICE_ENDPOINTS[slug].entrypoints,
+        readMethod: 'GET (read scope)',
+        writeMethods: 'POST/PATCH/PUT/DELETE (services:manage scope)',
+      }])),
+    }),
+  );
+
+  server.registerTool(
+    'picosvc_service_request',
+    {
+      description: 'Call an authenticated PicoSvc management API for Mock, Hooks, RSS, Mail, Shot, Fetch, QR, Cron, Functions, JSON, Files, License, Flags, Monitor or Forms. The path is constrained to the selected service namespace. Binary responses are returned as base64.',
+      inputSchema: z.object({
+        service: z.enum(SERVICE_SLUGS),
+        method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']).default('GET'),
+        path: z.string().min(1).max(1000),
+        body: z.unknown().optional(),
+      }),
+    },
+    async ({ service, method, path, body }) => {
+      if (!dispatchManagement) throw new Error('PicoSvc service dispatch is unavailable');
+      if (method === 'GET') requireScope(principal, 'read');
+      else requireScope(principal, 'services:manage');
+
+      const target = serviceRequestUrl(service, path, requestUrl);
+      const headers = new Headers({ accept: 'application/json, text/plain, */*' });
+      const init: RequestInit = { method, headers, redirect: 'manual' };
+      if (body !== undefined && method !== 'GET') {
+        headers.set('content-type', 'application/json');
+        init.body = JSON.stringify(body);
+      }
+      const internal = new Request(target.toString(), init);
+      const response = await dispatchManagement(internal, {
+        userId: principal.ownerId,
+        orgId: principal.ownerOrg,
+        ownerId: principal.ownerId,
+      });
+      return serviceResponseResult(response);
     },
   );
 
@@ -506,6 +654,7 @@ export async function picoSvcManagementMcpRoute(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
+  dispatchManagement?: PicoSvcManagementDispatch,
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (url.pathname !== '/mcp/picosvc') return null;
@@ -525,7 +674,7 @@ export async function picoSvcManagementMcpRoute(
   if (principal instanceof Response) return principal;
 
   const handler = createMcpHandler(
-    () => createManagementServer(env, principal, ctx, request.url),
+    () => createManagementServer(env, principal, ctx, request.url, dispatchManagement),
   );
   return handler.fetch(request);
 }
