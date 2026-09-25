@@ -78,6 +78,8 @@ Most management routes under `/api/picosvc/` and `/api/servers` require a Clerk 
 
 PicoSvc MCP supports public endpoints and bearer-token protected endpoints. Protected tokens are shown when created/rotated and are stored as hashes. MCP deployment environment secrets are AES-GCM encrypted; management APIs list names instead of disclosing values. The Screenshot API has separate `pss_...` keys limited to that product; **do not reuse them as management credentials**.
 
+PicoSvc also exposes a built-in management MCP at `/mcp/picosvc`. It uses dedicated one-time `psm_...` credentials with scoped permissions; these keys are separate from deployment bearer tokens and Screenshot keys. See [`docs/PICOSVC_MANAGEMENT_MCP.md`](docs/PICOSVC_MANAGEMENT_MCP.md).
+
 The Worker needs provider secrets/variables appropriate to the features you enable. The Remote MCP / GitHub App configuration includes:
 
 ```text
