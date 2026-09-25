@@ -1,6 +1,6 @@
 # PicoSvc Management MCP
 
-PicoSvc exposes a built-in Remote MCP endpoint for managing the authenticated owner's PicoSvc MCP deployments.
+PicoSvc exposes a built-in Remote MCP endpoint for managing the authenticated owner's resources across all 16 PicoSvc services.
 
 ## Endpoint
 
@@ -21,7 +21,7 @@ Content-Type: application/json
 
 {
   "name": "ChatGPT",
-  "scopes": ["read", "mcp:manage"]
+  "scopes": ["read", "mcp:manage", "services:manage"]
 }
 ```
 
@@ -31,7 +31,8 @@ Available scopes:
 
 - `read` — catalog/account information, deployment inspection, secret-name listing.
 - `mcp:manage` — create deployments, change visibility/enabled state, rebuild, rotate deployment bearer tokens.
-- `secrets:write` — create/replace/delete encrypted deployment secrets.
+- `services:manage` — create, update, execute and delete resources for Mock, Hooks, RSS, Mail, Shot, Fetch, QR, Cron, Functions, JSON, Files, License, Flags, Monitor and Forms.
+- `secrets:write` — create/replace/delete encrypted MCP deployment secrets.
 
 For a Pixiv MCP, create the deployment with `visibility: "token"` and store `PIXIV_REFRESH_TOKEN` as an encrypted deployment secret. Secret values cannot be read back through the management MCP.
 
@@ -48,6 +49,8 @@ DELETE /api/picosvc/mcp/keys/<key-id>
 | --- | --- | --- |
 | `list_products` | read | Product catalog, tiers and bundles |
 | `get_account` | read | MCP plan, usage and PicoSvc entitlements |
+| `list_service_operations` | read | Discover all 16 supported services, namespaces and entrypoints |
+| `picosvc_service_request` | read / services:manage | Call the selected service's existing management API; GET is read-only, writes/executions require `services:manage` |
 | `list_mcp_deployments` | read | List deployments without secret/token hashes |
 | `get_mcp_deployment` | read | Deployment runtime, tools and secret names |
 | `create_mcp_deployment` | mcp:manage | Deploy a public GitHub MCP repository |
@@ -57,6 +60,28 @@ DELETE /api/picosvc/mcp/keys/<key-id>
 | `list_mcp_secret_names` | read | List secret names only |
 | `put_mcp_secrets` | secrets:write | Create/replace encrypted secrets |
 | `delete_mcp_secret` | secrets:write | Delete one encrypted secret |
+
+The generic service tool covers the existing management namespaces for all non-MCP services:
+
+| Service | Namespace / entrypoint |
+| --- | --- |
+| Mock | `/api/picosvc/mock/endpoints` |
+| Hooks | `/api/picosvc/hooks/inboxes` |
+| RSS | `/api/picosvc/rss/feeds` |
+| Mail | `/api/picosvc/mail/routes` |
+| Shot | `/api/picosvc/shot`, `/api/picosvc/shot/keys` |
+| Fetch | `/api/picosvc/fetch` |
+| QR | `/api/picosvc/qr/links` |
+| Cron | `/api/picosvc/cron/jobs` |
+| Functions | `/api/picosvc/functions/apps` |
+| JSON | `/api/picosvc/json/stores` |
+| Files | `/api/picosvc/files/spaces` |
+| License | `/api/picosvc/license/projects` |
+| Flags | `/api/picosvc/flags/projects` |
+| Monitor | `/api/picosvc/monitor` |
+| Forms | `/api/picosvc/forms` |
+
+Paths are constrained to the namespace for the selected service, so the generic tool cannot reach the management-key API or unrelated Worker routes. Binary results such as Shot output are returned as base64 up to 4 MiB.
 
 Private GitHub repositories still use the existing GitHub App deployment flow. The management MCP's `create_mcp_deployment` tool intentionally accepts public repository URLs only; this avoids treating an installation ID as authorization.
 
@@ -76,5 +101,5 @@ Deploy the Worker after the migration. A GitHub CI pass does not apply the produ
 - Deployment bearer tokens are shown only on deployment creation or rotation.
 - Deployment secrets are encrypted with the existing AES-GCM `DEPLOYMENT_SECRETS_KEY` flow.
 - No MCP tool returns deployment secret values.
-- Use a key without `secrets:write` unless the client actually needs to mutate secrets.
+- Use a key without `services:manage` for read-only clients, and without `secrets:write` unless the client actually needs to mutate MCP secrets.
 - Revoking a management key immediately prevents future MCP calls using that key.
