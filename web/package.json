@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/clerk-js": "^6.0.0",
+    "@clerk/localizations": "^4.17.1",
     "@clerk/ui": "^1.33.1",
     "next": "^16.0.0",
     "react": "^19.0.0",
