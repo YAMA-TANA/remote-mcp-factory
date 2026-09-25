@@ -1,5 +1,4 @@
 import PricingPage from '../../pricing/page';
-import ClerkPricingTable from '../../components/ClerkPricingTable';
 import { LOCALE_SLUGS } from '../../i18n-data';
 import { localeMetadata, parseLocaleParam } from '../../seo';
 
@@ -19,6 +18,5 @@ export default async function LocalizedPricingPage({ params }: { params: Promise
   return <>
     <PricingPage />
     <section className="shell deploymentsSection"><div className="deployCard"><a className="primary" href={`/${slug}/usage`}>{label}</a></div></section>
-    <ClerkPricingTable />
   </>;
 }
