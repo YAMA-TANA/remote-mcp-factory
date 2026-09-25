@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useI18n } from '../i18n';
 
 type Kind = 'email' | 'phone';
@@ -16,31 +16,9 @@ function decode(kind: Kind): string {
 }
 
 export default function ProtectedContact({ kind }: { kind: Kind }) {
-  const { messages } = useI18n();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { locale, messages } = useI18n();
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const text = decode(kind);
-    const ratio = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
-    const cssWidth = kind === 'email' ? 320 : 220;
-    const cssHeight = 42;
-    canvas.width = cssWidth * ratio;
-    canvas.height = cssHeight * ratio;
-    canvas.style.width = `${cssWidth}px`;
-    canvas.style.maxWidth = '100%';
-    canvas.style.height = `${cssHeight}px`;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-    context.scale(ratio, ratio);
-    context.clearRect(0, 0, cssWidth, cssHeight);
-    context.font = '600 17px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
-    context.textBaseline = 'middle';
-    context.fillStyle = '#f6f7f9';
-    context.fillText(text, 0, cssHeight / 2);
-  }, [kind]);
+  const [revealed, setRevealed] = useState(false);
 
   async function copy() {
     await navigator.clipboard.writeText(decode(kind));
@@ -48,14 +26,24 @@ export default function ProtectedContact({ kind }: { kind: Kind }) {
     window.setTimeout(() => setCopied(false), 1200);
   }
 
-  const aria = kind === 'email'
-    ? `${messages.common.support} ${messages.common.email}`
-    : `${messages.common.support} ${messages.common.phone}`;
+  const labels = {
+    en: { revealEmail: 'Show email address', revealPhone: 'Show phone number', hideEmail: 'Hide email address', hidePhone: 'Hide phone number' },
+    ja: { revealEmail: 'メールアドレスを表示', revealPhone: '電話番号を表示', hideEmail: 'メールアドレスを隠す', hidePhone: '電話番号を隠す' },
+    'zh-CN': { revealEmail: '显示电子邮件地址', revealPhone: '显示电话号码', hideEmail: '隐藏电子邮件地址', hidePhone: '隐藏电话号码' },
+  } as const;
+  const revealLabel = kind === 'email' ? labels[locale].revealEmail : labels[locale].revealPhone;
+  const hideLabel = kind === 'email' ? labels[locale].hideEmail : labels[locale].hidePhone;
+  const contact = decode(kind);
+  const href = kind === 'email' ? `mailto:${contact}` : `tel:${contact}`;
+  const contactId = `support-contact-${kind}`;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '4px 0 16px' }}>
-      <canvas ref={canvasRef} role="img" aria-label={aria} />
-      <button className="ghost" type="button" onClick={copy}>{copied ? messages.common.copied : messages.common.copy}</button>
+      <button className="ghost" type="button" aria-expanded={revealed} aria-controls={contactId} onClick={() => setRevealed((value) => !value)}>{revealed ? hideLabel : revealLabel}</button>
+      <div id={contactId} style={{ display: revealed ? 'flex' : 'none', alignItems: 'center', gap: 12, flexWrap: 'wrap' }} aria-live="polite">
+        <a href={href}>{contact}</a>
+        <button className="ghost" type="button" onClick={copy}>{copied ? messages.common.copied : messages.common.copy}</button>
+      </div>
     </div>
   );
 }

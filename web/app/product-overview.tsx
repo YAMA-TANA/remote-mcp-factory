@@ -102,7 +102,7 @@ export const PRODUCT_OVERVIEW: Record<GenericServiceSlug | 'mock', Product> = {
     alternative: { name:'Keygen', url:'https://keygen.sh/docs/validating-licenses/', scope:t('ライセンス検証や端末フィンガープリントを案内しています。','Documents license validation and machine fingerprints.','官方文档介绍许可证验证与设备指纹。') },
   },
   flags: {
-    purpose: t('アプリから取得する機能フラグとリモート設定を管理します。','Manage feature flags and remote app configuration.','管理功能开关和应用远程配置。'),
+    purpose: t('アプリが取得するリモート設定を管理します。','Manage remote configuration for your app.','管理应用使用的远程配置。'),
     example: t('プロジェクトを作成し、アプリから公開設定を読み込みます。','Create a project and read published settings from your app.','创建项目并从应用读取公开配置。'),
     approach: t('小さな設定値をHTTPで共有する用途です。','Targets straightforward sharing of small settings over HTTP.','面向通过 HTTP 共享小型配置值。'),
     boundary: t('高度なターゲティング・段階的ロールアウト・実験分析は対象外です。','No advanced targeting, phased rollout or experiment analytics.','不提供高级定向、分阶段发布或实验分析。'),

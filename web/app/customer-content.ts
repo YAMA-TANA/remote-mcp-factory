@@ -178,8 +178,8 @@ export const CUSTOMER_GUIDES: Record<ProductSlug, CustomerGuide> = {
     competitor:{name:'Keygen',url:'https://keygen.sh/docs/validating-licenses/',axis:t('ライセンスの識別','License identification','许可证识别'),pico:t('キーの失効・有効期限を検証するシンプルなAPI。','Simple key validation with revocation and expiry.','提供撤销和有效期验证的简单 API。'),other:t('端末フィンガープリントなどを含む検証手順を文書化。','Documents validation workflows including optional machine fingerprints.','文档介绍含可选设备指纹的许可证验证。')},
   },
   flags:{
-    summary:t('アプリがHTTPで取得する機能フラグと設定値を公開します。','Publish feature flags and configuration values for apps to fetch over HTTP.','发布供应用通过 HTTP 获取的功能开关与配置。'),
-    who:t('リリース済みアプリの表示や挙動を切り替える開発者。','Developers toggling behavior in deployed apps.','切换已发布应用功能的开发者。'),
+    summary:t('アプリがHTTPで取得するリモート設定値を公開します。','Publish remote settings for apps to fetch over HTTP.','发布供应用通过 HTTP 获取的远程配置。'),
+    who:t('リリース済みアプリへ設定値を配信したい開発者。','Developers serving runtime settings to deployed apps.','向已发布应用提供运行时配置的开发者。'),
     input:t('プロジェクト名、キー、JSON値、有効／無効。','Project name, key, JSON value, and enabled state.','项目名称、键、JSON 值及启用状态。'),
     output:t('有効な設定値をまとめて返す公開JSON URL。','A public JSON endpoint returning enabled values.','返回已启用配置值的公开 JSON URL。'),
     prerequisite:t('アプリが読む設定キーと値。パスワードなどの秘密情報は入れません。','The keys/values your app will read; never include secrets.','准备应用需要读取的键和值，不要包含密码等秘密信息。'),

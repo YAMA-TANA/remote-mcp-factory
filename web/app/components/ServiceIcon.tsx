@@ -10,7 +10,7 @@ const LABELS: Record<ServiceIconName, string> = {
   brand: 'PicoSvc', mock: 'Mock API', mcp: 'MCP', hooks: 'Webhook Inbox', rss: 'RSS',
   mail: 'Email to Webhook', shot: 'Screenshot', fetch: 'Web Fetch', qr: 'Dynamic QR',
   cron: 'Cron', functions: 'Functions', json: 'JSON Store', files: 'Files',
-  license: 'License', flags: 'Feature Flags', monitor: 'Monitor', forms: 'Forms',
+  license: 'License', flags: 'Remote Config', monitor: 'Monitor', forms: 'Forms',
 };
 type Props = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt' | 'width' | 'height'> & {
   name: ServiceIconName;
