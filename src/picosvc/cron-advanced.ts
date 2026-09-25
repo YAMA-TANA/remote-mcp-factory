@@ -1,7 +1,8 @@
 import type { Env } from '../types.js';
 import { cronMatchesInTimezone, validCronExpression, validTimezone } from './cron-calendar.js';
 import { cleanName, consumeUsage, json, requireIdentity, resourceCapacity } from './service-utils.js';
-import { fetchPublic, safeHeaderObject, safePublicUrl } from './security.js';
+import { safeHeaderObject, safePublicUrl } from './security.js';
+import { fetchPicoSvcTarget, type InternalPicoSvcDispatch } from './internal-dispatch.js';
 
 const METHODS = new Set(['GET','POST','PUT','PATCH','DELETE']);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -16,7 +17,7 @@ type CronRow = {
 };
 
 function optionNumber(value: unknown, current: number, min: number, max: number): number | null {
-  if (value === undefined) return current;
+  if (value === undefined || value === null || value === '') return current;
   const number = Number(value);
   return Number.isSafeInteger(number) && number >= min && number <= max ? number : null;
 }
@@ -62,15 +63,19 @@ export async function cronAdvancedManagementRoutes(request: Request, env: Env): 
     const input = await request.json().catch(() => null) as Record<string, unknown> | null;
     const target = safePublicUrl(input?.targetUrl);
     const cron = typeof input?.cron === 'string' ? input.cron.trim() : '';
-    const timezone = validTimezone(input?.timezone === undefined ? 'UTC' : input.timezone);
-    const method = typeof input?.method === 'string' ? input.method.toUpperCase() : 'GET';
+    const timezone = validTimezone(input?.timezone === undefined || input.timezone === '' ? 'UTC' : input.timezone);
+    const method = typeof input?.method === 'string' ? input.method.trim().toUpperCase() : 'GET';
     const body = validatedBody(input?.body);
-    const expected = input?.expectedStatus === undefined || input?.expectedStatus === null ? null : optionNumber(input.expectedStatus, 200, 100, 599);
+    const expected = input?.expectedStatus === undefined || input?.expectedStatus === null || input?.expectedStatus === '' ? null : optionNumber(input.expectedStatus, 200, 100, 599);
     const retries = optionNumber(input?.maxRetries, 2, 0, 3);
     const notification = optionalPublicUrl(input?.notificationUrl);
-    if (!target || !validCronExpression(cron) || !timezone || !METHODS.has(method) || body === null || retries === null || notification === false || (input?.expectedStatus !== undefined && input?.expectedStatus !== null && expected === null)) {
-      return json({ error: 'Invalid targetUrl, cron, timezone, method, body, expectedStatus, maxRetries or notificationUrl' }, 400);
-    }
+    const invalidFields = [
+      !target && 'targetUrl', !validCronExpression(cron) && 'cron', !timezone && 'timezone',
+      !METHODS.has(method) && 'method', body === null && 'body', retries === null && 'maxRetries',
+      notification === false && 'notificationUrl',
+      input?.expectedStatus !== undefined && input.expectedStatus !== null && input.expectedStatus !== '' && expected === null && 'expectedStatus',
+    ].filter((field): field is string => Boolean(field));
+    if (invalidFields.length || !target) return json({ error: `Invalid Cron configuration: ${invalidFields.join(', ') || 'targetUrl'}`, fields: invalidFields }, 400);
     const id = crypto.randomUUID(); const now = new Date().toISOString();
     await env.DB.batch([
       env.DB.prepare(`INSERT INTO cron_jobs (id,owner,name,cron_expression,method,target_url,headers_json,body,enabled,last_run_at,created_at,updated_at)
@@ -104,15 +109,19 @@ export async function cronAdvancedManagementRoutes(request: Request, env: Env): 
   const input = await request.json().catch(() => null) as Record<string, unknown> | null;
   const target = input?.targetUrl === undefined ? job.target_url : optionalPublicUrl(input.targetUrl);
   const cron = input?.cron === undefined ? job.cron_expression : typeof input.cron === 'string' ? input.cron.trim() : '';
-  const timezone = validTimezone(input?.timezone === undefined ? job.timezone || 'UTC' : input.timezone);
-  const method = input?.method === undefined ? job.method : typeof input.method === 'string' ? input.method.toUpperCase() : '';
+  const timezone = validTimezone(input?.timezone === undefined || input.timezone === '' ? 'UTC' : input.timezone);
+  const method = input?.method === undefined ? job.method : typeof input.method === 'string' ? input.method.trim().toUpperCase() : '';
   const body = input?.body === undefined ? job.body : validatedBody(input.body);
-  const expected = input?.expectedStatus === undefined ? job.expected_status : input.expectedStatus === null ? null : optionNumber(input.expectedStatus, 200, 100, 599);
+  const expected = input?.expectedStatus === undefined ? job.expected_status : input.expectedStatus === null || input.expectedStatus === '' ? null : optionNumber(input.expectedStatus, 200, 100, 599);
   const retries = optionNumber(input?.maxRetries, job.max_retries ?? 2, 0, 3);
   const notification = input?.notificationUrl === undefined ? job.notification_url : optionalPublicUrl(input.notificationUrl);
-  if (typeof target !== 'string' || !validCronExpression(cron) || !timezone || !METHODS.has(method) || body === null || retries === null || notification === false || (input?.expectedStatus !== undefined && input.expectedStatus !== null && expected === null)) {
-    return json({ error: 'Invalid Cron configuration' }, 400);
-  }
+  const invalidFields = [
+    typeof target !== 'string' && 'targetUrl', !validCronExpression(cron) && 'cron', !timezone && 'timezone',
+    !METHODS.has(method) && 'method', body === null && 'body', retries === null && 'maxRetries',
+    notification === false && 'notificationUrl',
+    input?.expectedStatus !== undefined && input.expectedStatus !== null && input.expectedStatus !== '' && expected === null && 'expectedStatus',
+  ].filter((field): field is string => Boolean(field));
+  if (invalidFields.length) return json({ error: `Invalid Cron configuration: ${invalidFields.join(', ')}`, fields: invalidFields }, 400);
   const active = input?.enabled === undefined ? job.active === null ? Boolean(job.enabled) : Boolean(job.active) : input.enabled === true;
   const now = new Date().toISOString();
   await env.DB.batch([
@@ -127,13 +136,13 @@ export async function cronAdvancedManagementRoutes(request: Request, env: Env): 
 }
 
 async function sleep(ms: number): Promise<void> { await new Promise<void>((resolve) => setTimeout(resolve, ms)); }
-async function attemptRequest(job: CronRow): Promise<{ status: number | null; error: string | null; duration: number }> {
+async function attemptRequest(env: Env, job: CronRow, dispatchInternal?: InternalPicoSvcDispatch): Promise<{ status: number | null; error: string | null; duration: number }> {
   const start = Date.now(); let status: number | null = null; let error: string | null = null;
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), MAX_RUN_MS);
   try {
     const headers = new Headers(safeHeaderObject(JSON.parse(job.headers_json || '{}')));
     headers.set('user-agent', 'PicoSvc-Cron/2.0');
-    const response = await fetchPublic(job.target_url, { method: job.method, headers, body: job.method === 'GET' ? undefined : job.body, signal: controller.signal });
+    const response = await fetchPicoSvcTarget(job.target_url, { method: job.method, headers, body: job.method === 'GET' || job.method === 'HEAD' ? undefined : job.body, signal: controller.signal }, env, dispatchInternal);
     status = response.status;
     if (job.expected_status !== null && job.expected_status !== undefined ? status !== job.expected_status : status < 200 || status >= 300) error = `Unexpected HTTP ${status}`;
   } catch (err) { error = err instanceof Error ? err.message.slice(0, 500) : String(err).slice(0, 500); }
@@ -141,7 +150,7 @@ async function attemptRequest(job: CronRow): Promise<{ status: number | null; er
   return { status, error, duration: Date.now() - start };
 }
 
-async function dispatch(env: Env, job: CronRow, now: Date): Promise<void> {
+async function dispatch(env: Env, job: CronRow, now: Date, dispatchInternal?: InternalPicoSvcDispatch): Promise<void> {
   const minute = now.toISOString().slice(0, 16);
   const claimed = await env.DB.prepare(`INSERT INTO cron_dispatch_claims (job_id,scheduled_minute,claimed_at)
     VALUES (?,?,?) ON CONFLICT(job_id,scheduled_minute) DO NOTHING RETURNING job_id`).bind(job.id, minute, new Date().toISOString()).first();
@@ -162,7 +171,7 @@ async function dispatch(env: Env, job: CronRow, now: Date): Promise<void> {
   let totalDuration = 0;
   for (let attempt = 1; attempt <= (job.max_retries ?? 0) + 1; attempt += 1) {
     if (attempt > 1) await sleep(RETRY_BACKOFF_MS[attempt - 2]);
-    last = await attemptRequest(job);
+    last = await attemptRequest(env, job, dispatchInternal);
     totalDuration += last.duration;
     await env.DB.prepare(`INSERT INTO cron_run_attempts (run_id,job_id,owner,attempt,response_status,duration_ms,error,attempted_at)
       VALUES (?,?,?,?,?,?,?,?)`).bind(id, job.id, job.owner, attempt, last.status, last.duration, last.error, new Date().toISOString()).run();
@@ -174,11 +183,11 @@ async function dispatch(env: Env, job: CronRow, now: Date): Promise<void> {
   let notificationStatus: number | null = null; let notificationError: string | null = null;
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
-    const response = await fetchPublic(job.notification_url, {
+    const response = await fetchPicoSvcTarget(job.notification_url, {
       method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': 'PicoSvc-Cron/2.0' },
       body: JSON.stringify({ jobId: job.id, name: job.name, runId: id, failedAt: new Date().toISOString(), responseStatus: last.status, error: last.error }),
       signal: controller.signal,
-    });
+    }, env, dispatchInternal);
     notificationStatus = response.status;
     if (!response.ok) notificationError = `HTTP ${response.status}`;
   } catch (err) { notificationError = err instanceof Error ? err.message.slice(0, 500) : String(err).slice(0, 500); }
@@ -187,12 +196,12 @@ async function dispatch(env: Env, job: CronRow, now: Date): Promise<void> {
     VALUES (?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), id, job.id, job.owner, notificationError ? 'failed' : 'delivered', notificationStatus, notificationError, new Date().toISOString()).run();
 }
 
-export async function runAdvancedCronJobs(env: Env, now = new Date()): Promise<void> {
+export async function runAdvancedCronJobs(env: Env, now = new Date(), dispatchInternal?: InternalPicoSvcDispatch): Promise<void> {
   const jobs = await env.DB.prepare(`SELECT j.*,o.timezone,o.expected_status,o.max_retries,o.notification_url,o.active
     FROM cron_jobs j JOIN cron_job_options o ON o.job_id=j.id WHERE o.active=1 AND j.enabled=0 ORDER BY j.created_at LIMIT 100`).all<CronRow>();
   const due = (jobs.results || []).filter((job) => cronMatchesInTimezone(job.cron_expression, now, job.timezone || 'UTC'));
   for (let i = 0; i < due.length; i += 5) {
-    await Promise.allSettled(due.slice(i, i + 5).map((job) => dispatch(env, job, now)));
+    await Promise.allSettled(due.slice(i, i + 5).map((job) => dispatch(env, job, now, dispatchInternal)));
   }
   // Dispatch claims are only needed to dedupe overlapping runs of a given minute.
   await env.DB.prepare('DELETE FROM cron_dispatch_claims WHERE scheduled_minute<?')

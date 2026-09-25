@@ -75,6 +75,7 @@ export interface Env {
   BRIDGE_SIGNING_KEY?: string;
   ALLOW_DEV_AUTH?: string;
   PUBLIC_MCP_ORIGIN?: string;
+  PICOSVC_INTERNAL_ORIGINS?: string;
   WEB_ORIGINS?: string;
   GITHUB_APP_ID?: string;
   GITHUB_APP_CLIENT_ID?: string;

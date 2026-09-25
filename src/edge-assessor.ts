@@ -133,6 +133,8 @@ if 'createMcpHandler' in src and re.search(r'export\s+default', src):
     out['eligible'] = True
     out['strategy'] = 'native-http'
     out['reason'] = 'native Web MCP handler'
+elif re.search(r'\b(?:StreamableHTTPServerTransport|SSEServerTransport|WebStandardStreamableHTTPServerTransport)\b', src) or re.search(r'\b(?:app|server|httpServer)\.listen\s*\(', src):
+    out['reason'] = 'entrypoint already hosts an HTTP server; PicoSvc Edge conversion supports stdio servers or createMcpHandler'
 elif 'serveStdio' in src:
     out['eligible'] = True
     out['strategy'] = 'v2-serve-stdio'
