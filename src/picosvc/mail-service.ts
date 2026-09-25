@@ -48,8 +48,20 @@ export async function mailManagementRoutes(request: Request, env: Env): Promise<
   const route = await env.DB.prepare('SELECT * FROM mail_routes WHERE id=? AND owner=?').bind(routeMatch[1], owner).first<any>();
   if (!route) return json({ error: 'Mail route not found' }, 404);
   if (routeMatch[2] === 'events' && request.method === 'GET') {
-    const rows = await env.DB.prepare('SELECT * FROM mail_events WHERE route_id=? AND owner=? ORDER BY received_at DESC LIMIT 200').bind(route.id, owner).all();
-    return json({ route: { id: route.id, publicId: route.public_id, name: route.name, address: publicAddress(route.public_id) }, events: rows.results || [] });
+    const [rows, attempts] = await Promise.all([
+      env.DB.prepare('SELECT * FROM mail_events WHERE route_id=? AND owner=? ORDER BY received_at DESC LIMIT 200').bind(route.id, owner).all<any>(),
+      env.DB.prepare(`SELECT * FROM mail_delivery_attempts WHERE route_id=? AND owner=?
+        AND event_id IN (SELECT id FROM mail_events WHERE route_id=? AND owner=? ORDER BY received_at DESC LIMIT 200)
+        ORDER BY attempted_at DESC`).bind(route.id, owner, route.id, owner).all<any>(),
+    ]);
+    const attemptsByEvent = new Map<string, any[]>();
+    for (const attempt of attempts.results || []) {
+      const list = attemptsByEvent.get(attempt.event_id) || [];
+      list.push(attempt);
+      attemptsByEvent.set(attempt.event_id, list);
+    }
+    return json({ route: { id: route.id, publicId: route.public_id, name: route.name, address: publicAddress(route.public_id) },
+      events: (rows.results || []).map((event) => ({ ...event, deliveryAttempts: attemptsByEvent.get(event.id) || [] })) });
   }
   if (!routeMatch[2] && request.method === 'PATCH') {
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;

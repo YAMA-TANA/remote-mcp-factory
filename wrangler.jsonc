@@ -76,6 +76,7 @@
     "CLERK_PRO_PLAN_SLUG": "pro",
     "CLERK_TEAM_PLAN_SLUG": "team",
     "PUBLIC_MCP_ORIGIN": "https://mcp.picosvc.com",
+    "PICOSVC_INTERNAL_ORIGINS": "https://mcp.picosvc.com,https://remote-mcp-factory.hurukigeotym.workers.dev",
     "WEB_ORIGINS": "https://picosvc.com,https://app.picosvc.com"
   },
   "r2_buckets": [

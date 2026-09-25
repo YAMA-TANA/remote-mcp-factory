@@ -18,8 +18,8 @@ assert.match(source, /mail_attachments WHERE id=\? AND event_id=\? AND owner=\?/
 assert.match(source, /picosvc\/mail\/\$\{route\.id\}\/\$\{eventId\}/, 'Mail R2 keys must be event-scoped');
 assert.match(source, /deletePrefix\(env, `picosvc\/mail\//, 'Mail event/route R2 cleanup required');
 assert.match(source, /pruneMailR2Owner/, 'Mail retention must clean up R2');
-assert.match(entry, /handleIncomingMailAdvanced\(message, env\)/, 'Advanced inbound handler must be wired');
-assert.match(entry, /runMailRetries\(env\)/, 'Scheduled retry worker must be wired');
+assert.match(entry, /handleIncomingMailAdvanced\(message, env(?:,|\))/, 'Advanced inbound handler must be wired');
+assert.match(entry, /runMailRetries\(env(?:,|\))/, 'Scheduled retry worker must be wired');
 assert.ok(entry.indexOf('pruneMailR2Owners(env)') < entry.indexOf('picoSvcScheduledGuardrails(env)'), 'R2 must be cleaned before legacy D1 pruning');
 assert.ok(routes.indexOf('mailAdvancedManagementRoutes,') < routes.indexOf('mailManagementRoutes,'), 'Advanced Mail management must be prioritized');
 

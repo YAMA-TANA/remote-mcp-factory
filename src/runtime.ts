@@ -178,6 +178,16 @@ async function buildServerOnce(env: Env, row: ServerRow): Promise<void> {
     const bridge = await prepareBinaryBridge(env, sandbox, row);
     const edge = await tryCompileToEdge(env, sandbox, row, detection);
 
+    if (!edge.ok && !edge.assessment.eligible && edge.compatibility.runtime === 'edge') {
+      edge.compatibility = {
+        ...edge.compatibility,
+        runtime: 'heavy',
+        summary: `Edge conversion unavailable: ${edge.assessment.reason}`,
+      };
+      await env.DB.prepare('UPDATE edge_builds SET compatibility_json=?, updated_at=? WHERE server_id=?')
+        .bind(JSON.stringify(edge.compatibility), new Date().toISOString(), row.id).run();
+    }
+
     if (bridge.active) {
       await restoreBridgeSource(sandbox, row);
       if (edge.ok) {
@@ -210,9 +220,12 @@ async function buildServerOnce(env: Env, row: ServerRow): Promise<void> {
 
     const slot = await sandboxSlotState(env, row);
     if (!slot.ok) {
+      const edgeReason = edge.assessment.eligible
+        ? 'Edge-compatible build could not be completed'
+        : edge.assessment.reason.slice(0, 600);
       const reason = slot.limit === 0
-        ? `This MCP requires Sandbox fallback, but ${slot.tier} is Edge-only. Use an Edge-compatible MCP or upgrade to PicoPlus.`
-        : `This MCP requires Sandbox fallback, but the ${slot.tier} Sandbox limit is ${slot.limit} and all slots are in use.`;
+        ? `This MCP requires Sandbox fallback, but ${slot.tier} is Edge-only. Edge deployment unavailable: ${edgeReason}. Use an Edge-compatible MCP or upgrade to PicoPlus.`
+        : `This MCP requires Sandbox fallback, but the ${slot.tier} Sandbox limit is ${slot.limit} and all slots are in use. Edge deployment unavailable: ${edgeReason}.`;
       await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
         .bind('incompatible', reason, new Date().toISOString(), row.id).run();
       await env.DB.prepare('UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=?, updated_at=? WHERE id=?')

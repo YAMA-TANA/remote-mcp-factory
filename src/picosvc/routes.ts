@@ -37,13 +37,14 @@ import { shotQualityManagementRoutes } from './shot-quality.js';
 import { utilityAdvancedManagementRoutes } from './utility-advanced.js';
 import { utilityManagementRoutes } from './utility-services.js';
 import { picoSvcUsageDashboard } from './usage-dashboard.js';
+import type { InternalPicoSvcDispatch } from './internal-dispatch.js';
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 function monthKey(now = new Date()): string { return now.toISOString().slice(0, 7); }
 
-export async function picoSvcRoutes(request: Request, env: Env): Promise<Response | null> {
+export async function picoSvcRoutes(request: Request, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<Response | null> {
   const url = new URL(request.url);
   for (const handler of [
     picoSvcHealthRoute,
@@ -57,11 +58,11 @@ export async function picoSvcRoutes(request: Request, env: Env): Promise<Respons
     monitorDraftPreviewRoute,
     monitorAdvancedManagementRoutes,
     mailManualRetryGuard,
-    mailAdvancedManagementRoutes,
+    (incoming: Request, environment: Env) => mailAdvancedManagementRoutes(incoming, environment, dispatchInternal),
     cronAdvancedManagementRoutes,
     functionsAdvancedManagementRoutes,
-    hooksAdvancedManagementRoutes,
-    hooksManagementRoutes,
+    (incoming: Request, environment: Env) => hooksAdvancedManagementRoutes(incoming, environment, dispatchInternal),
+    (incoming: Request, environment: Env) => hooksManagementRoutes(incoming, environment, dispatchInternal),
     mockAdvancedManagementRoutes,
     mockManagementRoutes,
     reliableFetchRoute,

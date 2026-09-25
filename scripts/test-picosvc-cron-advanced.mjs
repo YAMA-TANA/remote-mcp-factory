@@ -27,7 +27,7 @@ assert.match(source, /consumeUsage\(env, job.owner, 'cron', 'runs'\)/, 'Cron quo
 assert.match(source, /RETRY_BACKOFF_MS = \[1_000, 3_000, 9_000\]/, 'Retries must back off');
 assert.match(source, /cron_notifications/, 'Notifications must be recorded');
 assert.match(source, /AND j.id=\?/, 'Management reads must scope job to owner');
-assert.match(entry, /runAdvancedCronJobs\(env, new Date\(controller.scheduledTime\)\)/, 'Advanced Cron must be scheduled');
+assert.match(entry, /runAdvancedCronJobs\(env, new Date\(controller.scheduledTime\)(?:,|\))/, 'Advanced Cron must be scheduled');
 assert.ok(routes.indexOf('cronAdvancedManagementRoutes,') < routes.indexOf('cronManagementRoutes,'), 'Advanced Cron routes must precede legacy manager');
 
 const db = new DatabaseSync(':memory:');

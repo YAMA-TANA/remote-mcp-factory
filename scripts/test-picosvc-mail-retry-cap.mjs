@@ -7,7 +7,8 @@ const routes = readFileSync(new URL('../src/picosvc/routes.ts', import.meta.url)
 assert.match(guard, /MAX_MAIL_ATTEMPTS = 4/);
 assert.match(guard, /WHERE id=\? AND owner=\?/, 'Manual retry must verify ownership');
 assert.match(guard, /event\.attempts >= MAX_MAIL_ATTEMPTS/, 'Manual retry must reject exhausted deliveries');
-assert.ok(routes.indexOf('mailManualRetryGuard,') < routes.indexOf('mailAdvancedManagementRoutes,'), 'Retry guard must precede delivery handler');
+const dispatchOrder = routes.slice(routes.indexOf('for (const handler of ['));
+assert.ok(dispatchOrder.indexOf('mailManualRetryGuard,') < dispatchOrder.indexOf('mailAdvancedManagementRoutes('), 'Retry guard must precede delivery handler');
 const db = new DatabaseSync(':memory:');
 db.exec('CREATE TABLE mail_events (id TEXT PRIMARY KEY,attempts INTEGER NOT NULL DEFAULT 0,delivery_status TEXT NOT NULL)');
 db.exec(readFileSync(new URL('../migrations/0025_picosvc_mail_retry_cap.sql', import.meta.url), 'utf8'));

@@ -2,6 +2,7 @@ import { clerkIdentity } from '../auth.js';
 import type { Env } from '../types.js';
 import { monthKey, productLimit } from './entitlements.js';
 import { consumeUsage, resourceCapacity } from './service-utils.js';
+import { fetchPicoSvcTarget, type InternalPicoSvcDispatch } from './internal-dispatch.js';
 
 interface WebhookInboxRow {
   id: string;
@@ -316,7 +317,7 @@ export async function hooksRuntimeRoute(request: Request, env: Env): Promise<Res
   return json({ received: true, eventId: id, tier: usage.tier, bodyStorage: r2Key ? 'r2' : 'd1' }, 202);
 }
 
-export async function hooksManagementRoutes(request: Request, env: Env): Promise<Response | null> {
+export async function hooksManagementRoutes(request: Request, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/api/picosvc/hooks/')) return null;
 
@@ -394,13 +395,13 @@ export async function hooksManagementRoutes(request: Request, env: Env): Promise
     const timer = setTimeout(() => controller.abort(), 10_000);
     try {
       const method = event.method.toUpperCase();
-      const replay = await fetch(target.toString(), {
+      const replay = await fetchPicoSvcTarget(target, {
         method,
         headers,
         body: method === 'GET' || method === 'HEAD' ? undefined : replayBody,
         redirect: 'manual',
         signal: controller.signal,
-      });
+      }, env, dispatchInternal, url.origin);
       return json({
         ok: replay.ok,
         status: replay.status,

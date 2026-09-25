@@ -20,6 +20,7 @@ import { jsonWriteQuotaGuard } from './picosvc/json-write-quota-guard.js';
 import { jsonExportQuotaGuard } from './picosvc/json-export-quota-guard.js';
 import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
 import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
+import type { InternalPicoSvcDispatch } from './picosvc/internal-dispatch.js';
 import { mcpObservedRuntimeRoute } from './picosvc/mcp-observability.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
@@ -61,6 +62,56 @@ function withRequestId(response: Response, requestId: string): Response {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
+async function runPicoSvcRuntimeRoutes(request: Request, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<Response | null> {
+  for (const handler of [
+    (incoming: Request, environment: Env) => hooksAdvancedRuntimeRoute(incoming, environment, dispatchInternal),
+    hooksRuntimeRoute,
+    mockAdvancedRuntimeRoute,
+    mockRuntimeRoute,
+    utilityAdvancedRuntimeRoute,
+    qrRuntimeRoute,
+    configRuntimeRoute,
+    jsonAdvancedRuntimeRoute,
+    licenseAdvancedRuntimeRoute,
+    formsAdvancedRuntimeRoute,
+    dataRuntimeRoute,
+    functionsAdvancedRuntimeRoute,
+    functionRuntimeRoute,
+    rssRuntimeRoute,
+  ]) {
+    const response = await handler(request, env);
+    if (response) {
+      await picoSvcPostResponseGuardrails(request, env, response);
+      return response;
+    }
+  }
+  return null;
+}
+
+export async function dispatchPicoSvcInternal(request: Request, env: Env, depth = 0): Promise<Response | null> {
+  if (depth >= 8) return Response.json({ error: 'PicoSvc internal dispatch depth exceeded' }, { status: 508 });
+  const dispatchInternal: InternalPicoSvcDispatch = (nested) => dispatchPicoSvcInternal(nested, env, depth + 1);
+  const url = new URL(request.url);
+  const filesResponse = await filesAccessRuntimeRoute(request, env);
+  if (filesResponse) return filesResponse;
+  const jsonWrite = request.method === 'PUT'
+    && (url.pathname.startsWith('/json/') || /^\/api\/picosvc\/json\/stores\/[^/]+\/documents\//.test(url.pathname));
+  const guardrailResponse = await (jsonWrite ? jsonWriteQuotaGuard(request, env) : picoSvcRuntimeGuardrails(request, env))
+    || await jsonExportQuotaGuard(request, env);
+  if (guardrailResponse) return guardrailResponse;
+  const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
+  if (sandboxMeterResponse) return sandboxMeterResponse;
+  try {
+    return await runPicoSvcRuntimeRoutes(request, env, dispatchInternal);
+  } catch (error) {
+    if ((url.pathname.startsWith('/json/') || url.pathname.startsWith('/api/picosvc/json/'))
+      && error instanceof Error && error.message.includes('json_quota_exceeded')) {
+      return Response.json({ error: 'JSON document or storage limit reached' }, { status: 402, headers: { 'cache-control': 'no-store' } });
+    }
+    throw error;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -87,30 +138,11 @@ export default {
       if (guardrailResponse) return send(guardrailResponse);
       const sandboxMeterResponse = await mcpSandboxActiveMinuteGuard(request, env);
       if (sandboxMeterResponse) return send(sandboxMeterResponse);
-      for (const handler of [
-        hooksAdvancedRuntimeRoute,
-        hooksRuntimeRoute,
-        mockAdvancedRuntimeRoute,
-        mockRuntimeRoute,
-        utilityAdvancedRuntimeRoute,
-        qrRuntimeRoute,
-        configRuntimeRoute,
-        jsonAdvancedRuntimeRoute,
-        licenseAdvancedRuntimeRoute,
-        formsAdvancedRuntimeRoute,
-        dataRuntimeRoute,
-        functionsAdvancedRuntimeRoute,
-        functionRuntimeRoute,
-        rssRuntimeRoute,
-      ]) {
-        const response = await handler(request, env);
-        if (response) {
-          await picoSvcPostResponseGuardrails(request, env, response);
-          return send(response);
-        }
-      }
+      const dispatchInternal: InternalPicoSvcDispatch = (internal) => dispatchPicoSvcInternal(internal, env);
+      const runtimeResponse = await runPicoSvcRuntimeRoutes(request, env, dispatchInternal);
+      if (runtimeResponse) return send(runtimeResponse);
       if (picoApi) {
-        const response = await picoSvcRoutes(request, env);
+        const response = await picoSvcRoutes(request, env, dispatchInternal);
         if (response) return send(response);
         return send(Response.json({ error: { code: 'not_found', message: 'PicoSvc route not found' }, requestId }, { status: 404 }));
       }
@@ -135,8 +167,9 @@ export default {
       try {
         await runScheduledServices(env, new Date(controller.scheduledTime));
         await runAdvancedMonitorChecks(env, new Date(controller.scheduledTime));
-        await runAdvancedCronJobs(env, new Date(controller.scheduledTime));
-        await runMailRetries(env);
+        const dispatchInternal: InternalPicoSvcDispatch = (request) => dispatchPicoSvcInternal(request, env);
+        await runAdvancedCronJobs(env, new Date(controller.scheduledTime), dispatchInternal);
+        await runMailRetries(env, dispatchInternal);
       } finally {
         await pruneMailR2Owners(env);
         await picoSvcScheduledGuardrails(env);
@@ -145,7 +178,7 @@ export default {
   },
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil((async () => {
-      try { await handleIncomingMailAdvanced(message, env); }
+      try { await handleIncomingMailAdvanced(message, env, (request) => dispatchPicoSvcInternal(request, env)); }
       finally {
         await pruneIncomingMailR2(message, env);
         await picoSvcEmailGuardrails(message, env);

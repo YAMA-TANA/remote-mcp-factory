@@ -1,7 +1,8 @@
 import type { Env } from '../types.js';
 import { hooksManagementRoutes, hooksRuntimeRoute, safeReplayUrl } from './hooks.js';
 import { json, requireIdentity } from './service-utils.js';
-import { fetchPublic, safePublicUrl } from './security.js';
+import { safePublicUrl } from './security.js';
+import { fetchPicoSvcTarget, type InternalPicoSvcDispatch } from './internal-dispatch.js';
 
 function decodeBase64(value: string): Uint8Array {
   const binary = atob(value);
@@ -51,7 +52,7 @@ async function recordDelivery(env: Env, event: any, kind: 'forward' | 'replay', 
   `).bind(crypto.randomUUID(), event.id, event.inbox_id, event.owner, kind, targetUrl, status, durationMs, error, new Date().toISOString()).run();
 }
 
-async function forwardStoredEvent(env: Env, event: any, inbox: any): Promise<void> {
+async function forwardStoredEvent(env: Env, event: any, inbox: any, dispatchInternal?: InternalPicoSvcDispatch, requestOrigin?: string): Promise<void> {
   const target = safePublicUrl(inbox.forward_url);
   if (!target) return;
   const bytes = await eventBody(env, event);
@@ -68,13 +69,13 @@ async function forwardStoredEvent(env: Env, event: any, inbox: any): Promise<voi
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const method = String(event.method || 'POST').toUpperCase();
-    const response = await fetchPublic(target, {
+    const response = await fetchPicoSvcTarget(target, {
       method,
       headers,
       body: method === 'GET' || method === 'HEAD' ? undefined : asArrayBuffer(bytes),
       redirect: 'manual',
       signal: controller.signal,
-    });
+    }, env, dispatchInternal, requestOrigin);
     status = response.status;
     if (!response.ok) error = `Forward returned HTTP ${response.status}`;
   } catch (err) {
@@ -95,7 +96,7 @@ function customResponse(inbox: any, eventId: string): Response | null {
   return new Response(status === 204 || status === 205 || status === 304 ? null : body, { status, headers });
 }
 
-export async function hooksAdvancedRuntimeRoute(request: Request, env: Env): Promise<Response | null> {
+export async function hooksAdvancedRuntimeRoute(request: Request, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<Response | null> {
   const url = new URL(request.url);
   if (!/^\/hooks\/[a-f0-9]{32}(?:\/.*)?$/i.test(url.pathname)) return null;
   const response = await hooksRuntimeRoute(request, env);
@@ -108,7 +109,7 @@ export async function hooksAdvancedRuntimeRoute(request: Request, env: Env): Pro
     WHERE e.id=?
   `).bind(payload.eventId).first<any>();
   if (!row) return response;
-  if (row.forward_url) await forwardStoredEvent(env, row, row);
+  if (row.forward_url) await forwardStoredEvent(env, row, row, dispatchInternal, url.origin);
   return customResponse(row, row.id) || response;
 }
 
@@ -127,7 +128,7 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export async function hooksAdvancedManagementRoutes(request: Request, env: Env): Promise<Response | null> {
+export async function hooksAdvancedManagementRoutes(request: Request, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/api/picosvc/hooks/')) return null;
 
@@ -136,7 +137,7 @@ export async function hooksAdvancedManagementRoutes(request: Request, env: Env):
     const cloned = request.clone();
     const authRequest = new Request(cloned.url, { method: 'GET', headers: cloned.headers });
     const started = Date.now();
-    const response = await hooksManagementRoutes(request, env);
+    const response = await hooksManagementRoutes(request, env, dispatchInternal);
     if (!response) return null;
     const identity = await requireIdentity(authRequest, env);
     if (!(identity instanceof Response)) {

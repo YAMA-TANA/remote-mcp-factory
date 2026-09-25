@@ -64,7 +64,7 @@ export async function functionsAdvancedRuntimeRoute(request: Request, env: Env):
     target.pathname = `/${match[2] || ''}`;
     const headers = new Headers(request.headers);
     for (const name of ['host','cf-connecting-ip','cf-ray','content-length','connection','transfer-encoding']) headers.delete(name);
-    const input = request.method === 'GET' || request.method === 'HEAD' ? null : await boundedBody(request.body, MAX_REQUEST_BYTES);
+    const input = request.method === 'GET' || request.method === 'HEAD' ? new ArrayBuffer(0) : await boundedBody(request.body, MAX_REQUEST_BYTES);
     if (input === null) {
       code = 413; error = 'Function request exceeds 1 MiB';
       result = json({ error }, code);
@@ -73,7 +73,7 @@ export async function functionsAdvancedRuntimeRoute(request: Request, env: Env):
       const timer = setTimeout(() => controller.abort(), MAX_FUNCTION_WALL_MS);
       try {
         const init: RequestInit = { method: request.method, headers, redirect: 'manual', signal: controller.signal };
-        if (input) init.body = input;
+        if (request.method !== 'GET' && request.method !== 'HEAD' && input) init.body = input;
         const upstream = await stub.getEntrypoint().fetch(new Request(target.toString(), init));
         const output = await boundedBody(upstream.body, MAX_RESPONSE_BYTES);
         if (output === null) {

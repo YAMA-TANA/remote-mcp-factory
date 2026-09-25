@@ -2,7 +2,8 @@ import type { Env } from '../types.js';
 import { productLimit } from './entitlements.js';
 import { decodeMimeHeader, parseMimeMessage } from './mail-mime.js';
 import { consumeUsage, json, requireIdentity } from './service-utils.js';
-import { fetchPublic, randomSecret, safePublicUrl } from './security.js';
+import { randomSecret, safePublicUrl } from './security.js';
+import { fetchPicoSvcTarget, type InternalPicoSvcDispatch } from './internal-dispatch.js';
 
 const MAIL_DOMAIN = 'picosvc.com';
 const MAX_RAW_BYTES = 1024 * 1024;
@@ -55,7 +56,8 @@ async function deletePrefix(env: Env, prefix: string): Promise<void> {
   } while (cursor);
 }
 
-async function deliver(env: Env, eventId: string): Promise<void> {
+async function deliver(env: Env, eventId: string, dispatchInternal?: InternalPicoSvcDispatch): Promise<void> {
+  const started = Date.now();
   const now = new Date().toISOString();
   const event = await env.DB.prepare(`UPDATE mail_events SET delivery_status='sending',attempts=attempts+1,next_retry_at=NULL
     WHERE id=? AND delivery_status IN ('pending','retry') AND (next_retry_at IS NULL OR next_retry_at<=?)
@@ -83,7 +85,7 @@ async function deliver(env: Env, eventId: string): Promise<void> {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), MAX_DELIVERY_MS);
       try {
-        const response = await fetchPublic(url, { method: 'POST', headers, body: payload, signal: controller.signal });
+        const response = await fetchPicoSvcTarget(url, { method: 'POST', headers, body: payload, signal: controller.signal }, env, dispatchInternal);
         status = response.status;
         if (!response.ok) error = `Webhook returned HTTP ${response.status}`;
       } finally { clearTimeout(timeout); }
@@ -91,18 +93,24 @@ async function deliver(env: Env, eventId: string): Promise<void> {
   }
   const retryable = Boolean(error && route && event.payload_r2_key && event.attempts < MAX_ATTEMPTS);
   const next = retryable ? new Date(Date.now() + RETRY_MINUTES[event.attempts - 1] * 60_000).toISOString() : null;
-  await env.DB.prepare('UPDATE mail_events SET delivery_status=?,error=?,response_status=?,next_retry_at=? WHERE id=? AND owner=?')
-    .bind(error ? retryable ? 'retry' : 'failed' : 'delivered', error, status, next, event.id, event.owner).run();
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO mail_delivery_attempts
+      (id,event_id,route_id,owner,attempt_number,response_status,duration_ms,error,attempted_at)
+      VALUES (?,?,?,?,?,?,?,?,?)`)
+      .bind(crypto.randomUUID(), event.id, event.route_id, event.owner, event.attempts, status, Date.now() - started, error, new Date().toISOString()),
+    env.DB.prepare('UPDATE mail_events SET delivery_status=?,error=?,response_status=?,next_retry_at=? WHERE id=? AND owner=?')
+      .bind(error ? retryable ? 'retry' : 'failed' : 'delivered', error, status, next, event.id, event.owner),
+  ]);
 }
 
-export async function runMailRetries(env: Env): Promise<void> {
+export async function runMailRetries(env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<void> {
   const now = new Date().toISOString();
   const due = await env.DB.prepare(`SELECT id FROM mail_events WHERE delivery_status='retry' AND next_retry_at<=? ORDER BY next_retry_at LIMIT 50`)
     .bind(now).all<{ id: string }>();
-  for (const event of due.results || []) await deliver(env, event.id);
+  for (const event of due.results || []) await deliver(env, event.id, dispatchInternal);
 }
 
-export async function handleIncomingMailAdvanced(message: ForwardableEmailMessage, env: Env): Promise<void> {
+export async function handleIncomingMailAdvanced(message: ForwardableEmailMessage, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<void> {
   const [local, domain] = message.to.trim().toLowerCase().split('@');
   if (domain !== MAIL_DOMAIN || !local || !/^[a-f0-9]{32}$/.test(local)) return;
   const route = await env.DB.prepare('SELECT * FROM mail_routes WHERE public_id=? AND enabled=1').bind(local).first<Route>();
@@ -144,7 +152,7 @@ export async function handleIncomingMailAdvanced(message: ForwardableEmailMessag
     const payloadKey = `${prefix}payload.json`;
     await env.ARTIFACTS.put(payloadKey, payload, { httpMetadata: { contentType: 'application/json' } });
     await env.DB.prepare('UPDATE mail_events SET payload_r2_key=? WHERE id=?').bind(payloadKey, eventId).run();
-    await deliver(env, eventId);
+    await deliver(env, eventId, dispatchInternal);
   } catch (error) {
     await deletePrefix(env, prefix).catch(() => undefined);
     await env.DB.prepare('DELETE FROM mail_attachments WHERE event_id=?').bind(eventId).run();
@@ -153,7 +161,7 @@ export async function handleIncomingMailAdvanced(message: ForwardableEmailMessag
   }
 }
 
-export async function mailAdvancedManagementRoutes(request: Request, env: Env): Promise<Response | null> {
+export async function mailAdvancedManagementRoutes(request: Request, env: Env, dispatchInternal?: InternalPicoSvcDispatch): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/api/picosvc/mail/')) return null;
   const identity = await requireIdentity(request, env);
@@ -182,7 +190,7 @@ export async function mailAdvancedManagementRoutes(request: Request, env: Env): 
       if (event.delivery_status === 'delivered' || event.delivery_status === 'sending' || !event.payload_r2_key) return json({ error: 'Mail event cannot be retried' }, 409);
       await env.DB.prepare("UPDATE mail_events SET delivery_status='retry',next_retry_at=? WHERE id=? AND owner=?")
         .bind(new Date().toISOString(), event.id, owner).run();
-      await deliver(env, event.id);
+      await deliver(env, event.id, dispatchInternal);
       return json({ eventId: event.id, retryRequested: true });
     }
     if (details[2]?.startsWith('attachments/')) {
@@ -197,12 +205,17 @@ export async function mailAdvancedManagementRoutes(request: Request, env: Env): 
       return new Response(object.body, { headers });
     }
     if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } });
-    const attachments = await env.DB.prepare('SELECT id,filename,content_type,size_bytes FROM mail_attachments WHERE event_id=? AND owner=? ORDER BY created_at')
-      .bind(event.id, owner).all();
+    const [attachments, deliveryAttempts] = await Promise.all([
+      env.DB.prepare('SELECT id,filename,content_type,size_bytes FROM mail_attachments WHERE event_id=? AND owner=? ORDER BY created_at')
+        .bind(event.id, owner).all(),
+      env.DB.prepare('SELECT attempt_number,response_status,duration_ms,error,attempted_at FROM mail_delivery_attempts WHERE event_id=? AND owner=? ORDER BY attempt_number')
+        .bind(event.id, owner).all(),
+    ]);
     return json({ event: { id: event.id, routeId: event.route_id, from: event.from_address, to: event.to_address,
       subject: event.subject, rawSize: event.raw_size, deliveryStatus: event.delivery_status, attempts: event.attempts,
       nextRetryAt: event.next_retry_at, responseStatus: event.response_status, error: event.error,
-      textPreview: event.text_preview, htmlPreview: event.html_preview, receivedAt: event.received_at }, attachments: attachments.results || [] });
+      textPreview: event.text_preview, htmlPreview: event.html_preview, receivedAt: event.received_at },
+      attachments: attachments.results || [], deliveryAttempts: deliveryAttempts.results || [] });
   }
   const deleting = url.pathname.match(/^\/api\/picosvc\/mail\/routes\/([0-9a-f-]{36})$/i);
   if (deleting && request.method === 'DELETE') {
