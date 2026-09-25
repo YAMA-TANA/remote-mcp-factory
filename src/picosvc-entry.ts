@@ -22,6 +22,7 @@ import { licenseAdvancedRuntimeRoute } from './picosvc/license-advanced.js';
 import { handleIncomingMailAdvanced, pruneIncomingMailR2, pruneMailR2Owners, runMailRetries } from './picosvc/mail-advanced.js';
 import type { InternalPicoSvcDispatch } from './picosvc/internal-dispatch.js';
 import { mcpObservedRuntimeRoute } from './picosvc/mcp-observability.js';
+import { picoSvcManagementMcpRoute } from './picosvc/management-mcp.js';
 import { mcpSandboxActiveMinuteGuard } from './picosvc/mcp-sandbox-meter.js';
 import { mockAdvancedRuntimeRoute } from './picosvc/mock-advanced.js';
 import { mockRuntimeRoute } from './picosvc/mock.js';
@@ -141,6 +142,8 @@ export default {
       const dispatchInternal: InternalPicoSvcDispatch = (internal) => dispatchPicoSvcInternal(internal, env);
       const runtimeResponse = await runPicoSvcRuntimeRoutes(request, env, dispatchInternal);
       if (runtimeResponse) return send(runtimeResponse);
+      const managementMcp = await picoSvcManagementMcpRoute(request, env, ctx);
+      if (managementMcp) return send(managementMcp);
       if (picoApi) {
         const response = await picoSvcRoutes(request, env, dispatchInternal);
         if (response) return send(response);
