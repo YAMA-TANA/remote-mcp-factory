@@ -224,8 +224,8 @@ async function buildServerOnce(env: Env, row: ServerRow): Promise<void> {
         ? 'Edge-compatible build could not be completed'
         : edge.assessment.reason.slice(0, 600);
       const reason = slot.limit === 0
-        ? `Edge deployment unavailable: ${edgeReason}. ${slot.tier} is Edge-only and cannot run the required Sandbox fallback. Use an Edge-compatible MCP or upgrade to PicoPlus.`
-        : `Edge deployment unavailable: ${edgeReason}. The ${slot.tier} Sandbox limit is ${slot.limit} and all slots are in use.`;
+        ? `This MCP requires Sandbox fallback, but ${slot.tier} is Edge-only. Edge deployment unavailable: ${edgeReason}. Use an Edge-compatible MCP or upgrade to PicoPlus.`
+        : `This MCP requires Sandbox fallback, but the ${slot.tier} Sandbox limit is ${slot.limit} and all slots are in use. Edge deployment unavailable: ${edgeReason}.`;
       await env.DB.prepare('UPDATE edge_builds SET status=?, reason=?, updated_at=? WHERE server_id=?')
         .bind('incompatible', reason, new Date().toISOString(), row.id).run();
       await env.DB.prepare('UPDATE servers SET status=?, detected_runtime=?, detected_command=?, error=?, updated_at=? WHERE id=?')
