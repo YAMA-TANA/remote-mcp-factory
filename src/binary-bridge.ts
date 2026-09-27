@@ -16,7 +16,7 @@ const VERSION_COMMANDS: Record<BridgeCapability, string> = {
 
 function bridgeSandbox(env: Env, row: Pick<ServerRow, 'id' | 'owner'>): Sandbox {
   const key = `bridge-${row.owner}-${row.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 60);
-  return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '30s' });
+  return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '30s', keepAlive: false });
 }
 
 function shell(value: string): string {
