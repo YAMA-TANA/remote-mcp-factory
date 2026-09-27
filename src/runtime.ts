@@ -14,6 +14,7 @@ const PORT = 8080;
 const SANDBOX_READY_MARKER = '/workspace/.sandbox-ready';
 const SANDBOX_SMOKE_SCRIPT = '/tmp/factory-sandbox-smoke.mjs';
 const GIT_AUTH_HOME = '/tmp/factory-git-home';
+const SANDBOX_COMMAND_TIMEOUT_MS = 5 * 60_000;
 
 function validateRepoUrl(value: string): string {
   const u = new URL(value);
@@ -36,7 +37,7 @@ function workdir(row: ServerRow): string {
 
 export function serverSandbox(env: Env, row: Pick<ServerRow, 'id' | 'owner'>): Sandbox {
   const key = `mcp-${row.owner}-${row.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 60);
-  return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '10m' });
+  return getSandbox(env.Sandbox, key, { normalizeId: true, sleepAfter: '10m', keepAlive: false });
 }
 
 async function sandboxSlotState(
@@ -87,7 +88,9 @@ async function cloneRepository(env: Env, sandbox: Sandbox, row: ServerRow): Prom
     }
 
     const prefix = authenticated ? `HOME=${GIT_AUTH_HOME} GIT_TERMINAL_PROMPT=0` : 'GIT_TERMINAL_PROMPT=0';
-    const result = await sandbox.exec(`${prefix} git clone --depth 1 --branch ${JSON.stringify(branch)} ${JSON.stringify(repo)} /workspace/repo`);
+    const result = await sandbox.exec(`${prefix} git clone --depth 1 --branch ${JSON.stringify(branch)} ${JSON.stringify(repo)} /workspace/repo`, {
+      timeout: SANDBOX_COMMAND_TIMEOUT_MS,
+    });
     if (!result.success) throw new Error(result.stderr || 'git clone failed');
   } finally {
     await sandbox.exec(`rm -rf ${GIT_AUTH_HOME}`).catch(() => undefined);
@@ -146,11 +149,11 @@ async function prepareSandboxFallback(env: Env, row: ServerRow, sandbox: Sandbox
   const cwd = workdir(row);
   let result;
   for (const command of detected.install) {
-    result = await sandbox.exec(command, { cwd });
+    result = await sandbox.exec(command, { cwd, timeout: SANDBOX_COMMAND_TIMEOUT_MS });
     if (!result.success) throw new Error(`Install failed: ${result.stderr || result.stdout}`);
   }
   for (const command of detected.build) {
-    result = await sandbox.exec(command, { cwd });
+    result = await sandbox.exec(command, { cwd, timeout: SANDBOX_COMMAND_TIMEOUT_MS });
     if (!result.success) throw new Error(`Build failed: ${result.stderr || result.stdout}`);
   }
 
@@ -235,6 +238,9 @@ async function buildServerOnce(env: Env, row: ServerRow): Promise<void> {
 
     await prepareSandboxFallback(env, row, sandbox, detection);
   } catch (error) {
+    // exec() timeouts only close the caller connection; the underlying process can keep running.
+    // A failed build has no useful runtime state, so destroy the sandbox to hard-stop every process.
+    await sandbox.destroy().catch(() => undefined);
     const message = error instanceof Error ? error.message : String(error);
     await env.DB.prepare('UPDATE servers SET status=?, error=?, updated_at=? WHERE id=?')
       .bind('error', message.slice(0, 8000), new Date().toISOString(), row.id).run();
@@ -288,23 +294,30 @@ export async function ensureRuntime(env: Env, row: ServerRow): Promise<string> {
   await ensureGitHubSchema(env);
   const sandbox = serverSandbox(env, row);
 
-  if (!(await processRunning(sandbox))) {
-    if (!(await repositoryPresent(sandbox))) await cloneRepository(env, sandbox, row);
-
-    let fresh = row;
-    if (!(await sandboxReady(sandbox))) {
-      fresh = await prepareSandboxFallback(env, row, sandbox);
-    } else {
-      fresh = await env.DB.prepare('SELECT * FROM servers WHERE id=?').bind(row.id).first<ServerRow>() ?? row;
-    }
-
+  try {
     if (!(await processRunning(sandbox))) {
-      const upstream = fresh.command?.trim() || fresh.detected_command;
-      if (!upstream) throw new Error('No stdio command configured');
-      await startVerifiedSandboxRuntime(env, fresh, sandbox, upstream, workdir(fresh));
-    }
-  }
+      if (!(await repositoryPresent(sandbox))) await cloneRepository(env, sandbox, row);
 
-  const tunnel = await sandbox.tunnels.get(PORT);
-  return tunnel.url.replace(/\/$/, '');
+      let fresh = row;
+      if (!(await sandboxReady(sandbox))) {
+        fresh = await prepareSandboxFallback(env, row, sandbox);
+      } else {
+        fresh = await env.DB.prepare('SELECT * FROM servers WHERE id=?').bind(row.id).first<ServerRow>() ?? row;
+      }
+
+      if (!(await processRunning(sandbox))) {
+        const upstream = fresh.command?.trim() || fresh.detected_command;
+        if (!upstream) throw new Error('No stdio command configured');
+        await startVerifiedSandboxRuntime(env, fresh, sandbox, upstream, workdir(fresh));
+      }
+    }
+
+    const tunnel = await sandbox.tunnels.get(PORT);
+    return tunnel.url.replace(/\/$/, '');
+  } catch (error) {
+    // Lazy startup can execute user-controlled install/build commands too. If any stage
+    // times out or fails, destroy the container so no detached command remains billable.
+    await sandbox.destroy().catch(() => undefined);
+    throw error;
+  }
 }
