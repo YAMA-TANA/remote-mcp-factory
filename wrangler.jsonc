@@ -71,6 +71,7 @@
   "vars": {
     "ALLOW_DEV_AUTH": "false",
     "SANDBOX_TRANSPORT": "rpc",
+    "COMMAND_TIMEOUT_MS": "300000",
     "CLERK_PICO_PLAN_SLUG": "pico",
     "CLERK_PICOPLUS_PLAN_SLUG": "picoplus",
     "CLERK_PRO_PLAN_SLUG": "pro",
